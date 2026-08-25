@@ -10,3 +10,5 @@ A Unified Digital Platform for Legal Metrology Verification and Certification.
 - `web/` — React + Vite web application
 - `mobile/` — Expo mobile application
 - `docs/` — Architecture, API, database, and technical decisions
+
+- testing 
