@@ -7,7 +7,7 @@ A Unified Digital Platform for Legal Metrology Verification and Certification.
 ## Repository Structure
 
 - `api/` — Express backend
-- `web/` — React + Vite web application
+- `web/` — React + Vite web Application
 - `mobile/` — Expo mobile application
 - `docs/` — Architecture, API, database, and technical decisions
 
