@@ -40,35 +40,35 @@ ON CONFLICT (name) DO NOTHING;
 -- ---------------------------------------------------------------------------
 INSERT INTO users (role_id, full_name, email, phone, password_hash, organization_name, status)
 SELECT r.id, 'Dev Admin', 'dev.admin@pramaan.local', '9000000001',
-       '$2b$10$CwTycUXWue0Thq9StjUM0uJ8pFGVXK1z8Ht4Xc3g6vqhz9O1qJZTa',
+       '$2b$10$s2etY4XoBAef7cmitAED0.qzl4P3ImRrli/IEwhFVRPNkmxz428xi',
        'Legal Metrology Department (Dev)', 'ACTIVE'
 FROM roles r WHERE r.name = 'ADMIN'
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (role_id, full_name, email, phone, password_hash, organization_name, status)
 SELECT r.id, 'Dev Instrument Owner', 'dev.owner@pramaan.local', '9000000002',
-       '$2b$10$CwTycUXWue0Thq9StjUM0uJ8pFGVXK1z8Ht4Xc3g6vqhz9O1qJZTa',
+       '$2b$10$s2etY4XoBAef7cmitAED0.qzl4P3ImRrli/IEwhFVRPNkmxz428xi',
        'Sharma General Store', 'ACTIVE'
 FROM roles r WHERE r.name = 'INSTRUMENT_OWNER'
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (role_id, full_name, email, phone, password_hash, organization_name, status)
 SELECT r.id, 'Dev LMO Officer', 'dev.lmo@pramaan.local', '9000000003',
-       '$2b$10$CwTycUXWue0Thq9StjUM0uJ8pFGVXK1z8Ht4Xc3g6vqhz9O1qJZTa',
+       '$2b$10$s2etY4XoBAef7cmitAED0.qzl4P3ImRrli/IEwhFVRPNkmxz428xi',
        'District Legal Metrology Office (Dev)', 'ACTIVE'
 FROM roles r WHERE r.name = 'LMO'
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (role_id, full_name, email, phone, password_hash, organization_name, status)
 SELECT r.id, 'Dev GATC User', 'dev.gatc@pramaan.local', '9000000004',
-       '$2b$10$CwTycUXWue0Thq9StjUM0uJ8pFGVXK1z8Ht4Xc3g6vqhz9O1qJZTa',
+       '$2b$10$s2etY4XoBAef7cmitAED0.qzl4P3ImRrli/IEwhFVRPNkmxz428xi',
        'Government Approved Test Centre (Dev)', 'ACTIVE'
 FROM roles r WHERE r.name = 'GATC'
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (role_id, full_name, email, phone, password_hash, status)
 SELECT r.id, 'Dev Public User', 'dev.public@pramaan.local', '9000000005',
-       '$2b$10$CwTycUXWue0Thq9StjUM0uJ8pFGVXK1z8Ht4Xc3g6vqhz9O1qJZTa',
+       '$2b$10$s2etY4XoBAef7cmitAED0.qzl4P3ImRrli/IEwhFVRPNkmxz428xi',
        'ACTIVE'
 FROM roles r WHERE r.name = 'PUBLIC_USER'
 ON CONFLICT (email) DO NOTHING;
