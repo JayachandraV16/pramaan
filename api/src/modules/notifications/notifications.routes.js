@@ -1,18 +1,42 @@
-// api/src/modules/notifications/notifications.routes.js
-//
-// STATUS: NOT STARTED — placeholder so app.js can mount every module now
-// and individual routes can be filled in later without touching app.js
-// or modules/index.js again (avoids merge conflicts).
-// Picked up in Stage 4.
-
 const express = require('express');
+
 const authenticate = require('../../middleware/authMiddleware');
-const ApiResponse = require('../../utils/ApiResponse');
+const controller = require('./notifications.controller');
 
 const router = express.Router();
 
-router.use(authenticate, (req, res) => {
-  new ApiResponse(501, null, 'notifications module not implemented yet (Stage 4)').send(res);
-});
+// All notification routes require authentication
+router.use(authenticate);
+
+// ADMIN creates a notification
+router.post(
+  '/',
+  controller.createNotification
+);
+
+// Get my notifications
+router.get(
+  '/',
+  controller.getMyNotifications
+);
+
+// Mark all my notifications as read
+// IMPORTANT: keep this before /:id
+router.patch(
+  '/read-all',
+  controller.markAllNotificationsAsRead
+);
+
+// Get notification by ID
+router.get(
+  '/:id',
+  controller.getNotificationById
+);
+
+// Mark one notification as read
+router.patch(
+  '/:id/read',
+  controller.markNotificationAsRead
+);
 
 module.exports = router;
