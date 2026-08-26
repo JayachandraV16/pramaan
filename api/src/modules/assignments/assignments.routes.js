@@ -1,18 +1,67 @@
-// api/src/modules/assignments/assignments.routes.js
-//
-// STATUS: NOT STARTED — placeholder so app.js can mount every module now
-// and individual routes can be filled in later without touching app.js
-// or modules/index.js again (avoids merge conflicts).
-// Picked up in Stage 2.
-
 const express = require('express');
+
 const authenticate = require('../../middleware/authMiddleware');
-const ApiResponse = require('../../utils/ApiResponse');
+const authorize = require('../../middleware/rbacMiddleware');
+const validateBody = require('../../middleware/validate');
+const { ROLES } = require('../../config/roles');
+
+const controller = require('./assignments.controller');
+
+const {
+  createAssignmentRules,
+  updateAssignmentStatusRules,
+} = require('./assignments.validation');
 
 const router = express.Router();
 
-router.use(authenticate, (req, res) => {
-  new ApiResponse(501, null, 'assignments module not implemented yet (Stage 2)').send(res);
-});
+// All assignment routes require authentication
+router.use(authenticate);
+
+// Create assignment
+// Only ADMIN can assign an application to an LMO/GATC
+router.post(
+  '/',
+  authorize(ROLES.ADMIN),
+  validateBody(createAssignmentRules),
+  controller.createAssignment
+);
+
+// Get assignments
+// ADMIN -> all assignments
+// LMO/GATC -> only assignments assigned to them
+router.get(
+  '/',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  controller.getAssignments
+);
+
+// Get one assignment
+router.get(
+  '/:id',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  controller.getAssignmentById
+);
+
+// Update assignment status
+// Assigned LMO/GATC can accept, decline, complete, etc.
+// ADMIN is also allowed by the service layer
+router.patch(
+  '/:id/status',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  validateBody(updateAssignmentStatusRules),
+  controller.updateAssignmentStatus
+);
 
 module.exports = router;

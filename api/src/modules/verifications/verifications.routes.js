@@ -1,18 +1,93 @@
-// api/src/modules/verifications/verifications.routes.js
-//
-// STATUS: NOT STARTED — placeholder so app.js can mount every module now
-// and individual routes can be filled in later without touching app.js
-// or modules/index.js again (avoids merge conflicts).
-// Picked up in Stage 3.
-
 const express = require('express');
+
 const authenticate = require('../../middleware/authMiddleware');
-const ApiResponse = require('../../utils/ApiResponse');
+const authorize = require('../../middleware/rbacMiddleware');
+const validateBody = require('../../middleware/validate');
+
+const { ROLES } = require('../../config/roles');
+
+const controller = require('./verifications.controller');
+
+const {
+  createVerificationRules,
+  createObservationRules,
+  createReadingRules,
+  createResultRules,
+} = require('./verifications.validation');
 
 const router = express.Router();
 
-router.use(authenticate, (req, res) => {
-  new ApiResponse(501, null, 'verifications module not implemented yet (Stage 3)').send(res);
-});
+// All verification routes require authentication
+router.use(authenticate);
+
+// Start a field verification
+router.post(
+  '/',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  validateBody(createVerificationRules),
+  controller.createVerification
+);
+
+// Get all accessible verifications
+router.get(
+  '/',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  controller.getVerifications
+);
+
+// Get one verification
+router.get(
+  '/:id',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  controller.getVerificationById
+);
+
+// Add qualitative observation
+router.post(
+  '/:id/observations',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  validateBody(createObservationRules),
+  controller.addObservation
+);
+
+// Add measurement reading
+router.post(
+  '/:id/readings',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  validateBody(createReadingRules),
+  controller.addReading
+);
+
+// Submit final PASS/FAIL result
+router.post(
+  '/:id/result',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  validateBody(createResultRules),
+  controller.submitResult
+);
 
 module.exports = router;

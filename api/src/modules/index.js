@@ -15,7 +15,7 @@ const assignmentsRoutes = require('./assignments/assignments.routes');
 const verificationsRoutes = require('./verifications/verifications.routes');
 const certificatesRoutes = require('./certificates/certificates.routes');
 const notificationsRoutes = require('./notifications/notifications.routes');
-
+const schedulesRoutes = require('./schedules/schedules.routes');
 const router = express.Router();
 
 router.use('/auth', authRoutes);
@@ -25,5 +25,5 @@ router.use('/assignments', assignmentsRoutes);
 router.use('/verifications', verificationsRoutes);
 router.use('/certificates', certificatesRoutes);
 router.use('/notifications', notificationsRoutes);
-
+router.use('/schedules', schedulesRoutes);
 module.exports = router;
