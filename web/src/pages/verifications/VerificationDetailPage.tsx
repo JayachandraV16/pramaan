@@ -1,0 +1,572 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { verificationsApi } from '../../api/verifications.api';
+import { Verification } from '../../types';
+import { Card } from '../../components/common/Card';
+import { Badge } from '../../components/common/Badge';
+import { Button } from '../../components/common/Button';
+import { Modal } from '../../components/common/Modal';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { useAuth } from '../../context/AuthContext';
+
+export const VerificationDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [verification, setVerification] = useState<Verification | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modal states for adding observation / reading / submitting final decision
+  const [showObsModal, setShowObsModal] = useState(false);
+  const [showReadingModal, setShowReadingModal] = useState(false);
+  const [showDecisionModal, setShowDecisionModal] = useState(false);
+
+  // Form inputs
+  const [obsType, setObsType] = useState('Lead & Wire Official Seal Integrity');
+  const [obsDesc, setObsDesc] = useState('Inspect tamper protection seal');
+  const [obsVal, setObsVal] = useState('Intact');
+  const [obsRemarks, setObsRemarks] = useState('');
+
+  const [rdgType, setRdgType] = useState('Standard Load Point Test');
+  const [expectedVal, setExpectedVal] = useState('50.000');
+  const [observedVal, setObservedVal] = useState('50.005');
+  const [unit, setUnit] = useState('kg');
+  const [tolerance, setTolerance] = useState('0.050');
+  const [rdgRemarks, setRdgRemarks] = useState('Within permissible error');
+
+  const [finalDecision, setFinalDecision] = useState<'PASS' | 'FAIL'>('PASS');
+  const [decisionRemarks, setDecisionRemarks] = useState('All metrological error tolerances and qualitative seal verifications satisfied.');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (id) loadVerification(id);
+  }, [id]);
+
+  const loadVerification = async (verId: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await verificationsApi.getVerificationById(verId);
+      if (!data) {
+        setError('Verification record not found.');
+      } else {
+        setVerification(data);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load verification inspection record.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddObservation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verification) return;
+    setIsSubmitting(true);
+    try {
+      await verificationsApi.addObservation(verification.id, {
+        observation_type: obsType,
+        observation_description: obsDesc,
+        observed_value: obsVal,
+        remarks: obsRemarks,
+      });
+      setShowObsModal(false);
+      loadVerification(verification.id);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to save observation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddReading = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verification) return;
+    setIsSubmitting(true);
+
+    const exp = Number(expectedVal);
+    const obs = Number(observedVal);
+    const tol = Number(tolerance);
+    const pass = Math.abs(obs - exp) <= tol;
+
+    try {
+      await verificationsApi.addReading(verification.id, {
+        reading_type: rdgType,
+        expected_value: exp,
+        observed_value: obs,
+        unit,
+        tolerance: tol,
+        result: pass ? 'PASS' : 'FAIL',
+        remarks: rdgRemarks,
+      });
+      setShowReadingModal(false);
+      loadVerification(verification.id);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to record measurement reading');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitDecision = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verification) return;
+    setIsSubmitting(true);
+    try {
+      await verificationsApi.submitDecision(
+        verification.id,
+        finalDecision,
+        decisionRemarks,
+        {
+          id: user?.id || 'u-201-lmo-001',
+          name: user?.full_name || 'Vikram Malhotra (LMO)',
+        }
+      );
+      setShowDecisionModal(false);
+      loadVerification(verification.id);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to sign decision');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <LoadingSpinner label="Loading verification inspection sheet..." />
+      </div>
+    );
+  }
+
+  if (error || !verification) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <ErrorMessage message={error || 'Verification record not found'} onRetry={() => id && loadVerification(id)} />
+        <div className="mt-4">
+          <Button variant="secondary" onClick={() => navigate('/verifications')}>
+            ← Back to Verifications
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Header & Back */}
+      <div className="flex items-center justify-between">
+        <Link to="/verifications" className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1">
+          ← Back to Verifications List
+        </Link>
+        <Badge status={verification.status} size="md" />
+      </div>
+
+      {/* Main Inspection Header */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-gov flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">
+            Official Field Verification Dossier
+          </span>
+          <h1 className="text-2xl font-bold text-slate-900 mt-0.5">{verification.instrument_name}</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Serial: <strong className="font-mono text-slate-800">{verification.instrument_serial}</strong> • Location: {verification.location}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {verification.status === 'IN_PROGRESS' && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setShowObsModal(true)}>
+                + Add Qualitative Check
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowReadingModal(true)}>
+                + Record Load Reading
+              </Button>
+              <Button variant="accent" size="sm" onClick={() => setShowDecisionModal(true)}>
+                Finalize Decision (PASS/FAIL)
+              </Button>
+            </>
+          )}
+
+          {verification.result && (
+            <div className="flex items-center gap-3">
+              <Badge status={verification.result.decision} size="lg">
+                Decision: {verification.result.decision}
+              </Badge>
+              {verification.result.decision === 'PASS' && (
+                <Link to="/certificates">
+                  <Button variant="primary" size="sm">
+                    View Stamped Certificate →
+                  </Button>
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Final Decision Banner if Completed */}
+      {verification.result && (
+        <div
+          className={`rounded-2xl p-5 border ${
+            verification.result.decision === 'PASS'
+              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+              : 'bg-rose-50/80 border-rose-200 text-rose-900'
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold">
+                  {verification.result.decision === 'PASS' ? '✓ STATUTORY PASS DECISION' : '✗ FAILED TOLERANCE VERIFICATION'}
+                </span>
+                <span className="text-xs font-mono">
+                  {new Date(verification.result.result_date).toLocaleDateString()}
+                </span>
+              </div>
+              <p className="text-xs mt-1 leading-relaxed opacity-90">{verification.result.remarks}</p>
+            </div>
+            <div className="text-right text-xs shrink-0">
+              <p className="font-semibold">{verification.result.decided_by_name || 'Legal Metrology Officer'}</p>
+              <p className="text-[11px] opacity-75">Statutory Sign-Off Authority</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section 1: Quantitative Measurement Readings Table */}
+      <Card
+        title="Quantitative Measurement & Error Tolerance Readings"
+        subtitle="Standard test weight comparison against permissible limits (Schedule IX, Metrology Rules)"
+        action={
+          verification.status === 'IN_PROGRESS' && (
+            <Button variant="outline" size="sm" onClick={() => setShowReadingModal(true)}>
+              + Add Reading
+            </Button>
+          )
+        }
+      >
+        {verification.readings.length === 0 ? (
+          <p className="text-xs text-slate-400 py-4 italic text-center">No measurement readings logged yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                  <th className="pb-3 pr-4">Test Step / Load Point</th>
+                  <th className="pb-3 px-4">Standard Weight (Exp)</th>
+                  <th className="pb-3 px-4">Observed Reading</th>
+                  <th className="pb-3 px-4">Error vs Tolerance</th>
+                  <th className="pb-3 px-4">Result</th>
+                  <th className="pb-3 pl-4">Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {verification.readings.map((r) => {
+                  const errorVal = Number((r.observed_value - (r.expected_value || 0)).toFixed(4));
+                  return (
+                    <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 pr-4 font-semibold text-slate-900">{r.reading_type}</td>
+                      <td className="py-3 px-4 font-mono">{r.expected_value} {r.unit}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{r.observed_value} {r.unit}</td>
+                      <td className="py-3 px-4 font-mono text-[11px]">
+                        <span className={errorVal > r.tolerance ? 'text-rose-600 font-bold' : 'text-slate-600'}>
+                          {errorVal >= 0 ? `+${errorVal}` : errorVal} {r.unit}
+                        </span>{' '}
+                        <span className="text-slate-400">(±{r.tolerance})</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge status={r.result} size="sm">
+                          {r.result}
+                        </Badge>
+                      </td>
+                      <td className="py-3 pl-4 text-slate-500 text-[11px]">{r.remarks || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Section 2: Qualitative Inspection Observations Table */}
+      <Card
+        title="Qualitative Inspection & Tamper Seal Observations"
+        subtitle="Visual, mechanical, and tamper-evident wire seal inspection checklist"
+        action={
+          verification.status === 'IN_PROGRESS' && (
+            <Button variant="outline" size="sm" onClick={() => setShowObsModal(true)}>
+              + Add Observation
+            </Button>
+          )
+        }
+      >
+        {verification.observations.length === 0 ? (
+          <p className="text-xs text-slate-400 py-4 italic text-center">No qualitative observations logged yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                  <th className="pb-3 pr-4">Checklist Category</th>
+                  <th className="pb-3 px-4">Description</th>
+                  <th className="pb-3 px-4">Observed State</th>
+                  <th className="pb-3 pl-4">Officer Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {verification.observations.map((obs) => (
+                  <tr key={obs.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 pr-4 font-semibold text-slate-900">{obs.observation_type}</td>
+                    <td className="py-3 px-4 text-slate-500 text-[11px]">{obs.observation_description}</td>
+                    <td className="py-3 px-4">
+                      <span className="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200">
+                        {obs.observed_value}
+                      </span>
+                    </td>
+                    <td className="py-3 pl-4 text-slate-600 text-[11px]">{obs.remarks || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* MODAL 1: Add Reading */}
+      <Modal
+        isOpen={showReadingModal}
+        onClose={() => setShowReadingModal(false)}
+        title="Record Measurement Reading"
+        subtitle="Log load point and tolerance check against calibrated test weight"
+      >
+        <form onSubmit={handleAddReading} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Reading Type / Test Point *</label>
+            <input
+              type="text"
+              value={rdgType}
+              onChange={(e) => setRdgType(e.target.value)}
+              placeholder="e.g. Zero Load, Half Max Load (50kg), Corner 1"
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Expected Standard Value *</label>
+              <input
+                type="number"
+                step="0.0001"
+                value={expectedVal}
+                onChange={(e) => setExpectedVal(e.target.value)}
+                required
+                className="w-full px-3 py-2 font-mono border border-slate-300 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Observed Reading *</label>
+              <input
+                type="number"
+                step="0.0001"
+                value={observedVal}
+                onChange={(e) => setObservedVal(e.target.value)}
+                required
+                className="w-full px-3 py-2 font-mono border border-slate-300 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Unit *</label>
+              <input
+                type="text"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Tolerance (+- Limit) *</label>
+              <input
+                type="number"
+                step="0.0001"
+                value={tolerance}
+                onChange={(e) => setTolerance(e.target.value)}
+                required
+                className="w-full px-3 py-2 font-mono border border-slate-300 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Remarks</label>
+            <input
+              type="text"
+              value={rdgRemarks}
+              onChange={(e) => setRdgRemarks(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowReadingModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm" isLoading={isSubmitting}>
+              Save Reading
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 2: Add Observation */}
+      <Modal
+        isOpen={showObsModal}
+        onClose={() => setShowObsModal(false)}
+        title="Add Qualitative Observation"
+        subtitle="Record visual, mechanical, or seal inspection observation"
+      >
+        <form onSubmit={handleAddObservation} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Observation Type *</label>
+            <input
+              type="text"
+              value={obsType}
+              onChange={(e) => setObsType(e.target.value)}
+              placeholder="e.g. Lead & Wire Seal Integrity, Spirit Level"
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Observation Description</label>
+            <input
+              type="text"
+              value={obsDesc}
+              onChange={(e) => setObsDesc(e.target.value)}
+              placeholder="Details of the physical check"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Observed State / Value *</label>
+            <input
+              type="text"
+              value={obsVal}
+              onChange={(e) => setObsVal(e.target.value)}
+              placeholder="e.g. Intact, Good, No Distortion"
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Officer Notes</label>
+            <input
+              type="text"
+              value={obsRemarks}
+              onChange={(e) => setObsRemarks(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowObsModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm" isLoading={isSubmitting}>
+              Save Observation
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 3: Submit Final Decision */}
+      <Modal
+        isOpen={showDecisionModal}
+        onClose={() => setShowDecisionModal(false)}
+        title="Finalize Metrological Verification Decision"
+        subtitle="Sign off on legal stamping and certificate generation"
+      >
+        <form onSubmit={handleSubmitDecision} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Statutory Decision *</label>
+            <div className="grid grid-cols-2 gap-3">
+              <label
+                className={`p-3 rounded-xl border cursor-pointer text-center font-bold ${
+                  finalDecision === 'PASS'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                    : 'border-slate-200 text-slate-600'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="finalDecision"
+                  value="PASS"
+                  checked={finalDecision === 'PASS'}
+                  onChange={() => setFinalDecision('PASS')}
+                  className="mr-1.5"
+                />
+                PASS (Issue Certificate)
+              </label>
+
+              <label
+                className={`p-3 rounded-xl border cursor-pointer text-center font-bold ${
+                  finalDecision === 'FAIL'
+                    ? 'bg-rose-50 border-rose-500 text-rose-800'
+                    : 'border-slate-200 text-slate-600'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="finalDecision"
+                  value="FAIL"
+                  checked={finalDecision === 'FAIL'}
+                  onChange={() => setFinalDecision('FAIL')}
+                  className="mr-1.5"
+                />
+                FAIL (Reject & Rectify)
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Official Findings & Sign-Off Remarks *</label>
+            <textarea
+              rows={3}
+              value={decisionRemarks}
+              onChange={(e) => setDecisionRemarks(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowDecisionModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant={finalDecision === 'PASS' ? 'accent' : 'danger'}
+              size="sm"
+              isLoading={isSubmitting}
+            >
+              Sign & Stamp Decision
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+};
