@@ -85,3 +85,5 @@ SELECT u.id, it.id, 'Shop Counter Scale', 'Avery Weigh-Tronix', 'AWT-200',
 FROM users u, instrument_types it
 WHERE u.email = 'dev.owner@pramaan.local' AND it.name = 'Weighing Scale'
 ON CONFLICT (serial_number) DO NOTHING;
+
+
