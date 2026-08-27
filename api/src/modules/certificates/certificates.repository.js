@@ -156,6 +156,17 @@ async function updateCertificateStatus(id, status) {
 
   return rows[0] || null;
 }
+async function updateCertificateFileUrl(id, fileUrl) {
+  const { rows } = await pool.query(
+    `UPDATE verification_certificates
+     SET certificate_file_url = $2
+     WHERE id = $1
+     RETURNING *`,
+    [id, fileUrl]
+  );
+
+  return rows[0] || null;
+}
 
 module.exports = {
   findVerificationById,
@@ -167,4 +178,5 @@ module.exports = {
   findCertificateById,
   findCertificateByQrToken,
   updateCertificateStatus,
+  updateCertificateFileUrl,
 };

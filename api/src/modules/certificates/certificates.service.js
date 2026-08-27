@@ -6,6 +6,13 @@ const {
 } = require('./certificates.validation');
 
 const { ROLES } = require('../../config/roles');
+const fs = require('fs');
+const path = require('path');
+
+const { generateQRCode } = require('../../utils/qrGenerator');
+const {
+  generateCertificatePDF,
+} = require('../../utils/certificateGenerator');
 
 // Create certificate
 async function createCertificate(user, data) {
@@ -80,13 +87,66 @@ async function createCertificate(user, data) {
   const certificateNumber =
     await repo.getNextCertificateNumber();
 
-  return repo.createCertificate({
+    const certificate = await repo.createCertificate({
     verificationId: data.verificationId,
     instrumentId: data.instrumentId,
     certificateNumber,
     validFrom: data.validFrom,
     validUntil: data.validUntil,
   });
+
+  // Generate QR code
+  const qrCodeBuffer = await generateQRCode(
+    certificate.qr_token
+  );
+
+  // Add instrument details required by PDF generator
+  const certificateData = {
+    ...certificate,
+    instrument_name: instrument.instrument_name,
+    manufacturer: instrument.manufacturer,
+    model: instrument.model,
+  };
+
+  // Generate PDF
+  const pdfBuffer = await generateCertificatePDF(
+    certificateData,
+    qrCodeBuffer
+  );
+
+  // Ensure certificates upload directory exists
+  const certificatesDir = path.join(
+    process.cwd(),
+    'uploads',
+    'certificates'
+  );
+
+  fs.mkdirSync(certificatesDir, {
+    recursive: true,
+  });
+
+  // Save PDF
+  const fileName = `${certificate.certificate_number}.pdf`;
+
+  const filePath = path.join(
+    certificatesDir,
+    fileName
+  );
+
+  fs.writeFileSync(filePath, pdfBuffer);
+
+  // URL stored in database
+  const fileUrl =
+    `/uploads/certificates/${fileName}`;
+
+  // Update certificate
+  const updatedCertificate =
+    await repo.updateCertificateFileUrl(
+      certificate.id,
+      fileUrl
+    );
+
+  return updatedCertificate;
 }
 
 // Get all certificates
