@@ -37,6 +37,74 @@ export interface InstrumentType {
   created_at: string;
 }
 
+// ==========================================
+// BACKEND CONTRACT TYPES (api/src/modules/instruments)
+// ==========================================
+
+export interface BackendInstrumentTypeResponse {
+  id: string;
+  name: string;
+  description?: string;
+  default_unit?: string;
+  defaultUnit?: string;
+  is_active?: boolean;
+  isActive?: boolean;
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface BackendCreateInstrumentRequest {
+  instrumentTypeId: string;
+  instrumentName: string;
+  serialNumber: string;
+  manufacturer?: string;
+  model?: string;
+  capacity?: number;
+  capacityUnit?: string;
+  accuracyClass?: string;
+  locationAddress?: string;
+  locationLat?: number;
+  locationLng?: number;
+}
+
+export interface BackendInstrumentResponse {
+  id: string;
+  owner_id?: string;
+  ownerId?: string;
+  owner_name?: string;
+  ownerName?: string;
+  instrument_type_id?: string;
+  instrumentTypeId?: string;
+  instrument_type_name?: string;
+  instrumentTypeName?: string;
+  instrument_name?: string;
+  instrumentName?: string;
+  manufacturer?: string;
+  model?: string;
+  serial_number?: string;
+  serialNumber?: string;
+  registration_number?: string | null;
+  registrationNumber?: string | null;
+  capacity?: number;
+  capacity_unit?: string;
+  capacityUnit?: string;
+  accuracy_class?: string;
+  accuracyClass?: string;
+  location_address?: string;
+  locationAddress?: string;
+  location_lat?: number;
+  locationLat?: number;
+  location_lng?: number;
+  locationLng?: number;
+  registration_date?: string;
+  registrationDate?: string;
+  status?: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+}
+
 export interface Instrument {
   id: string;
   owner_id: string;
