@@ -10,6 +10,7 @@ const express = require('express');
 
 const authRoutes = require('./auth/auth.routes');
 const instrumentsRoutes = require('./instruments/instruments.routes');
+const instrumentTypesRoutes = require('./instrument-types/instrument-types.routes');
 const applicationsRoutes = require('./applications/applications.routes');
 const assignmentsRoutes = require('./assignments/assignments.routes');
 const verificationsRoutes = require('./verifications/verifications.routes');
@@ -23,6 +24,7 @@ const router = express.Router();
 
 router.use('/auth', authRoutes);
 router.use('/instruments', instrumentsRoutes);
+router.use('/instrument-types', instrumentTypesRoutes);
 router.use('/applications', applicationsRoutes);
 router.use('/assignments', assignmentsRoutes);
 router.use('/verifications', verificationsRoutes);
