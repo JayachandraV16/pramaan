@@ -85,12 +85,28 @@ const submitResult = asyncHandler(async (req, res) => {
     'Verification result submitted successfully'
   ).send(res);
 });
+async function getVerificationResult(req, res, next) {
+  try {
+    const result = await service.getVerificationResult(
+      req.user,
+      req.params.id
+    );
 
+    new ApiResponse(
+      200,
+      result,
+      'Verification result retrieved successfully'
+    ).send(res);
+  } catch (error) {
+    next(error);
+  }
+}
 module.exports = {
   createVerification,
   addObservation,
   addReading,
   getVerifications,
   getVerificationById,
+  getVerificationResult,
   submitResult,
 };

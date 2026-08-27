@@ -5,7 +5,6 @@ const authorize = require('../../middleware/rbacMiddleware');
 const validateBody = require('../../middleware/validate');
 
 const { ROLES } = require('../../config/roles');
-
 const controller = require('./verifications.controller');
 
 const {
@@ -41,6 +40,17 @@ router.get(
     ROLES.GATC
   ),
   controller.getVerifications
+);
+
+// Get one verification result
+router.get(
+  '/:id/result',
+  authorize(
+    ROLES.ADMIN,
+    ROLES.LMO,
+    ROLES.GATC
+  ),
+  controller.getVerificationResult
 );
 
 // Get one verification

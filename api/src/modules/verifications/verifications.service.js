@@ -270,12 +270,44 @@ async function submitResult(
 
   return result;
 }
+async function getVerificationResult(user, verificationId) {
+  const verification = await repo.findVerificationById(
+    verificationId
+  );
 
+  if (!verification) {
+    throw ApiError.notFound('Verification not found');
+  }
+
+  // ADMIN can access any result
+  // Officer can access only their own verification
+  if (
+    user.role !== ROLES.ADMIN &&
+    verification.performed_by_id !== user.id
+  ) {
+    throw ApiError.forbidden(
+      'You do not have permission to access this verification result'
+    );
+  }
+
+  const result = await repo.findResultByVerificationId(
+    verificationId
+  );
+
+  if (!result) {
+    throw ApiError.notFound(
+      'Verification result has not been submitted yet'
+    );
+  }
+
+  return result;
+}
 module.exports = {
   createVerification,
   addObservation,
   addReading,
   getVerifications,
   getVerificationById,
+  getVerificationResult,
   submitResult,
 };
