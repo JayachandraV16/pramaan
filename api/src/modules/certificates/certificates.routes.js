@@ -1,18 +1,62 @@
-// api/src/modules/certificates/certificates.routes.js
-//
-// STATUS: NOT STARTED — placeholder so app.js can mount every module now
-// and individual routes can be filled in later without touching app.js
-// or modules/index.js again (avoids merge conflicts).
-// Picked up in Stage 3.
-
 const express = require('express');
+
 const authenticate = require('../../middleware/authMiddleware');
-const ApiResponse = require('../../utils/ApiResponse');
+const authorize = require('../../middleware/rbacMiddleware');
+const validateBody = require('../../middleware/validate');
+
+const { ROLES } = require('../../config/roles');
+
+const controller = require('./certificates.controller');
+
+const {
+  createCertificateRules,
+  updateCertificateStatusRules,
+} = require('./certificates.validation');
 
 const router = express.Router();
 
-router.use(authenticate, (req, res) => {
-  new ApiResponse(501, null, 'certificates module not implemented yet (Stage 3)').send(res);
-});
+// ============================================
+// PUBLIC QR VERIFICATION
+// No authentication required
+// ============================================
+router.get(
+  '/verify/:qrToken',
+  controller.verifyCertificate
+);
+
+// ============================================
+// AUTHENTICATED ROUTES
+// ============================================
+router.use(authenticate);
+
+// Issue certificate
+router.post(
+  '/',
+  authorize(ROLES.ADMIN),
+  validateBody(createCertificateRules),
+  controller.createCertificate
+);
+
+// Get all certificates
+router.get(
+  '/',
+  authorize(ROLES.ADMIN),
+  controller.getCertificates
+);
+
+// Get certificate by ID
+router.get(
+  '/:id',
+  authorize(ROLES.ADMIN),
+  controller.getCertificateById
+);
+
+// Update certificate status
+router.patch(
+  '/:id/status',
+  authorize(ROLES.ADMIN),
+  validateBody(updateCertificateStatusRules),
+  controller.updateCertificateStatus
+);
 
 module.exports = router;

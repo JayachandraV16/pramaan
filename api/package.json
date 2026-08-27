@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "reset": "node src/reset.js",
+    "migrate": "node src/migrate.js",
+    "seed": "node src/seed.js",
+    "db:setup": "npm run reset && npm run migrate && npm run seed"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +21,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
     "pg": "^8.23.0"
   },
   "devDependencies": {

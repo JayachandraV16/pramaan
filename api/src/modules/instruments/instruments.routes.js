@@ -1,18 +1,40 @@
-// api/src/modules/instruments/instruments.routes.js
-//
-// STATUS: NOT STARTED — placeholder so app.js can mount every module now
-// and individual routes can be filled in later without touching app.js
-// or modules/index.js again (avoids merge conflicts).
-// Picked up in Stage 1.
-
 const express = require('express');
+
 const authenticate = require('../../middleware/authMiddleware');
-const ApiResponse = require('../../utils/ApiResponse');
+const authorize = require('../../middleware/rbacMiddleware');
+const validateBody = require('../../middleware/validate');
+const { ROLES } = require('../../config/roles');
+
+const controller = require('./instruments.controller');
+const { createInstrumentRules } = require('./instruments.validation');
 
 const router = express.Router();
 
-router.use(authenticate, (req, res) => {
-  new ApiResponse(501, null, 'instruments module not implemented yet (Stage 1)').send(res);
-});
+// All instrument routes require authentication
+router.use(authenticate);
+
+// Create an instrument
+router.post(
+  '/',
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN),
+  validateBody(createInstrumentRules),
+  controller.createInstrument
+);
+
+// Get instruments
+// ADMIN -> all instruments
+// INSTRUMENT_OWNER -> own instruments
+router.get(
+  '/',
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN),
+  controller.getInstruments
+);
+
+// Get one instrument
+router.get(
+  '/:id',
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN),
+  controller.getInstrumentById
+);
 
 module.exports = router;
