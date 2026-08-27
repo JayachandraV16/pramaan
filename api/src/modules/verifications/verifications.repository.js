@@ -259,7 +259,17 @@ async function findVerificationsByOfficerId(userId) {
 
   return rows;
 }
+async function completeApplication(applicationId) {
+  const { rows } = await pool.query(
+    `UPDATE verification_applications
+     SET status = 'COMPLETED'
+     WHERE id = $1
+     RETURNING *`,
+    [applicationId]
+  );
 
+  return rows[0] || null;
+}
 module.exports = {
   findAssignmentById,
   findScheduleById,
@@ -274,4 +284,5 @@ module.exports = {
   completeVerification,
   findAllVerifications,
   findVerificationsByOfficerId,
+  completeApplication,
 };

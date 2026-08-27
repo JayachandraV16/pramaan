@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "reset": "node src/reset.js",
+    "migrate": "node src/migrate.js",
+    "seed": "node src/seed.js",
+    "db:setup": "npm run reset && npm run migrate && npm run seed"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +22,9 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
-    "pg": "^8.23.0"
+    "pdfkit": "^0.20.1",
+    "pg": "^8.23.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

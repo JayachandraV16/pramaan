@@ -50,11 +50,16 @@ async function createAssignment(user, data) {
   }
 
   const assignment = await repo.createAssignment({
-    applicationId: data.applicationId,
-    assignedToId: data.assignedToId,
-    assignedById: user.id,
-    remarks: data.remarks,
+  applicationId: data.applicationId,
+  assignedToId: data.assignedToId,
+  assignedById: user.id,
+  remarks: data.remarks,
   });
+
+  await repo.updateApplicationStatus(
+    data.applicationId,
+    'UNDER_REVIEW'
+  );
 
   return assignment;
 }

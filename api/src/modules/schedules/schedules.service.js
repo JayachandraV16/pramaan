@@ -31,14 +31,21 @@ async function createSchedule(user, data) {
     );
   }
 
-  return repo.createSchedule({
-    applicationId: data.applicationId,
-    assignmentId: data.assignmentId,
-    scheduledDate: data.scheduledDate,
-    scheduledTime: data.scheduledTime,
-    verificationLocation: data.verificationLocation,
-    remarks: data.remarks,
+  const schedule = await repo.createSchedule({
+  applicationId: data.applicationId,
+  assignmentId: data.assignmentId,
+  scheduledDate: data.scheduledDate,
+  scheduledTime: data.scheduledTime,
+  verificationLocation: data.verificationLocation,
+  remarks: data.remarks,
   });
+
+  await repo.updateApplicationStatus(
+    data.applicationId,
+    'SCHEDULED'
+  );
+
+  return schedule;
 }
 
 async function getSchedules(user) {

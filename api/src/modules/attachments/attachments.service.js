@@ -6,7 +6,36 @@ const {
 } = require('./attachments.validation');
 
 const { ROLES } = require('../../config/roles');
+async function ensureApplicationAccess(user, applicationId) {
+  // ADMIN has full access
+  if (user.role === ROLES.ADMIN) {
+    return;
+  }
 
+  // Instrument owner can access their own application
+  const isOwner = await repo.isApplicationOwner(
+    applicationId,
+    user.id
+  );
+
+  if (isOwner) {
+    return;
+  }
+
+  // Assigned LMO/GATC can access the application
+  const isAssigned = await repo.isAssignedToApplication(
+    applicationId,
+    user.id
+  );
+
+  if (isAssigned) {
+    return;
+  }
+
+  throw ApiError.forbidden(
+    'You do not have permission to access attachments for this application'
+  );
+}
 // Create attachment
 async function createAttachment(user, data) {
   const {
@@ -67,6 +96,11 @@ async function createAttachment(user, data) {
     if (!application) {
       throw ApiError.notFound('Application not found');
     }
+
+    await ensureApplicationAccess(
+      user,
+      applicationId
+    );
   }
 
   if (verificationId) {
@@ -76,7 +110,12 @@ async function createAttachment(user, data) {
     if (!verification) {
       throw ApiError.notFound('Verification not found');
     }
-  }
+
+    await ensureApplicationAccess(
+      user,
+      verification.application_id
+    );
+  } 
 
   if (certificateId) {
     const certificate =
@@ -85,6 +124,22 @@ async function createAttachment(user, data) {
     if (!certificate) {
       throw ApiError.notFound('Certificate not found');
     }
+
+    const applicationId =
+      await repo.findApplicationIdByCertificateId(
+        certificateId
+      );
+
+    if (!applicationId) {
+      throw ApiError.forbidden(
+        'Unable to determine certificate ownership'
+      );
+    }
+
+    await ensureApplicationAccess(
+      user,
+      applicationId
+    );
   }
 
   return repo.createAttachment({
@@ -110,14 +165,37 @@ async function getAttachmentById(user, attachmentId) {
     throw ApiError.notFound('Attachment not found');
   }
 
+  let applicationId = attachment.application_id;
+
+  // Attachment belongs to a verification
+  if (!applicationId && attachment.verification_id) {
+    applicationId =
+      await repo.findApplicationIdByVerificationId(
+        attachment.verification_id
+      );
+  }
+
+  // Attachment belongs to a certificate
+  if (!applicationId && attachment.certificate_id) {
+    applicationId =
+      await repo.findApplicationIdByCertificateId(
+        attachment.certificate_id
+      );
+  }
+
+  if (!applicationId) {
+    throw ApiError.forbidden(
+      'Unable to determine attachment ownership'
+    );
+  }
+
+  await ensureApplicationAccess(user, applicationId);
+
   return attachment;
 }
 
 // Get application attachments
-async function getApplicationAttachments(
-  user,
-  applicationId
-) {
+async function getApplicationAttachments(user, applicationId) {
   const application =
     await repo.findApplicationById(applicationId);
 
@@ -125,9 +203,9 @@ async function getApplicationAttachments(
     throw ApiError.notFound('Application not found');
   }
 
-  return repo.findAttachmentsByApplicationId(
-    applicationId
-  );
+  await ensureApplicationAccess(user, applicationId);
+
+  return repo.findAttachmentsByApplicationId(applicationId);
 }
 
 // Get verification attachments
@@ -141,6 +219,11 @@ async function getVerificationAttachments(
   if (!verification) {
     throw ApiError.notFound('Verification not found');
   }
+
+  await ensureApplicationAccess(
+    user,
+    verification.application_id
+  );
 
   return repo.findAttachmentsByVerificationId(
     verificationId
@@ -158,6 +241,22 @@ async function getCertificateAttachments(
   if (!certificate) {
     throw ApiError.notFound('Certificate not found');
   }
+
+  const applicationId =
+    await repo.findApplicationIdByCertificateId(
+      certificateId
+    );
+
+  if (!applicationId) {
+    throw ApiError.forbidden(
+      'Unable to determine certificate ownership'
+    );
+  }
+
+  await ensureApplicationAccess(
+    user,
+    applicationId
+  );
 
   return repo.findAttachmentsByCertificateId(
     certificateId

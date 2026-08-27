@@ -151,15 +151,85 @@ async function deleteAttachment(id) {
 
   return rows[0] || null;
 }
+// Check whether a user owns an application
 
+async function isApplicationOwner(applicationId, userId) {
+  const { rows } = await pool.query(
+    `
+      SELECT 1
+      FROM verification_applications
+      WHERE id = $1
+        AND applicant_id = $2
+    `,
+    [applicationId, userId]
+  );
+
+  return rows.length > 0;
+}
+
+// Check whether an LMO/GATC is assigned to an application
+
+async function isAssignedToApplication(applicationId, userId) {
+  const { rows } = await pool.query(
+    `
+      SELECT 1
+      FROM verification_assignments
+      WHERE application_id = $1
+        AND assigned_to_id = $2
+    `,
+    [applicationId, userId]
+  );
+
+  return rows.length > 0;
+}
+
+// Get the application connected to a verification
+
+async function findApplicationIdByVerificationId(verificationId) {
+  const { rows } = await pool.query(
+    `
+      SELECT application_id
+      FROM verifications
+      WHERE id = $1
+    `,
+    [verificationId]
+  );
+
+  return rows[0]?.application_id || null;
+}
+
+// Get the application connected to a certificate
+
+async function findApplicationIdByCertificateId(certificateId) {
+  const { rows } = await pool.query(
+    `
+      SELECT application_id
+      FROM verification_certificates
+      WHERE id = $1
+    `,
+    [certificateId]
+  );
+
+  return rows[0]?.application_id || null;
+}
 module.exports = {
   findApplicationById,
   findVerificationById,
   findCertificateById,
+
   createAttachment,
+
   findAttachmentById,
+
   findAttachmentsByApplicationId,
   findAttachmentsByVerificationId,
   findAttachmentsByCertificateId,
+
+  isApplicationOwner,
+  isAssignedToApplication,
+
+  findApplicationIdByVerificationId,
+  findApplicationIdByCertificateId,
+
   deleteAttachment,
 };
