@@ -130,6 +130,21 @@ async function updateAssignmentStatus(id, status, remarks) {
   return rows[0] || null;
 }
 
+async function updateApplicationStatus(
+  applicationId,
+  status
+) {
+  const { rows } = await pool.query(
+    `UPDATE verification_applications
+     SET status = $2
+     WHERE id = $1
+     RETURNING *`,
+    [applicationId, status]
+  );
+
+  return rows[0] || null;
+}
+
 module.exports = {
   findApplicationById,
   findUserById,
@@ -138,4 +153,5 @@ module.exports = {
   findAssignmentsByAssigneeId,
   findAssignmentById,
   updateAssignmentStatus,
+  updateApplicationStatus,
 };

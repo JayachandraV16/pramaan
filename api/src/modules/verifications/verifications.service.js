@@ -256,13 +256,17 @@ async function submitResult(
   }
 
   const result = await repo.createResult({
-    verificationId,
-    decision: data.decision,
-    decidedById: user.id,
-    remarks: data.remarks,
+  verificationId,
+  decision: data.decision,
+  decidedById: user.id,
+  remarks: data.remarks,
   });
 
   await repo.completeVerification(verificationId);
+
+  await repo.completeApplication(
+    verification.application_id
+  );
 
   return result;
 }
