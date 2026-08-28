@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { applicationsApi } from '../../api/applications.api';
 import { VerificationApplication } from '../../types';
 import { Card } from '../../components/common/Card';
@@ -7,19 +8,28 @@ import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { EmptyState } from '../../components/common/EmptyState';
 
 export const ApplicationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'GATC' || user?.role_id === 'ADMIN';
+
   const [app, setApp] = useState<VerificationApplication | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) loadApp(id);
-  }, [id]);
+    if (!isAuthLoading && isAuthorized && id) {
+      loadApp(id);
+    } else if (!isAuthLoading && !isAuthorized) {
+      setIsLoading(false);
+    }
+  }, [isAuthLoading, isAuthorized, id]);
 
   const loadApp = async (appId: string) => {
+    if (!isAuthorized) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -36,10 +46,23 @@ export const ApplicationDetailPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
         <LoadingSpinner label="Loading application lifecycle tracking..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Verification Applications are available to Instrument Owners, GATC Test Centres, and Administrators."
+          actionText="Return to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
       </div>
     );
   }

@@ -8,12 +8,14 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { EmptyState } from '../../components/common/EmptyState';
 import { useAuth } from '../../context/AuthContext';
 
 export const VerificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const isAuthorized = user?.role_id === 'LMO' || user?.role_id === 'GATC' || user?.role_id === 'ADMIN';
 
   const [verification, setVerification] = useState<Verification | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,10 +44,15 @@ export const VerificationDetailPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (id) loadVerification(id);
-  }, [id]);
+    if (!isAuthLoading && isAuthorized && id) {
+      loadVerification(id);
+    } else if (!isAuthLoading && !isAuthorized) {
+      setIsLoading(false);
+    }
+  }, [isAuthLoading, isAuthorized, id]);
 
   const loadVerification = async (verId: string) => {
+    if (!isAuthorized) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -121,8 +128,8 @@ export const VerificationDetailPage: React.FC = () => {
         finalDecision,
         decisionRemarks,
         {
-          id: user?.id || 'u-201-lmo-001',
-          name: user?.full_name || 'Vikram Malhotra (LMO)',
+          id: user?.id || '',
+          name: user?.full_name || '',
         }
       );
       setShowDecisionModal(false);
@@ -134,10 +141,23 @@ export const VerificationDetailPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
         <LoadingSpinner label="Loading verification inspection sheet..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Field Verifications & Inspections are restricted to Legal Metrology Officers, Approved Test Centres (GATC), and Administrators."
+          actionText="Return to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
       </div>
     );
   }

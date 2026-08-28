@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { applicationsApi } from '../../api/applications.api';
 import { VerificationApplication, ApplicationStatus } from '../../types';
 import { Card } from '../../components/common/Card';
@@ -10,6 +11,11 @@ import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { EmptyState } from '../../components/common/EmptyState';
 
 export const ApplicationsListPage: React.FC = () => {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const navigate = useNavigate();
+  const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'GATC' || user?.role_id === 'ADMIN';
+  const canCreate = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'ADMIN';
+
   const [applications, setApplications] = useState<VerificationApplication[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | ''>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -17,10 +23,15 @@ export const ApplicationsListPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadApplications();
-  }, [selectedStatus, searchQuery]);
+    if (!isAuthLoading && isAuthorized) {
+      loadApplications();
+    } else if (!isAuthLoading && !isAuthorized) {
+      setIsLoading(false);
+    }
+  }, [isAuthLoading, isAuthorized, selectedStatus, searchQuery]);
 
   const loadApplications = async () => {
+    if (!isAuthorized) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -36,6 +47,27 @@ export const ApplicationsListPage: React.FC = () => {
     }
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <LoadingSpinner label="Authenticating permissions..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Verification Applications queue is available to Instrument Owners, Approved Test Centres (GATC), and Administrators. Field Officers can access assigned tasks in Field Verifications."
+          actionText="Go to Field Verifications"
+          onAction={() => navigate('/verifications')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
@@ -46,11 +78,13 @@ export const ApplicationsListPage: React.FC = () => {
             Track and process initial stamping and annual re-verification requests across legal zones.
           </p>
         </div>
-        <Link to="/applications/new">
-          <Button variant="accent" size="md">
-            + New Verification Application
-          </Button>
-        </Link>
+        {canCreate && (
+          <Link to="/applications/new">
+            <Button variant="accent" size="md">
+              + New Verification Application
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filter Bar */}

@@ -5,12 +5,15 @@ import { instrumentsApi } from '../../api/instruments.api';
 import { Instrument, ApplicationType } from '../../types';
 import { Button } from '../../components/common/Button';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { EmptyState } from '../../components/common/EmptyState';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../context/AuthContext';
 
 export const NewApplicationPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'ADMIN';
 
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<string>(searchParams.get('instrumentId') || '');
@@ -25,6 +28,10 @@ export const NewApplicationPage: React.FC = () => {
 
   useEffect(() => {
     async function loadUserInstruments() {
+      if (!isAuthorized) {
+        setIsLoadingInstruments(false);
+        return;
+      }
       try {
         const list = await instrumentsApi.listInstruments();
         setInstruments(list);
@@ -37,8 +44,10 @@ export const NewApplicationPage: React.FC = () => {
         setIsLoadingInstruments(false);
       }
     }
-    loadUserInstruments();
-  }, []);
+    if (!isAuthLoading) {
+      loadUserInstruments();
+    }
+  }, [isAuthLoading, isAuthorized]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,9 +68,9 @@ export const NewApplicationPage: React.FC = () => {
         application_type: appType,
         purpose,
         remarks,
-        applicant_id: user?.id || 'u-101-owner-001',
-        applicant_name: user?.full_name || 'Rajesh Sharma',
-        applicant_organization: user?.organization_name || 'Sharma Agro & Logistics Pvt Ltd',
+        applicant_id: user?.id,
+        applicant_name: user?.full_name,
+        applicant_organization: user?.organization_name,
       });
       navigate(`/applications/${created.id}`);
     } catch (err: any) {
@@ -70,6 +79,27 @@ export const NewApplicationPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <LoadingSpinner label="Authenticating permissions..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Submitting new verification applications is restricted to Instrument Owners and Administrators."
+          actionText="Return to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

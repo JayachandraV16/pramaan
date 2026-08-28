@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { certificatesApi } from '../../api/certificates.api';
 import { VerificationCertificate, CertificateStatus } from '../../types';
 import { Card } from '../../components/common/Card';
@@ -10,6 +11,10 @@ import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { EmptyState } from '../../components/common/EmptyState';
 
 export const CertificatesListPage: React.FC = () => {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const navigate = useNavigate();
+  const isAuthorized = user?.role_id === 'ADMIN';
+
   const [certificates, setCertificates] = useState<VerificationCertificate[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<CertificateStatus | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,10 +22,15 @@ export const CertificatesListPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadCertificates();
-  }, [selectedStatus, searchQuery]);
+    if (!isAuthLoading && isAuthorized) {
+      loadCertificates();
+    } else if (!isAuthLoading && !isAuthorized) {
+      setIsLoading(false);
+    }
+  }, [isAuthLoading, isAuthorized, selectedStatus, searchQuery]);
 
   const loadCertificates = async () => {
+    if (!isAuthorized) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -35,6 +45,27 @@ export const CertificatesListPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <LoadingSpinner label="Authenticating permissions..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Digital Certificate registry management is restricted to Directorate Administrators. To verify an instrument certificate by QR code or serial number, please use the Public Citizen Portal."
+          actionText="Open Citizen Verification Tool"
+          onAction={() => navigate('/verify-public')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

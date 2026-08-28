@@ -4,11 +4,14 @@ import { instrumentsApi } from '../../api/instruments.api';
 import { InstrumentType } from '../../types';
 import { Button } from '../../components/common/Button';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { EmptyState } from '../../components/common/EmptyState';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../context/AuthContext';
 
 export const NewInstrumentPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'ADMIN';
 
   const [types, setTypes] = useState<InstrumentType[]>([]);
   const [instrumentName, setInstrumentName] = useState('');
@@ -29,6 +32,10 @@ export const NewInstrumentPage: React.FC = () => {
 
   useEffect(() => {
     async function loadTypes() {
+      if (!isAuthorized) {
+        setIsLoadingTypes(false);
+        return;
+      }
       try {
         const data = await instrumentsApi.getInstrumentTypes();
         setTypes(data);
@@ -42,8 +49,10 @@ export const NewInstrumentPage: React.FC = () => {
         setIsLoadingTypes(false);
       }
     }
-    loadTypes();
-  }, []);
+    if (!isAuthLoading) {
+      loadTypes();
+    }
+  }, [isAuthLoading, isAuthorized]);
 
   const handleTypeChange = (typeId: string) => {
     setInstrumentTypeId(typeId);
@@ -79,8 +88,8 @@ export const NewInstrumentPage: React.FC = () => {
         location_address: locationAddress,
         location_lat: locationLat ? Number(locationLat) : undefined,
         location_lng: locationLng ? Number(locationLng) : undefined,
-        owner_id: user?.id || 'u-101-owner-001',
-        owner_name: user?.full_name || 'Rajesh Sharma',
+        owner_id: user?.id,
+        owner_name: user?.full_name,
       });
       navigate(`/instruments/${created.id}`);
     } catch (err: any) {
@@ -89,6 +98,27 @@ export const NewInstrumentPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <LoadingSpinner label="Authenticating permissions..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Registering new instruments is restricted to Instrument Owners and Directorate Administrators."
+          actionText="Return to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

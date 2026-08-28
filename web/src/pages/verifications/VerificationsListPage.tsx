@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { verificationsApi } from '../../api/verifications.api';
 import { Verification, VerificationStatus } from '../../types';
 import { Card } from '../../components/common/Card';
@@ -10,6 +11,10 @@ import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { EmptyState } from '../../components/common/EmptyState';
 
 export const VerificationsListPage: React.FC = () => {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const navigate = useNavigate();
+  const isAuthorized = user?.role_id === 'LMO' || user?.role_id === 'GATC' || user?.role_id === 'ADMIN';
+
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<VerificationStatus | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,10 +22,15 @@ export const VerificationsListPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadVerifications();
-  }, [selectedStatus, searchQuery]);
+    if (!isAuthLoading && isAuthorized) {
+      loadVerifications();
+    } else if (!isAuthLoading && !isAuthorized) {
+      setIsLoading(false);
+    }
+  }, [isAuthLoading, isAuthorized, selectedStatus, searchQuery]);
 
   const loadVerifications = async () => {
+    if (!isAuthorized) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -35,6 +45,27 @@ export const VerificationsListPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <LoadingSpinner label="Authenticating permissions..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Field Verifications & Inspections are restricted to Legal Metrology Officers, Approved Test Centres (GATC), and Administrators."
+          actionText="Return to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

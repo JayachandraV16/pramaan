@@ -5,333 +5,208 @@ import {
   VerificationReading, 
   VerificationResult 
 } from '../types';
-import { simulateNetworkDelay, getStoredData, setStoredData } from './client';
+import { apiClient } from './client';
 
-export const INITIAL_VERIFICATIONS: Verification[] = [
-  {
-    id: 'ver-001',
-    application_id: 'app-001',
-    application_number: 'APP-LM-2026-00142',
-    assignment_id: 'asgn-001',
-    schedule_id: 'sch-001',
-    instrument_id: 'inst-001-wb',
-    instrument_name: 'Main Freight Weighbridge - 60T',
-    instrument_serial: 'SN-AV-2024-88910',
-    performed_by_id: 'u-201-lmo-001',
-    performed_by_name: 'Vikram Malhotra (LMO Grade I)',
-    verification_date: '2026-03-02',
-    start_time: '2026-03-02T10:30:00Z',
-    end_time: '2026-03-02T12:45:00Z',
-    location: 'Warehouse Gate 1, APMC Yard, Navi Mumbai',
-    status: 'IN_PROGRESS',
-    remarks: 'Field inspection in progress. Initial zero-point stability and corner load tests conducted.',
-    created_at: '2026-02-20T14:00:00Z',
-    updated_at: '2026-03-02T10:30:00Z',
-    observations: [
-      {
-        id: 'obs-101',
-        verification_id: 'ver-001',
-        observation_type: 'Physical Structure & Platform Condition',
-        observation_description: 'Check for deck plate distortion, rust, clearance from pit walls, drainage.',
-        observed_value: 'Good - No obstruction or pit debris detected',
-        remarks: 'Platform alignment satisfactory.',
-        observed_at: '2026-03-02T10:45:00Z',
-      },
-      {
-        id: 'obs-102',
-        verification_id: 'ver-001',
-        observation_type: 'Lead & Wire Official Seal Integrity',
-        observation_description: 'Verification of previous metrological seal and tamper-evident wire.',
-        observed_value: 'Intact - Stamped seal #LM-2024-9981 verified',
-        remarks: 'No unauthorized access to calibration jumper or digital junction box.',
-        observed_at: '2026-03-02T10:50:00Z',
-      },
-      {
-        id: 'obs-103',
-        verification_id: 'ver-001',
-        observation_type: 'Weight Indicator & Remote Display',
-        observation_description: 'Digital display clarity, zero-tracking device, tare device functionality.',
-        observed_value: 'Normal - 7-segment LED display clear with no dead segments',
-        remarks: 'Zero return accurate within 0.25e.',
-        observed_at: '2026-03-02T11:00:00Z',
-      },
-    ],
-    readings: [
-      {
-        id: 'rdg-101',
-        verification_id: 'ver-001',
-        reading_type: 'Zero Load Test (0 tonne)',
-        expected_value: 0.000,
-        observed_value: 0.000,
-        unit: 'tonne',
-        tolerance: 0.005,
-        result: 'PASS',
-        remarks: 'Exact center of zero.',
-        recorded_at: '2026-03-02T11:15:00Z',
-      },
-      {
-        id: 'rdg-102',
-        verification_id: 'ver-001',
-        reading_type: 'Eccentricity Test (Corner 1 - 15 tonne standard weight)',
-        expected_value: 15.000,
-        observed_value: 15.004,
-        unit: 'tonne',
-        tolerance: 0.020,
-        result: 'PASS',
-        remarks: 'Within permissible error limit.',
-        recorded_at: '2026-03-02T11:30:00Z',
-      },
-      {
-        id: 'rdg-103',
-        reading_type: 'Eccentricity Test (Corner 2 - 15 tonne standard weight)',
-        verification_id: 'ver-001',
-        expected_value: 15.000,
-        observed_value: 15.006,
-        unit: 'tonne',
-        tolerance: 0.020,
-        result: 'PASS',
-        remarks: 'Within permissible error limit.',
-        recorded_at: '2026-03-02T11:40:00Z',
-      },
-      {
-        id: 'rdg-104',
-        verification_id: 'ver-001',
-        reading_type: 'Half Load Weighing Test (30 tonne)',
-        expected_value: 30.000,
-        observed_value: 30.008,
-        unit: 'tonne',
-        tolerance: 0.040,
-        result: 'PASS',
-        remarks: 'Linearity confirmed.',
-        recorded_at: '2026-03-02T12:00:00Z',
-      },
-    ],
-  },
-  {
-    id: 'ver-002',
-    application_id: 'app-002',
-    application_number: 'APP-LM-2026-00189',
-    assignment_id: 'asgn-002',
-    schedule_id: 'sch-002',
-    instrument_id: 'inst-002-ps',
-    instrument_name: 'Grain Loading Dock Scale #2',
-    instrument_serial: 'SN-ESS-2023-44129',
-    performed_by_id: 'u-201-lmo-001',
-    performed_by_name: 'Vikram Malhotra (LMO Grade I)',
-    verification_date: '2026-01-12',
-    start_time: '2026-01-12T14:00:00Z',
-    end_time: '2026-01-12T15:30:00Z',
-    location: 'Loading Shed B, APMC Market Yard, Navi Mumbai',
-    status: 'COMPLETED',
-    remarks: 'Scale verified in compliance with Legal Metrology (General) Rules, 2011. Verification Certificate issued.',
-    created_at: '2026-01-07T12:00:00Z',
-    updated_at: '2026-01-12T16:00:00Z',
-    observations: [
-      {
-        id: 'obs-201',
-        verification_id: 'ver-002',
-        observation_type: 'Physical & Mechanical Housing',
-        observation_description: 'Check load cell mounts, spirit bubble level, stainless steel platter.',
-        observed_value: 'Good - Level bubble centered, firm footing',
-        remarks: 'No corrosion or physical damage.',
-        observed_at: '2026-01-12T14:10:00Z',
-      },
-      {
-        id: 'obs-202',
-        verification_id: 'ver-002',
-        observation_type: 'Tamper Protection & Verification Plugs',
-        observation_description: 'Physical lead seal affixed to calibration screws.',
-        observed_value: 'Intact - Fresh tamper-proof seal applied #PRM-2026-7812',
-        remarks: 'Department seal stamped.',
-        observed_at: '2026-01-12T14:20:00Z',
-      },
-    ],
-    readings: [
-      {
-        id: 'rdg-201',
-        verification_id: 'ver-002',
-        reading_type: 'Zero Load Check (0.00 kg)',
-        expected_value: 0.000,
-        observed_value: 0.000,
-        unit: 'kg',
-        tolerance: 0.020,
-        result: 'PASS',
-        remarks: 'Zero stable.',
-        recorded_at: '2026-01-12T14:30:00Z',
-      },
-      {
-        id: 'rdg-202',
-        verification_id: 'ver-002',
-        reading_type: '1/3 Max Capacity (150.00 kg Test Load)',
-        expected_value: 150.000,
-        observed_value: 150.010,
-        unit: 'kg',
-        tolerance: 0.050,
-        result: 'PASS',
-        remarks: 'Error +10g well within tolerance (+-50g).',
-        recorded_at: '2026-01-12T14:45:00Z',
-      },
-      {
-        id: 'rdg-203',
-        verification_id: 'ver-002',
-        reading_type: 'Full Capacity (500.00 kg Test Load)',
-        expected_value: 500.000,
-        observed_value: 500.020,
-        unit: 'kg',
-        tolerance: 0.100,
-        result: 'PASS',
-        remarks: 'Error +20g within tolerance (+-100g).',
-        recorded_at: '2026-01-12T15:00:00Z',
-      },
-      {
-        id: 'rdg-204',
-        verification_id: 'ver-002',
-        reading_type: 'Repeatability Test 3 Consecutive Runs (500 kg)',
-        expected_value: 500.000,
-        observed_value: 500.015,
-        unit: 'kg',
-        tolerance: 0.100,
-        result: 'PASS',
-        remarks: 'Repeatability error <= 0.015 kg.',
-        recorded_at: '2026-01-12T15:15:00Z',
-      },
-    ],
-    result: {
-      id: 'res-002',
-      verification_id: 'ver-002',
-      decision: 'PASS',
-      decided_by_id: 'u-201-lmo-001',
-      decided_by_name: 'Vikram Malhotra (LMO Grade I)',
-      result_date: '2026-01-12T15:30:00Z',
-      remarks: 'All qualitative checks and metrological tolerance limits satisfied. Digital certificate issued for 12 months validity.',
-      created_at: '2026-01-12T15:30:00Z',
-    },
-  },
-];
+export interface CreateVerificationPayload {
+  application_id: string;
+  assignment_id: string;
+  schedule_id?: string;
+  location?: string;
+  remarks?: string;
+}
 
-const VERIFICATIONS_KEY = 'verifications_list';
+export function mapBackendObservationToFrontend(item: any): InspectionObservation {
+  return {
+    id: item.id,
+    verification_id: item.verification_id || item.verificationId || '',
+    observation_type: item.observation_type || item.observationType || 'General Observation',
+    observation_description: item.observation_description || item.observationDescription || undefined,
+    observed_value: item.observed_value || item.observedValue || 'PASSED',
+    remarks: item.remarks || undefined,
+    observed_at: item.observed_at || item.observedAt || item.created_at || new Date().toISOString(),
+  };
+}
+
+export function mapBackendReadingToFrontend(item: any): VerificationReading {
+  return {
+    id: item.id,
+    verification_id: item.verification_id || item.verificationId || '',
+    reading_type: item.reading_type || item.readingType || 'Standard Load Test',
+    expected_value: Number(item.expected_value ?? item.expectedValue ?? 0),
+    observed_value: Number(item.observed_value ?? item.observedValue ?? 0),
+    unit: item.unit || 'kg',
+    tolerance: Number(item.tolerance ?? 0.01),
+    result: (item.result || 'PASS') as 'PASS' | 'FAIL',
+    remarks: item.remarks || undefined,
+    recorded_at: item.recorded_at || item.recordedAt || item.created_at || new Date().toISOString(),
+  };
+}
+
+export function mapBackendResultToFrontend(item: any): VerificationResult {
+  return {
+    id: item.id,
+    verification_id: item.verification_id || item.verificationId || '',
+    decision: (item.decision || 'PASS') as 'PASS' | 'FAIL',
+    decided_by_id: item.decided_by_id || item.decidedById || '',
+    decided_by_name: item.decided_by_name || item.decidedByName || 'Legal Metrology Officer',
+    result_date: item.result_date || item.resultDate || item.created_at || new Date().toISOString(),
+    remarks: item.remarks || undefined,
+    created_at: item.created_at || item.createdAt || new Date().toISOString(),
+  };
+}
+
+export function mapBackendVerificationToFrontend(item: any): Verification {
+  return {
+    id: item.id,
+    application_id: item.application_id || item.applicationId || '',
+    application_number: item.application_number || item.applicationNumber || `APP-${item.application_id || item.id}`,
+    assignment_id: item.assignment_id || item.assignmentId || '',
+    schedule_id: item.schedule_id || item.scheduleId || undefined,
+    instrument_id: item.instrument_id || item.instrumentId || '',
+    instrument_name: item.instrument_name || item.instrumentName || 'Weighing Equipment',
+    instrument_serial: item.serial_number || item.instrument_serial || item.serialNumber || 'SN-UNKNOWN',
+    performed_by_id: item.performed_by_id || item.performedById || '',
+    performed_by_name: item.performed_by_name || item.performedByName || 'Legal Metrology Officer',
+    verification_date: item.verification_date || item.verificationDate || (item.created_at ? item.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+    start_time: item.start_time || item.startTime || undefined,
+    end_time: item.end_time || item.endTime || undefined,
+    location: item.location || 'Inspection Premises',
+    status: (item.status as VerificationStatus) || 'IN_PROGRESS',
+    remarks: item.remarks || undefined,
+    created_at: item.created_at || item.createdAt || new Date().toISOString(),
+    updated_at: item.updated_at || item.updatedAt || new Date().toISOString(),
+    observations: Array.isArray(item.observations) ? item.observations.map(mapBackendObservationToFrontend) : [],
+    readings: Array.isArray(item.readings) ? item.readings.map(mapBackendReadingToFrontend) : [],
+    result: item.result ? mapBackendResultToFrontend(item.result) : undefined,
+  };
+}
 
 export const verificationsApi = {
   /**
-   * List verifications
+   * List verifications from backend GET /api/verifications
    */
   async listVerifications(params?: {
     performedById?: string;
     status?: VerificationStatus;
     search?: string;
   }): Promise<Verification[]> {
-    await simulateNetworkDelay(200, 400);
-    // TODO: Replace with real fetch('/api/v1/verifications?' + new URLSearchParams(params as any))
-    let list = getStoredData<Verification[]>(VERIFICATIONS_KEY, INITIAL_VERIFICATIONS);
+    try {
+      const response = await apiClient.get<any[]>('/verifications');
+      if (!Array.isArray(response)) {
+        return [];
+      }
 
-    if (params?.performedById) {
-      list = list.filter((v) => v.performed_by_id === params.performedById);
-    }
-    if (params?.status) {
-      list = list.filter((v) => v.status === params.status);
-    }
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (v) =>
-          (v.application_number && v.application_number.toLowerCase().includes(q)) ||
-          (v.instrument_name && v.instrument_name.toLowerCase().includes(q)) ||
-          (v.instrument_serial && v.instrument_serial.toLowerCase().includes(q)) ||
-          (v.location && v.location.toLowerCase().includes(q))
-      );
-    }
+      let list = response.map(mapBackendVerificationToFrontend);
 
-    return list;
+      if (params?.performedById) {
+        list = list.filter((v) => v.performed_by_id === params.performedById);
+      }
+      if (params?.status) {
+        list = list.filter((v) => v.status === params.status);
+      }
+      if (params?.search) {
+        const q = params.search.toLowerCase();
+        list = list.filter(
+          (v) =>
+            (v.application_number && v.application_number.toLowerCase().includes(q)) ||
+            (v.instrument_name && v.instrument_name.toLowerCase().includes(q)) ||
+            (v.instrument_serial && v.instrument_serial.toLowerCase().includes(q)) ||
+            (v.location && v.location.toLowerCase().includes(q))
+        );
+      }
+
+      return list;
+    } catch (err: any) {
+      // If role is unauthorized on /verifications (e.g. INSTRUMENT_OWNER), return empty list
+      if (err.statusCode === 403) {
+        return [];
+      }
+      throw err;
+    }
   },
 
   /**
-   * Get single verification by ID with readings and observations
+   * Get single verification by ID from backend GET /api/verifications/:id
    */
   async getVerificationById(id: string): Promise<Verification | null> {
-    await simulateNetworkDelay(150, 300);
-    // TODO: Replace with real fetch(`/api/v1/verifications/${id}`)
-    const list = getStoredData<Verification[]>(VERIFICATIONS_KEY, INITIAL_VERIFICATIONS);
-    return list.find((v) => v.id === id) || null;
+    const response = await apiClient.get<any>(`/verifications/${id}`);
+    if (response && response.id) {
+      return mapBackendVerificationToFrontend(response);
+    }
+    return null;
   },
 
   /**
-   * Add a quantitative measurement reading to a verification
+   * Start a new verification via backend POST /api/verifications
+   */
+  async createVerification(payload: CreateVerificationPayload): Promise<Verification> {
+    const body = {
+      applicationId: payload.application_id,
+      assignmentId: payload.assignment_id,
+      scheduleId: payload.schedule_id || undefined,
+      location: payload.location || undefined,
+      remarks: payload.remarks || undefined,
+    };
+
+    const response = await apiClient.post<any>('/verifications', body);
+    if (!response || !response.id) {
+      throw new Error('Failed to start verification.');
+    }
+    return mapBackendVerificationToFrontend(response);
+  },
+
+  /**
+   * Add a quantitative measurement reading via backend POST /api/verifications/:id/readings
    */
   async addReading(verificationId: string, reading: Omit<VerificationReading, 'id' | 'verification_id' | 'recorded_at'>): Promise<VerificationReading> {
-    await simulateNetworkDelay(200, 350);
-    // TODO: Replace with real fetch(`/api/v1/verifications/${verificationId}/readings`, { method: 'POST', body: ... })
-    const list = getStoredData<Verification[]>(VERIFICATIONS_KEY, INITIAL_VERIFICATIONS);
-    const ver = list.find((v) => v.id === verificationId);
-    if (!ver) throw new Error('Verification not found');
-
-    const newReading: VerificationReading = {
-      id: `rdg-${Date.now()}`,
-      verification_id: verificationId,
-      ...reading,
-      recorded_at: new Date().toISOString(),
+    const body = {
+      readingType: reading.reading_type,
+      expectedValue: reading.expected_value,
+      observedValue: reading.observed_value,
+      unit: reading.unit,
+      tolerance: reading.tolerance,
+      result: reading.result,
+      remarks: reading.remarks || undefined,
     };
 
-    ver.readings = [...ver.readings, newReading];
-    ver.updated_at = new Date().toISOString();
-    setStoredData(VERIFICATIONS_KEY, list);
-
-    return newReading;
+    const response = await apiClient.post<any>(`/verifications/${verificationId}/readings`, body);
+    if (!response || !response.id) {
+      throw new Error('Failed to add verification reading.');
+    }
+    return mapBackendReadingToFrontend(response);
   },
 
   /**
-   * Add a qualitative observation to a verification
+   * Add a qualitative observation via backend POST /api/verifications/:id/observations
    */
   async addObservation(verificationId: string, observation: Omit<InspectionObservation, 'id' | 'verification_id' | 'observed_at'>): Promise<InspectionObservation> {
-    await simulateNetworkDelay(200, 350);
-    // TODO: Replace with real fetch(`/api/v1/verifications/${verificationId}/observations`, { method: 'POST', body: ... })
-    const list = getStoredData<Verification[]>(VERIFICATIONS_KEY, INITIAL_VERIFICATIONS);
-    const ver = list.find((v) => v.id === verificationId);
-    if (!ver) throw new Error('Verification not found');
-
-    const newObs: InspectionObservation = {
-      id: `obs-${Date.now()}`,
-      verification_id: verificationId,
-      ...observation,
-      observed_at: new Date().toISOString(),
+    const body = {
+      observationType: observation.observation_type,
+      observationDescription: observation.observation_description || undefined,
+      observedValue: observation.observed_value || undefined,
+      remarks: observation.remarks || undefined,
     };
 
-    ver.observations = [...ver.observations, newObs];
-    ver.updated_at = new Date().toISOString();
-    setStoredData(VERIFICATIONS_KEY, list);
-
-    return newObs;
+    const response = await apiClient.post<any>(`/verifications/${verificationId}/observations`, body);
+    if (!response || !response.id) {
+      throw new Error('Failed to add verification observation.');
+    }
+    return mapBackendObservationToFrontend(response);
   },
 
   /**
-   * Finalize verification with PASS / FAIL decision
+   * Finalize verification with PASS / FAIL decision via backend POST /api/verifications/:id/result
    */
-  async submitDecision(verificationId: string, decision: 'PASS' | 'FAIL', remarks: string, decidedBy: { id: string; name: string }): Promise<Verification> {
-    await simulateNetworkDelay(300, 600);
-    // TODO: Replace with real fetch(`/api/v1/verifications/${verificationId}/results`, { method: 'POST', body: ... })
-    const list = getStoredData<Verification[]>(VERIFICATIONS_KEY, INITIAL_VERIFICATIONS);
-    const index = list.findIndex((v) => v.id === verificationId);
-    if (index === -1) throw new Error('Verification not found');
-
-    const result: VerificationResult = {
-      id: `res-${Date.now()}`,
-      verification_id: verificationId,
+  async submitDecision(verificationId: string, decision: 'PASS' | 'FAIL', remarks: string, _decidedBy?: { id: string; name: string }): Promise<VerificationResult> {
+    const body = {
       decision,
-      decided_by_id: decidedBy.id,
-      decided_by_name: decidedBy.name,
-      result_date: new Date().toISOString(),
       remarks,
-      created_at: new Date().toISOString(),
     };
 
-    list[index] = {
-      ...list[index],
-      status: 'COMPLETED',
-      end_time: new Date().toISOString(),
-      result,
-      updated_at: new Date().toISOString(),
-    };
-
-    setStoredData(VERIFICATIONS_KEY, list);
-    return list[index];
+    const response = await apiClient.post<any>(`/verifications/${verificationId}/result`, body);
+    if (!response || !response.id) {
+      throw new Error('Failed to submit verification result.');
+    }
+    return mapBackendResultToFrontend(response);
   },
 };

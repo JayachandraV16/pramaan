@@ -82,7 +82,11 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
       throw err;
     }
     // Network / offline error
-    throw new ApiError(err?.message || 'Failed to connect to Pramaan backend server.', 0);
+    const msg =
+      err?.message === 'Failed to fetch' || err?.name === 'TypeError'
+        ? 'Could not connect to backend server (http://localhost:5000). Please ensure the backend API server is running.'
+        : err?.message || 'Failed to connect to Pramaan backend server.';
+    throw new ApiError(msg, 0);
   }
 }
 

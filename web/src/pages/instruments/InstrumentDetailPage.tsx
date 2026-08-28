@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { instrumentsApi } from '../../api/instruments.api';
 import { Instrument } from '../../types';
 import { Card } from '../../components/common/Card';
@@ -7,19 +8,28 @@ import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { EmptyState } from '../../components/common/EmptyState';
 
 export const InstrumentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'ADMIN';
+
   const [instrument, setInstrument] = useState<Instrument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) loadInstrument(id);
-  }, [id]);
+    if (!isAuthLoading && isAuthorized && id) {
+      loadInstrument(id);
+    } else if (!isAuthLoading && !isAuthorized) {
+      setIsLoading(false);
+    }
+  }, [isAuthLoading, isAuthorized, id]);
 
   const loadInstrument = async (instId: string) => {
+    if (!isAuthorized) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -36,10 +46,23 @@ export const InstrumentDetailPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
         <LoadingSpinner label="Loading technical specifications..." />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <EmptyState
+          title="Section Not Available for Your Role"
+          description="Weighing & Measuring Instruments are managed exclusively by Instrument Owners and Directorate Administrators."
+          actionText="Return to Dashboard"
+          onAction={() => navigate('/dashboard')}
+        />
       </div>
     );
   }
@@ -131,7 +154,7 @@ export const InstrumentDetailPage: React.FC = () => {
           <div className="space-y-3 text-xs">
             <div>
               <span className="text-slate-500">Custodian / Owner:</span>
-              <p className="font-semibold text-slate-900 mt-0.5">{instrument.owner_name || 'Sharma Agro & Logistics'}</p>
+              <p className="font-semibold text-slate-900 mt-0.5">{instrument.owner_name || 'Registered Owner'}</p>
             </div>
             <div>
               <span className="text-slate-500">Physical Address:</span>

@@ -38,6 +38,42 @@ export interface InstrumentType {
 }
 
 // ==========================================
+// BACKEND CONTRACT TYPES (api/src/modules/auth)
+// ==========================================
+
+export interface BackendUser {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  status: UserStatus;
+  organization_name?: string | null;
+  address?: string | null;
+  created_at: string;
+  role: RoleName;
+}
+
+export interface BackendAuthResponse {
+  user: BackendUser;
+  token: string;
+}
+
+export interface BackendLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface BackendRegisterRequest {
+  fullName: string;
+  email?: string;
+  phone?: string;
+  password: string;
+  role: RoleName;
+  organizationName?: string;
+  address?: string;
+}
+
+// ==========================================
 // BACKEND CONTRACT TYPES (api/src/modules/instruments)
 // ==========================================
 
@@ -85,17 +121,17 @@ export interface BackendInstrumentResponse {
   serialNumber?: string;
   registration_number?: string | null;
   registrationNumber?: string | null;
-  capacity?: number;
+  capacity?: number | string;
   capacity_unit?: string;
   capacityUnit?: string;
   accuracy_class?: string;
   accuracyClass?: string;
   location_address?: string;
   locationAddress?: string;
-  location_lat?: number;
-  locationLat?: number;
-  location_lng?: number;
-  locationLng?: number;
+  location_lat?: number | string | null;
+  locationLat?: number | string | null;
+  location_lng?: number | string | null;
+  locationLng?: number | string | null;
   registration_date?: string;
   registrationDate?: string;
   status?: string;
@@ -352,6 +388,7 @@ export interface DashboardOverviewStats {
   pendingApplications: number;
   completedVerifications: number;
   passRatePercentage: number;
+  avgTurnaround?: string;
   recentActivity: Array<{
     id: string;
     type: 'INSTRUMENT' | 'APPLICATION' | 'VERIFICATION' | 'CERTIFICATE';

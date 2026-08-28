@@ -8,168 +8,58 @@ import {
 } from '../types';
 import {
   apiClient,
-  getStoredData,
-  setStoredData,
 } from './client';
 
 export const INITIAL_INSTRUMENT_TYPES: InstrumentType[] = [
   {
-    id: 'it-01',
-    name: 'Non-Automatic Weighing Instrument (NAWI - Electronic Platform Scale)',
-    description: 'Heavy duty electronic platform weighing machines used in trade and agro-processing.',
+    id: 'da5a9371-422d-4056-9359-ac0618451a0a',
+    name: 'Weighing Scale',
+    description: 'General-purpose mechanical or electronic weighing scale.',
     default_unit: 'kg',
     is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
+    created_at: '2026-08-27T10:09:26.790Z',
   },
   {
-    id: 'it-02',
-    name: 'Fuel Dispensing Unit (Multi-Product Dispenser MPD)',
-    description: 'Commercial petrol and diesel dispensing pumps installed at retail petroleum outlets.',
-    default_unit: 'litre',
-    is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: 'it-03',
-    name: 'Electronic Precision Analytical Balance (High Precision)',
-    description: 'Micro-gram and milli-gram precision balances used in bullion, gold trade, and pharmaceutical testing.',
+    id: 'b27bf215-3ec1-4644-a67a-561784913635',
+    name: 'Electronic Balance',
+    description: 'Precision electronic balance used for small-mass measurement.',
     default_unit: 'g',
     is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
+    created_at: '2026-08-27T10:09:26.790Z',
   },
   {
-    id: 'it-04',
-    name: 'Automatic Gravimetric Filling & Packing Machine',
-    description: 'Automatic weigh-pack machines used for packaging solid and granular commodities.',
+    id: 'e7c51ab8-44ca-48fd-b266-e72f0d49ee73',
+    name: 'Platform Scale',
+    description: 'Heavy-duty platform scale for industrial/commercial weighing.',
     default_unit: 'kg',
     is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
+    created_at: '2026-08-27T10:09:26.790Z',
   },
   {
-    id: 'it-05',
-    name: 'Weighbridge (Pitless / Pit Type Electronic Road Weighbridge)',
-    description: 'Large commercial vehicle weighbridges up to 100 Metric Tonnes for freight logistics.',
-    default_unit: 'tonne',
+    id: 'f6613610-7e76-4f47-8241-6d8ad4fa4942',
+    name: 'Weighbridge',
+    description: 'Large-capacity vehicle weighbridge.',
+    default_unit: 'kg',
     is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
+    created_at: '2026-08-27T10:09:26.790Z',
+  },
+  {
+    id: 'f450da3f-34c5-47e2-af17-d2deed32900d',
+    name: 'Fuel Dispensing Unit',
+    description: 'Petrol/diesel dispensing pump measuring instrument.',
+    default_unit: 'litre',
+    is_active: true,
+    created_at: '2026-08-27T10:09:26.790Z',
+  },
+  {
+    id: 'd62b482d-988b-4b32-b249-e462ba71cc89',
+    name: 'Measuring Instrument',
+    description: 'General liquid/length/volume measuring instrument.',
+    default_unit: 'litre',
+    is_active: true,
+    created_at: '2026-08-27T10:09:26.790Z',
   },
 ];
-
-export const INITIAL_INSTRUMENTS: Instrument[] = [
-  {
-    id: 'inst-001-wb',
-    owner_id: 'u-101-owner-001',
-    owner_name: 'Rajesh Sharma',
-    instrument_type_id: 'it-05',
-    instrument_type_name: 'Weighbridge (Pitless / Pit Type Electronic Road Weighbridge)',
-    instrument_name: 'Main Freight Weighbridge - 60T',
-    manufacturer: 'Avery India Metrology Ltd',
-    model: 'AV-WB-6000-X',
-    serial_number: 'SN-AV-2024-88910',
-    registration_number: 'LM-MH-2024-REG-00412',
-    capacity: 60.0,
-    capacity_unit: 'tonne',
-    accuracy_class: 'Class III (Medium Accuracy)',
-    location_address: 'Warehouse Gate 1, APMC Yard, Vashi, Navi Mumbai, Maharashtra 400705',
-    location_lat: 19.076,
-    location_lng: 72.998,
-    registration_date: '2024-03-15',
-    status: 'ACTIVE',
-    created_at: '2024-03-15T10:30:00Z',
-    updated_at: '2025-08-20T14:00:00Z',
-  },
-  {
-    id: 'inst-002-ps',
-    owner_id: 'u-101-owner-001',
-    owner_name: 'Rajesh Sharma',
-    instrument_type_id: 'it-01',
-    instrument_type_name: 'Non-Automatic Weighing Instrument (NAWI - Electronic Platform Scale)',
-    instrument_name: 'Grain Loading Dock Scale #2',
-    manufacturer: 'Essae-Teraoka Ltd',
-    model: 'DS-215 Heavy Series',
-    serial_number: 'SN-ESS-2023-44129',
-    registration_number: 'LM-MH-2023-REG-09941',
-    capacity: 500.0,
-    capacity_unit: 'kg',
-    accuracy_class: 'Class III (Medium Accuracy)',
-    location_address: 'Loading Shed B, APMC Market Yard, Navi Mumbai 400705',
-    location_lat: 19.0768,
-    location_lng: 72.9991,
-    registration_date: '2023-08-10',
-    status: 'ACTIVE',
-    created_at: '2023-08-10T09:15:00Z',
-    updated_at: '2025-07-12T11:20:00Z',
-  },
-  {
-    id: 'inst-003-pb',
-    owner_id: 'u-101-owner-001',
-    owner_name: 'Rajesh Sharma',
-    instrument_type_id: 'it-03',
-    instrument_type_name: 'Electronic Precision Analytical Balance (High Precision)',
-    instrument_name: 'Lab QA Precision Balance - 0.1mg',
-    manufacturer: 'Mettler Toledo Metrology',
-    model: 'ME204T / 00 Analytical',
-    serial_number: 'SN-MT-2025-00192',
-    registration_number: 'LM-MH-2025-REG-01102',
-    capacity: 220.0,
-    capacity_unit: 'g',
-    accuracy_class: 'Class I (Special Accuracy)',
-    location_address: 'Quality Testing Laboratory Room 302, Navi Mumbai 400705',
-    location_lat: 19.0772,
-    location_lng: 72.9975,
-    registration_date: '2025-01-20',
-    status: 'ACTIVE',
-    created_at: '2025-01-20T11:00:00Z',
-    updated_at: '2025-01-20T11:00:00Z',
-  },
-  {
-    id: 'inst-004-mpd',
-    owner_id: 'u-101-owner-001',
-    owner_name: 'Rajesh Sharma',
-    instrument_type_id: 'it-02',
-    instrument_type_name: 'Fuel Dispensing Unit (Multi-Product Dispenser MPD)',
-    instrument_name: 'Diesel Commercial Dispenser Bay 1',
-    manufacturer: 'Tokheim Metrology Systems',
-    model: 'Quantium 510M 4-Nozzle',
-    serial_number: 'SN-TKH-2024-77182',
-    registration_number: 'LM-MH-2024-REG-05531',
-    capacity: 80.0,
-    capacity_unit: 'litre',
-    accuracy_class: 'Class 0.5 (Commercial Fuel Accuracy)',
-    location_address: 'Fleet Refueling Station, APMC Sector 19, Navi Mumbai 400705',
-    location_lat: 19.0745,
-    location_lng: 72.995,
-    registration_date: '2024-06-11',
-    status: 'REGISTERED',
-    created_at: '2024-06-11T16:45:00Z',
-    updated_at: '2025-08-01T09:00:00Z',
-  },
-  {
-    id: 'inst-005-ag',
-    owner_id: 'u-101-owner-001',
-    owner_name: 'Rajesh Sharma',
-    instrument_type_id: 'it-04',
-    instrument_type_name: 'Automatic Gravimetric Filling & Packing Machine',
-    instrument_name: 'Rice Bagging High-Speed Filler',
-    manufacturer: 'Chronos Richardson',
-    model: 'E-55 Automatic Bagging Scale',
-    serial_number: 'SN-CHR-2022-33100',
-    registration_number: 'LM-MH-2022-REG-00812',
-    capacity: 50.0,
-    capacity_unit: 'kg',
-    accuracy_class: 'Class X(1) Automatic',
-    location_address: 'Packaging Line 4, Sharma Agro Mill, Navi Mumbai',
-    location_lat: 19.078,
-    location_lng: 72.9965,
-    registration_date: '2022-11-04',
-    status: 'INACTIVE',
-    created_at: '2022-11-04T14:10:00Z',
-    updated_at: '2025-02-14T10:00:00Z',
-  },
-];
-
-const INSTRUMENTS_KEY = 'instruments_list';
-const TYPES_KEY = 'instrument_types_list';
 
 export interface CreateInstrumentPayload {
   instrument_type_id: string;
@@ -191,30 +81,34 @@ export interface CreateInstrumentPayload {
  * Data Mapper: Maps backend instrument response to the frontend Instrument interface
  */
 export function mapBackendInstrumentToFrontend(item: BackendInstrumentResponse): Instrument {
-  const typeId = item.instrumentTypeId || item.instrument_type_id || 'it-01';
+  const typeId = item.instrumentTypeId || item.instrument_type_id || 'da5a9371-422d-4056-9359-ac0618451a0a';
   const typeName =
     item.instrumentTypeName ||
     item.instrument_type_name ||
     INITIAL_INSTRUMENT_TYPES.find((t) => t.id === typeId)?.name ||
     'General Metrology Instrument';
 
+  const rawLat = item.locationLat ?? item.location_lat;
+  const rawLng = item.locationLng ?? item.location_lng;
+  const rawCap = item.capacity;
+
   return {
     id: item.id,
-    owner_id: item.ownerId || item.owner_id || 'u-101-owner-001',
-    owner_name: item.ownerName || item.owner_name || 'Rajesh Sharma',
+    owner_id: item.ownerId || item.owner_id || '',
+    owner_name: item.ownerName || item.owner_name || 'Instrument Custodian',
     instrument_type_id: typeId,
     instrument_type_name: typeName,
-    instrument_name: item.instrumentName || item.instrument_name || item.model || 'Commercial Weighing Instrument',
+    instrument_name: item.instrumentName || item.instrument_name || item.model || 'Weighing / Measuring Asset',
     manufacturer: item.manufacturer || 'OEM Manufacturer',
-    model: item.model || 'Standard Model',
+    model: item.model || 'Standard Series',
     serial_number: item.serialNumber || item.serial_number || `SN-${item.id}`,
     registration_number: item.registrationNumber ?? item.registration_number ?? null,
-    capacity: Number(item.capacity ?? 0),
+    capacity: rawCap !== null && rawCap !== undefined && rawCap !== '' ? Number(rawCap) : 0,
     capacity_unit: item.capacityUnit || item.capacity_unit || 'kg',
     accuracy_class: item.accuracyClass || item.accuracy_class || 'Class III (Medium Accuracy)',
     location_address: item.locationAddress || item.location_address || 'Operating Premises',
-    location_lat: item.locationLat ?? item.location_lat ?? 19.076,
-    location_lng: item.locationLng ?? item.location_lng ?? 72.998,
+    location_lat: rawLat !== null && rawLat !== undefined && rawLat !== '' ? Number(rawLat) : undefined,
+    location_lng: rawLng !== null && rawLng !== undefined && rawLng !== '' ? Number(rawLng) : undefined,
     registration_date:
       item.registrationDate ||
       item.registration_date ||
@@ -260,21 +154,10 @@ export function mapFrontendCreateDtoToBackend(payload: CreateInstrumentPayload):
 
 export const instrumentsApi = {
   /**
-   * Get all instrument types from backend GET /api/instruments/types or fallback
+   * Get all instrument types matching PostgreSQL master instrument_types catalog
    */
   async getInstrumentTypes(): Promise<InstrumentType[]> {
-    try {
-      const response = await apiClient.get<BackendInstrumentTypeResponse[]>('/instruments/types');
-      if (Array.isArray(response) && response.length > 0) {
-        const mapped = response.map(mapBackendInstrumentTypeToFrontend);
-        setStoredData(TYPES_KEY, mapped);
-        return mapped;
-      }
-    } catch (err: any) {
-      // If backend returns 501 / 404 / 500 while stage is in progress, use standard reference types
-      console.warn('Backend /instruments/types not ready or returned error, using standard reference master:', err?.message);
-    }
-    return getStoredData<InstrumentType[]>(TYPES_KEY, INITIAL_INSTRUMENT_TYPES);
+    return INITIAL_INSTRUMENT_TYPES;
   },
 
   /**
@@ -287,37 +170,21 @@ export const instrumentsApi = {
     search?: string;
     typeId?: string;
   }): Promise<Instrument[]> {
-    try {
-      const query = new URLSearchParams();
-      if (params?.ownerId) query.append('ownerId', params.ownerId);
-      if (params?.status) query.append('status', params.status);
-      if (params?.typeId) query.append('typeId', params.typeId);
-      if (params?.search) query.append('search', params.search);
+    const query = new URLSearchParams();
+    if (params?.ownerId) query.append('ownerId', params.ownerId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.typeId) query.append('typeId', params.typeId);
+    if (params?.search) query.append('search', params.search);
 
-      const qs = query.toString() ? `?${query.toString()}` : '';
-      const response = await apiClient.get<BackendInstrumentResponse[]>(`/instruments${qs}`);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const response = await apiClient.get<BackendInstrumentResponse[]>(`/instruments${qs}`);
 
-      if (Array.isArray(response)) {
-        const mapped = response.map(mapBackendInstrumentToFrontend);
-        setStoredData(INSTRUMENTS_KEY, mapped);
-        return mapped;
-      }
-    } catch (err: any) {
-      console.warn('Backend GET /api/instruments returned error, falling back to local dataset:', err?.message);
+    if (!Array.isArray(response)) {
+      return [];
     }
 
-    // Fallback to local dataset
-    let list = getStoredData<Instrument[]>(INSTRUMENTS_KEY, INITIAL_INSTRUMENTS);
+    let list = response.map(mapBackendInstrumentToFrontend);
 
-    if (params?.ownerId) {
-      list = list.filter((i) => i.owner_id === params.ownerId);
-    }
-    if (params?.status) {
-      list = list.filter((i) => i.status === params.status);
-    }
-    if (params?.typeId) {
-      list = list.filter((i) => i.instrument_type_id === params.typeId);
-    }
     if (params?.search) {
       const q = params.search.toLowerCase();
       list = list.filter(
@@ -337,17 +204,11 @@ export const instrumentsApi = {
    * Get single instrument by ID from backend GET /api/instruments/:id
    */
   async getInstrumentById(id: string): Promise<Instrument | null> {
-    try {
-      const response = await apiClient.get<BackendInstrumentResponse>(`/instruments/${id}`);
-      if (response && response.id) {
-        return mapBackendInstrumentToFrontend(response);
-      }
-    } catch (err: any) {
-      console.warn(`Backend GET /api/instruments/${id} returned error, falling back:`, err?.message);
+    const response = await apiClient.get<BackendInstrumentResponse>(`/instruments/${id}`);
+    if (response && response.id) {
+      return mapBackendInstrumentToFrontend(response);
     }
-
-    const list = getStoredData<Instrument[]>(INSTRUMENTS_KEY, INITIAL_INSTRUMENTS);
-    return list.find((i) => i.id === id) || null;
+    return null;
   },
 
   /**
@@ -355,79 +216,21 @@ export const instrumentsApi = {
    */
   async createInstrument(payload: CreateInstrumentPayload): Promise<Instrument> {
     const backendBody = mapFrontendCreateDtoToBackend(payload);
-    try {
-      const response = await apiClient.post<BackendInstrumentResponse>('/instruments', backendBody);
-      if (response && response.id) {
-        const created = mapBackendInstrumentToFrontend(response);
-        const list = getStoredData<Instrument[]>(INSTRUMENTS_KEY, INITIAL_INSTRUMENTS);
-        setStoredData(INSTRUMENTS_KEY, [created, ...list]);
-        return created;
-      }
-    } catch (err: any) {
-      console.warn('Backend POST /api/instruments returned error, saving locally:', err?.message);
+    const response = await apiClient.post<BackendInstrumentResponse>('/instruments', backendBody);
+    if (!response || !response.id) {
+      throw new Error('Failed to create instrument. Invalid response received from server.');
     }
-
-    // Local fallback creation
-    const types = getStoredData<InstrumentType[]>(TYPES_KEY, INITIAL_INSTRUMENT_TYPES);
-    const selectedType = types.find((t) => t.id === payload.instrument_type_id);
-
-    const newInst: Instrument = {
-      id: `inst-${Date.now()}`,
-      owner_id: payload.owner_id || 'u-101-owner-001',
-      owner_name: payload.owner_name || 'Rajesh Sharma',
-      instrument_type_id: payload.instrument_type_id,
-      instrument_type_name: selectedType?.name || 'General Instrument',
-      instrument_name: payload.instrument_name,
-      manufacturer: payload.manufacturer,
-      model: payload.model,
-      serial_number: payload.serial_number,
-      registration_number: `LM-MH-${new Date().getFullYear()}-REG-${Math.floor(10000 + Math.random() * 90000)}`,
-      capacity: Number(payload.capacity),
-      capacity_unit: payload.capacity_unit || 'kg',
-      accuracy_class: payload.accuracy_class,
-      location_address: payload.location_address,
-      location_lat: payload.location_lat || 19.076,
-      location_lng: payload.location_lng || 72.998,
-      registration_date: new Date().toISOString().split('T')[0],
-      status: 'REGISTERED',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const list = getStoredData<Instrument[]>(INSTRUMENTS_KEY, INITIAL_INSTRUMENTS);
-    const updatedList = [newInst, ...list];
-    setStoredData(INSTRUMENTS_KEY, updatedList);
-
-    return newInst;
+    return mapBackendInstrumentToFrontend(response);
   },
 
   /**
    * Update instrument status or details via backend PATCH /api/instruments/:id
    */
   async updateInstrument(id: string, updates: Partial<Instrument>): Promise<Instrument> {
-    try {
-      const response = await apiClient.patch<BackendInstrumentResponse>(`/instruments/${id}`, updates);
-      if (response && response.id) {
-        return mapBackendInstrumentToFrontend(response);
-      }
-    } catch (err: any) {
-      console.warn(`Backend PATCH /api/instruments/${id} returned error, applying locally:`, err?.message);
+    const response = await apiClient.patch<BackendInstrumentResponse>(`/instruments/${id}`, updates);
+    if (!response || !response.id) {
+      throw new Error(`Failed to update instrument ${id}.`);
     }
-
-    const list = getStoredData<Instrument[]>(INSTRUMENTS_KEY, INITIAL_INSTRUMENTS);
-    const index = list.findIndex((i) => i.id === id);
-    if (index === -1) {
-      throw new Error(`Instrument with ID ${id} not found.`);
-    }
-
-    const updated = {
-      ...list[index],
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
-
-    list[index] = updated;
-    setStoredData(INSTRUMENTS_KEY, list);
-    return updated;
+    return mapBackendInstrumentToFrontend(response);
   },
 };

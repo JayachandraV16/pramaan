@@ -11,23 +11,23 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
 
   const [role, setRole] = useState<RoleName>('INSTRUMENT_OWNER');
-  const [identifier, setIdentifier] = useState('rajesh.sharma@sharmaagro.in');
-  const [password, setPassword] = useState('Pramaan@2026');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const demoAccounts: Array<{ role: RoleName; label: string; email: string; badge: string }> = [
-    { role: 'INSTRUMENT_OWNER', label: 'Instrument Owner', email: 'rajesh.sharma@sharmaagro.in', badge: 'Trader / Mandi' },
-    { role: 'LMO', label: 'Legal Metrology Officer', email: 'v.malhotra@legalmetrology.gov.in', badge: 'Zone 4 Field Officer' },
-    { role: 'GATC', label: 'GATC / RRSL Lab', email: 's.verma@rrsl-testing.gov.in', badge: 'Test Centre Lab' },
-    { role: 'ADMIN', label: 'Directorate Admin', email: 'admin.directorate@pramaan.gov.in', badge: 'Ministry Admin' },
-    { role: 'PUBLIC_USER', label: 'Public Citizen', email: 'aarav.patel@gmail.com', badge: 'Citizen / Consumer' },
+    { role: 'INSTRUMENT_OWNER', label: 'Instrument Owner', email: 'dev.owner@pramaan.local', badge: 'Mandi Trader' },
+    { role: 'LMO', label: 'Legal Metrology Officer', email: 'dev.lmo@pramaan.local', badge: 'Zone Field Officer' },
+    { role: 'GATC', label: 'GATC / RRSL Lab', email: 'dev.gatc@pramaan.local', badge: 'Approved Test Lab' },
+    { role: 'ADMIN', label: 'Directorate Admin', email: 'dev.admin@pramaan.local', badge: 'Ministry Admin' },
+    { role: 'PUBLIC_USER', label: 'Public Citizen', email: 'dev.public@pramaan.local', badge: 'Citizen / Consumer' },
   ];
 
   const handleQuickSelect = (acc: typeof demoAccounts[0]) => {
     setRole(acc.role);
     setIdentifier(acc.email);
-    setPassword('Pramaan@2026');
+    setPassword('DevPassword123!');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

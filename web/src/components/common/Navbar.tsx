@@ -3,8 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Badge } from './Badge';
 import { useAuth } from '../../context/AuthContext';
 import { RoleName } from '../../types';
-import emblemImg from '@/emaap_extracted_resources/static/media/logon1.5dbace7d080abd5e3d46.png';
-
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout, switchRole } = useAuth();
   const location = useLocation();
@@ -72,20 +70,15 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[#E0E0E0] shadow-xs">
-      {/* Top Header Bar matching Screenshot 1 */}
+      {/* Top Header Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between border-b border-slate-100">
-        {/* Left: Emblem + Pramaan Logo */}
+        {/* Left: Pramaan Logo */}
         <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={() => handleNavClick()}
             className="flex items-center gap-3 select-none text-left"
           >
-            <img
-              src={emblemImg}
-              alt="Government of India Emblem"
-              className="h-12 w-auto object-contain shrink-0"
-            />
             <div className="flex items-center gap-1.5">
               <div className="flex flex-col">
                 <span className="text-2xl font-black tracking-tight text-[#1a1a2e] leading-none">
@@ -97,14 +90,6 @@ export const Navbar: React.FC = () => {
               </div>
             </div>
           </button>
-
-          <div className="hidden lg:block h-8 w-px bg-slate-200 mx-2" />
-
-          <div className="hidden lg:block">
-            <p className="text-[12px] font-bold text-[#1a1a2e] tracking-tight uppercase">
-              DEPARTMENT OF CONSUMER AFFAIRS | GOVERNMENT OF INDIA
-            </p>
-          </div>
         </div>
 
         {/* Right: Accessibility + Language + Quick Actions */}
@@ -211,34 +196,42 @@ export const Navbar: React.FC = () => {
                       >
                         📊 My Dashboard
                       </Link>
-                      <Link
-                        to="/instruments"
-                        onClick={() => setRoleDropdownOpen(false)}
-                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                      >
-                        ⚖️ Weighing Instruments
-                      </Link>
-                      <Link
-                        to="/applications"
-                        onClick={() => setRoleDropdownOpen(false)}
-                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                      >
-                        📝 Verification Applications
-                      </Link>
-                      <Link
-                        to="/verifications"
-                        onClick={() => setRoleDropdownOpen(false)}
-                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                      >
-                        🔍 Field Verifications
-                      </Link>
-                      <Link
-                        to="/certificates"
-                        onClick={() => setRoleDropdownOpen(false)}
-                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                      >
-                        📜 Digital Certificates
-                      </Link>
+                      {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'ADMIN') && (
+                        <Link
+                          to="/instruments"
+                          onClick={() => setRoleDropdownOpen(false)}
+                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                        >
+                          ⚖️ Weighing Instruments
+                        </Link>
+                      )}
+                      {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+                        <Link
+                          to="/applications"
+                          onClick={() => setRoleDropdownOpen(false)}
+                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                        >
+                          📝 Verification Applications
+                        </Link>
+                      )}
+                      {(user.role_id === 'LMO' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+                        <Link
+                          to="/verifications"
+                          onClick={() => setRoleDropdownOpen(false)}
+                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                        >
+                          🔍 Field Verifications
+                        </Link>
+                      )}
+                      {user.role_id === 'ADMIN' && (
+                        <Link
+                          to="/certificates"
+                          onClick={() => setRoleDropdownOpen(false)}
+                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                        >
+                          📜 Digital Certificates
+                        </Link>
+                      )}
 
                       <div className="pt-2 mt-1 border-t border-slate-100">
                         <p className="px-3 py-1 text-[10px] font-bold uppercase text-slate-400">Switch Demo Role</p>
@@ -353,7 +346,7 @@ export const Navbar: React.FC = () => {
               {item.label}
             </button>
           ))}
-          {isAuthenticated && (
+          {isAuthenticated && user && (
             <div className="pt-2 border-t border-slate-200 space-y-1">
               <Link
                 to="/dashboard"
@@ -362,20 +355,42 @@ export const Navbar: React.FC = () => {
               >
                 📊 Dashboard
               </Link>
-              <Link
-                to="/instruments"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
-              >
-                ⚖️ Instruments
-              </Link>
-              <Link
-                to="/applications"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
-              >
-                📝 Applications
-              </Link>
+              {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'ADMIN') && (
+                <Link
+                  to="/instruments"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
+                >
+                  ⚖️ Instruments
+                </Link>
+              )}
+              {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+                <Link
+                  to="/applications"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
+                >
+                  📝 Applications
+                </Link>
+              )}
+              {(user.role_id === 'LMO' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+                <Link
+                  to="/verifications"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
+                >
+                  🔍 Field Verifications
+                </Link>
+              )}
+              {user.role_id === 'ADMIN' && (
+                <Link
+                  to="/certificates"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
+                >
+                  📜 Digital Certificates
+                </Link>
+              )}
             </div>
           )}
         </div>

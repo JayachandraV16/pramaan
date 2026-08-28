@@ -21,8 +21,8 @@ import {
 } from '../types';
 
 export const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
-  const role = user?.role_id || 'INSTRUMENT_OWNER';
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const role = user?.role_id;
 
   const [stats, setStats] = useState<DashboardOverviewStats | null>(null);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
@@ -33,20 +33,43 @@ export const DashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [role]);
+    if (!isAuthLoading && user && role) {
+      loadDashboardData();
+    }
+  }, [isAuthLoading, user, role]);
 
   const loadDashboardData = async () => {
+    if (!role) return;
     setIsLoading(true);
     setError(null);
     try {
-      const [overviewStats, instList, appList, verList, certList] = await Promise.all([
-        reportsApi.getDashboardOverview(role),
-        instrumentsApi.listInstruments(),
-        applicationsApi.listApplications(),
-        verificationsApi.listVerifications(),
-        certificatesApi.listCertificates(),
-      ]);
+      const overviewStats = await reportsApi.getDashboardOverview(role).catch(() => null);
+
+      let instList: Instrument[] = [];
+      let appList: VerificationApplication[] = [];
+      let verList: Verification[] = [];
+      let certList: VerificationCertificate[] = [];
+
+      if (role === 'INSTRUMENT_OWNER') {
+        [instList, appList] = await Promise.all([
+          instrumentsApi.listInstruments().catch(() => []),
+          applicationsApi.listApplications().catch(() => []),
+        ]);
+      } else if (role === 'LMO') {
+        verList = await verificationsApi.listVerifications().catch(() => []);
+      } else if (role === 'GATC') {
+        [appList, verList] = await Promise.all([
+          applicationsApi.listApplications().catch(() => []),
+          verificationsApi.listVerifications().catch(() => []),
+        ]);
+      } else if (role === 'ADMIN') {
+        [instList, appList, verList, certList] = await Promise.all([
+          instrumentsApi.listInstruments().catch(() => []),
+          applicationsApi.listApplications().catch(() => []),
+          verificationsApi.listVerifications().catch(() => []),
+          certificatesApi.listCertificates().catch(() => []),
+        ]);
+      }
 
       setStats(overviewStats);
       setInstruments(instList);
@@ -60,7 +83,7 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <LoadingSpinner size="lg" label="Loading role-specific dashboard metrics..." />
@@ -116,11 +139,13 @@ export const DashboardPage: React.FC = () => {
                   Conduct Field Verification
                 </Button>
               </Link>
-              <Link to="/applications">
-                <Button variant="outline" size="sm">
-                  Review Queue ({applications.filter(a => a.status === 'SUBMITTED' || a.status === 'UNDER_REVIEW').length})
-                </Button>
-              </Link>
+              {role === 'GATC' && (
+                <Link to="/applications">
+                  <Button variant="outline" size="sm">
+                    Review Queue ({applications.filter(a => a.status === 'SUBMITTED' || a.status === 'UNDER_REVIEW').length})
+                  </Button>
+                </Link>
+              )}
             </>
           )}
 
@@ -229,7 +254,7 @@ export const DashboardPage: React.FC = () => {
             />
             <StatCard
               label="Pass Rate"
-              value="96.2%"
+              value={stats?.passRatePercentage !== undefined ? `${stats.passRatePercentage}%` : '—'}
               sublabel="Permissible error tolerance rate"
               variant="emerald"
               icon={
@@ -245,26 +270,26 @@ export const DashboardPage: React.FC = () => {
           <>
             <StatCard
               label="National Grid Total"
-              value={stats?.totalInstruments || 1124500}
+              value={stats?.totalInstruments !== undefined ? stats.totalInstruments.toLocaleString() : role === 'ADMIN' && instruments.length > 0 ? instruments.length.toLocaleString() : '—'}
               sublabel="Registered weighing units"
               variant="navy"
             />
             <StatCard
               label="Active Digital Certificates"
-              value={stats?.activeCertificates || 959037}
+              value={stats?.activeCertificates !== undefined ? stats.activeCertificates.toLocaleString() : role === 'ADMIN' && certificates.length > 0 ? certificates.filter(c => c.status === 'ACTIVE').length.toLocaleString() : '—'}
               sublabel="Certified & QR-tagged"
               variant="emerald"
-              trend={{ value: '94.4% pass', positive: true }}
+              trend={stats?.passRatePercentage !== undefined ? { value: `${stats.passRatePercentage}% pass`, positive: true } : undefined}
             />
             <StatCard
               label="Open Workflows"
-              value={stats?.pendingApplications || 14205}
+              value={stats?.pendingApplications !== undefined ? stats.pendingApplications.toLocaleString() : role === 'ADMIN' && applications.length > 0 ? applications.filter(a => a.status !== 'COMPLETED' && a.status !== 'REJECTED').length.toLocaleString() : '—'}
               sublabel="Under review or scheduled"
               variant="amber"
             />
             <StatCard
               label="Avg Turnaround"
-              value="41.5 hrs"
+              value={stats?.avgTurnaround || '—'}
               sublabel="Application to Certificate"
             />
           </>
@@ -276,67 +301,75 @@ export const DashboardPage: React.FC = () => {
         {/* Left 2 Cols: Priority Items */}
         <div className="lg:col-span-2 space-y-6">
           {/* Applications Section */}
-          <Card
-            title="Verification Applications"
-            subtitle="Latest statutory verification requests and status progression"
-            action={
-              <Link to="/applications" className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
-                View All ({applications.length}) →
-              </Link>
-            }
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 font-semibold uppercase">
-                    <th className="pb-3 pr-4">App Number</th>
-                    <th className="pb-3 px-4">Instrument</th>
-                    <th className="pb-3 px-4">Type</th>
-                    <th className="pb-3 px-4">Status</th>
-                    <th className="pb-3 pl-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {applications.slice(0, 4).map((app) => (
-                    <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 pr-4 font-mono font-medium text-slate-900">
-                        {app.application_number}
-                      </td>
-                      <td className="py-3 px-4">
-                        <p className="font-semibold text-slate-900">{app.instrument_name}</p>
-                        <p className="text-[10px] text-slate-500 font-mono">{app.instrument_serial}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-slate-600">
-                          {app.application_type === 'RE_VERIFICATION' ? 'Re-Verification' : 'Fresh Verification'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge status={app.status} size="sm" />
-                      </td>
-                      <td className="py-3 pl-4 text-right">
-                        <Link
-                          to={`/applications/${app.id}`}
-                          className="text-xs font-medium text-pramaan-gold-700 hover:underline"
-                        >
-                          Details →
-                        </Link>
-                      </td>
+          {(role === 'INSTRUMENT_OWNER' || role === 'GATC' || role === 'ADMIN') && (
+            <Card
+              title="Verification Applications"
+              subtitle="Latest statutory verification requests and status progression"
+              action={
+                <Link to="/applications" className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
+                  View All ({applications.length}) →
+                </Link>
+              }
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                      <th className="pb-3 pr-4">App Number</th>
+                      <th className="pb-3 px-4">Instrument</th>
+                      <th className="pb-3 px-4">Type</th>
+                      <th className="pb-3 px-4">Status</th>
+                      <th className="pb-3 pl-4 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {applications.slice(0, 4).map((app) => (
+                      <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 pr-4 font-mono font-medium text-slate-900">
+                          {app.application_number}
+                        </td>
+                        <td className="py-3 px-4">
+                          <p className="font-semibold text-slate-900">{app.instrument_name}</p>
+                          <p className="text-[10px] text-slate-500 font-mono">{app.instrument_serial}</p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-slate-600">
+                            {app.application_type === 'RE_VERIFICATION' ? 'Re-Verification' : 'Fresh Verification'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge status={app.status} size="sm" />
+                        </td>
+                        <td className="py-3 pl-4 text-right">
+                          <Link
+                            to={`/applications/${app.id}`}
+                            className="text-xs font-medium text-pramaan-gold-700 hover:underline"
+                          >
+                            Details →
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
 
           {/* Instruments / Verifications Section */}
           <Card
             title={role === 'LMO' || role === 'GATC' ? 'Assigned Field Verifications' : 'Registered Instruments'}
             subtitle={role === 'LMO' || role === 'GATC' ? 'On-site verification logs and test readings' : 'Active weighing scales and measuring units'}
             action={
-              <Link to={role === 'LMO' || role === 'GATC' ? '/verifications' : '/instruments'} className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
-                View All →
-              </Link>
+              role === 'LMO' || role === 'GATC' ? (
+                <Link to="/verifications" className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
+                  View All ({verifications.length}) →
+                </Link>
+              ) : (
+                <Link to="/instruments" className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
+                  View All ({instruments.length}) →
+                </Link>
+              )
             }
           >
             {role === 'LMO' || role === 'GATC' ? (
@@ -392,9 +425,15 @@ export const DashboardPage: React.FC = () => {
             title="Digital Certificates Vault"
             subtitle="Tamper-proof QR certificates"
             action={
-              <Link to="/certificates" className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
-                All ({certificates.length}) →
-              </Link>
+              role === 'ADMIN' ? (
+                <Link to="/certificates" className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
+                  All ({certificates.length}) →
+                </Link>
+              ) : (
+                <Link to="/verify-public" className="text-xs font-semibold text-pramaan-navy-800 hover:underline">
+                  Verify QR →
+                </Link>
+              )
             }
           >
             <div className="space-y-3">
