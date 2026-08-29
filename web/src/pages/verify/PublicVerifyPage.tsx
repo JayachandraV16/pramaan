@@ -6,7 +6,6 @@ import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { PramaanLogo } from '../../components/common/PramaanLogo';
 
 export const PublicVerifyPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,16 +59,10 @@ export const PublicVerifyPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="flex justify-center mb-2">
-          <PramaanLogo size="lg" />
-        </div>
+      <div className="text-center">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-          Public Certificate & QR Authentication
+          Verify documents
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
-          Verify the authenticity and legal calibration status of any weighing or measuring instrument across India.
-        </p>
       </div>
 
       {/* Lookup Card */}

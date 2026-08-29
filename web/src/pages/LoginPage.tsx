@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { RoleName } from '../types';
 import { Button } from '../components/common/Button';
-import { PramaanLogo } from '../components/common/PramaanLogo';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 
 export const LoginPage: React.FC = () => {
@@ -61,14 +60,8 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex justify-center mb-2">
-            <PramaanLogo size="lg" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">National Portal Sign In</h2>
-          <p className="text-xs text-slate-500">
-            Sign in to access your Legal Metrology portal dashboard
-          </p>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-slate-900">Sign In</h2>
         </div>
 
         {/* Demo Fast Switcher */}

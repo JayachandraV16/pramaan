@@ -1,5 +1,4 @@
 import React from 'react';
-import emblemImg from '@/emaap_extracted_resources/static/media/logon1.5dbace7d080abd5e3d46.png';
 
 interface PramaanLogoProps {
   className?: string;
@@ -17,20 +16,13 @@ export const PramaanLogo: React.FC<PramaanLogoProps> = ({
   const isDark = theme === 'dark';
 
   const sizeStyles = {
-    sm: { img: 'h-8', title: 'text-base', sub: 'text-[10px]' },
-    md: { img: 'h-11', title: 'text-xl', sub: 'text-[11px]' },
-    lg: { img: 'h-14', title: 'text-2xl', sub: 'text-xs' },
+    sm: { title: 'text-base', sub: 'text-[10px]' },
+    md: { title: 'text-xl', sub: 'text-[11px]' },
+    lg: { title: 'text-2xl', sub: 'text-xs' },
   };
 
   return (
     <div className={`flex items-center gap-3 select-none ${className}`}>
-      {/* Official Emblem Logo */}
-      <img
-        src={emblemImg}
-        alt="Government of India Emblem"
-        className={`${sizeStyles[size].img} w-auto object-contain shrink-0`}
-      />
-
       <div className="flex flex-col">
         <div className="flex items-center gap-1.5">
           <span className={`font-extrabold tracking-tight ${sizeStyles[size].title} ${isDark ? 'text-white' : 'text-[#1a1a2e]'}`}>

@@ -50,8 +50,6 @@ export const Navbar: React.FC = () => {
     { label: 'About Us', anchorId: 'overview' },
     { label: 'Act & Rules', anchorId: 'rules', action: () => setActModalOpen(true) },
     { label: 'Enforcement Activity', anchorId: 'empower' },
-    { label: 'Judgements', anchorId: 'updates' },
-    { label: 'Reports', anchorId: 'insights' },
   ];
 
   const rolesList: Array<{ id: RoleName; label: string; desc: string }> = [
@@ -159,7 +157,7 @@ export const Navbar: React.FC = () => {
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
               </svg>
-              Citizen Portal / QR
+              Verify documents
             </Link>
 
             {isAuthenticated && user ? (

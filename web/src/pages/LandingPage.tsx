@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend 
-} from 'recharts';
-import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { ErrorMessage } from '../components/common/ErrorMessage';
-import { reportsApi } from '../api/reports.api';
-import { CategoryApprovalStat, MonthlyTrendStat } from '../types';
 
 // Images & Media from extracted resources
 import banner1 from '@/emaap_extracted_resources/static/media/Banner1b.d80b8a0b4ce3d22c648e.jpg';
@@ -42,41 +34,17 @@ import stateCg from '@/emaap_extracted_resources/static/media/chhattisgarh.feeb5
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [certType, setCertType] = useState('Verification');
+  const [certType, setCertType] = useState('Weights & Measures');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBanner, setActiveBanner] = useState(0);
-  const [categoryData, setCategoryData] = useState<CategoryApprovalStat[]>([]);
-  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrendStat[]>([]);
-  const [selectedYear, setSelectedYear] = useState('2023-24');
-  const [isLoadingCharts, setIsLoadingCharts] = useState(true);
-  const [chartsError, setChartsError] = useState<string | null>(null);
-
   const banners = [banner1, banner2, banner3];
 
   useEffect(() => {
-    loadChartData();
     const interval = setInterval(() => {
       setActiveBanner((prev) => (prev + 1) % banners.length);
     }, 6000);
     return () => clearInterval(interval);
   }, []);
-
-  const loadChartData = async () => {
-    setIsLoadingCharts(true);
-    setChartsError(null);
-    try {
-      const [cats, trends] = await Promise.all([
-        reportsApi.getCategoryWiseApprovals(),
-        reportsApi.getLastSixMonthsTrend(),
-      ]);
-      setCategoryData(cats);
-      setMonthlyTrend(trends);
-    } catch (err: any) {
-      setChartsError(err?.message || 'Failed to load live statistics.');
-    } finally {
-      setIsLoadingCharts(false);
-    }
-  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,8 +52,6 @@ export const LandingPage: React.FC = () => {
       navigate(`/verify-public?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
-
-  const pieColors = ['#FFAA17', '#F87171', '#FB923C', '#FBBF24'];
 
   const statesList = [
     { name: 'Maharashtra', gradient: 'from-[#FF6B35] to-[#F85A20]', icon: stateMh },
@@ -208,12 +174,12 @@ export const LandingPage: React.FC = () => {
                   <select
                     value={certType}
                     onChange={(e) => setCertType(e.target.value)}
-                    className="px-3 py-2.5 bg-white text-[#222429] text-xs rounded-md font-medium border-0 focus:ring-2 focus:ring-[#FFAA17]"
+                    className="px-3 py-2.5 bg-white text-[#222429] text-xs rounded-md font-medium border-0 focus:ring-2 focus:ring-[#FFAA17] cursor-pointer"
                   >
-                    <option value="Verification">Select Certificate</option>
-                    <option value="Verification">Weights & Measures</option>
+                    <option value="">Select Certificate</option>
+                    <option value="Weights & Measures">Weights & Measures</option>
                     <option value="Model Approval">Model Approval</option>
-                    <option value="Importer">Importer Licence</option>
+                    <option value="Importer Licence">Importer Licence</option>
                   </select>
 
                   <div className="flex-1 relative">
@@ -237,17 +203,6 @@ export const LandingPage: React.FC = () => {
                     SUBMIT
                   </button>
                 </form>
-
-                <p className="text-[10px] text-slate-300 leading-tight">
-                  *Search certificates issued from 18/12/2024 onwards. Previously issued certificates can be viewed{' '}
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('CERT-LM-MH-2026-098124')}
-                    className="text-[#FFAA17] underline font-bold"
-                  >
-                    here
-                  </button>.
-                </p>
               </div>
             </div>
           </div>
@@ -591,190 +546,6 @@ export const LandingPage: React.FC = () => {
                   <div className="w-6 h-6 rounded-full bg-[#222429] text-white flex items-center justify-center text-xs">
                     ➔
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. LETS GET INSIGHTS (Screenshots 7 & 8) */}
-      <section id="insights" className="w-full py-16 bg-[#F4F5F8] border-t border-slate-200 scroll-mt-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#222429]">
-              Lets Get Insights
-            </h2>
-          </div>
-
-          {isLoadingCharts ? (
-            <LoadingSpinner label="Fetching insights data..." />
-          ) : chartsError ? (
-            <ErrorMessage message={chartsError} onRetry={loadChartData} />
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Left: Donut Chart (Categories Wise Approvals) */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-extrabold text-sm text-[#222429]">Categories Wise Approvals</h3>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                    className="px-3 py-1 bg-slate-50 border border-slate-300 rounded-md text-xs font-bold text-slate-700"
-                  >
-                    <option value="2023-24">2023-24</option>
-                    <option value="2024-25">2024-25</option>
-                    <option value="2025-26">2025-26</option>
-                  </select>
-                </div>
-
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        dataKey="approvals"
-                        nameKey="categoryLabel"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={120}
-                        paddingAngle={2}
-                      >
-                        {categoryData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: any) => [Number(v).toLocaleString('en-IN'), 'Approvals']} />
-                      <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Right: Grouped Bar Chart (Last Six Month Approvals) */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-extrabold text-sm text-[#222429]">Last Six Month Approvals</h3>
-                  <div className="flex items-center gap-4 text-xs font-bold">
-                    <span className="flex items-center gap-1.5 text-slate-800">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#1a1a2e]" /> Submitted
-                    </span>
-                    <span className="flex items-center gap-1.5 text-amber-600">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#FFAA17]" /> Approved
-                    </span>
-                    <span className="flex items-center gap-1.5 text-rose-500">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#FF584E]" /> Rejected
-                    </span>
-                  </div>
-                </div>
-
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyTrend} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#475569' }} />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: '#475569' }}
-                        tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
-                      />
-                      <Tooltip formatter={(v: any) => [Number(v).toLocaleString('en-IN'), '']} />
-                      <Bar dataKey="submitted" fill="#1a1a2e" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="approved" fill="#FFAA17" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="rejected" fill="#FF584E" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 7. STAY UPDATED SECTION (Screenshots 9 & 10) */}
-      <section id="updates" className="w-full py-16 bg-white border-t border-slate-200 scroll-mt-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#222429]">
-              Stay <span className="px-3 py-1 rounded-md bg-[#FFAA17] text-[#1a1a2e]">Updated</span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* News 1 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200 flex flex-col justify-between">
-              <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                <img src={step1Img} alt="News 1" className="w-full h-full object-cover" />
-                <div className="absolute top-2 right-2 bg-[#FFAA17] text-[#1a1a2e] font-extrabold text-[10px] text-center px-2 py-1 rounded shadow-sm">
-                  <p className="text-xs leading-none">6</p>
-                  <p className="leading-none mt-0.5">SEPT</p>
-                </div>
-              </div>
-              <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <h3 className="font-extrabold text-sm text-[#222429] leading-snug">
-                    Penalty for violations of rules on measurement, weights of store goods to be raised in Delhi
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    The Delhi Govt. is poised to raise penalties for violations of laid down guidelines against the use of non-standard weights and measurement for loose and packaged goods...
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-slate-100">
-                  <span className="text-[11px] text-slate-600 font-semibold flex items-center gap-1 hover:text-[#FFAA17] cursor-pointer">
-                    Read full article about Penalty for violations... ➔
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* News 2 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200 flex flex-col justify-between">
-              <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                <img src={step4Img} alt="News 2" className="w-full h-full object-cover" />
-                <div className="absolute top-2 right-2 bg-[#FFAA17] text-[#1a1a2e] font-extrabold text-[10px] text-center px-2 py-1 rounded shadow-sm">
-                  <p className="text-xs leading-none">26</p>
-                  <p className="leading-none mt-0.5">JUL</p>
-                </div>
-              </div>
-              <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <h3 className="font-extrabold text-sm text-[#222429] leading-snug">
-                    Centre wants 'country of origin' filter on shopping apps
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    The Centre has floated a proposal asking e-commerce platforms to add a 'country of origin' filter to their websites and apps, a move aimed at helping consumers make quicker informed choices...
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-slate-100">
-                  <span className="text-[11px] text-slate-600 font-semibold flex items-center gap-1 hover:text-[#FFAA17] cursor-pointer">
-                    Read full article about Centre wants 'country of origin'... ➔
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* News 3 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200 flex flex-col justify-between">
-              <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                <img src={banner3} alt="News 3" className="w-full h-full object-cover" />
-                <div className="absolute top-2 right-2 bg-[#FFAA17] text-[#1a1a2e] font-extrabold text-[10px] text-center px-2 py-1 rounded shadow-sm">
-                  <p className="text-xs leading-none">14</p>
-                  <p className="leading-none mt-0.5">APR</p>
-                </div>
-              </div>
-              <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <h3 className="font-extrabold text-sm text-[#222429] leading-snug">
-                    Govt frames draft rules for gas meters to protect consumers
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    The government has drafted new rules requiring testing, verification and stamping of all domestic, commercial, and industrial gas meters before they can be used in trade...
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-slate-100">
-                  <span className="text-[11px] text-slate-600 font-semibold flex items-center gap-1 hover:text-[#FFAA17] cursor-pointer">
-                    Read full article about Govt frames draft rules for gas meters... ➔
-                  </span>
                 </div>
               </div>
             </div>

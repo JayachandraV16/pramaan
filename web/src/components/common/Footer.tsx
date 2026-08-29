@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import nicLogo from '@/emaap_extracted_resources/assets/footer/NIC.png';
-import emblemImg from '@/emaap_extracted_resources/static/media/logon1.5dbace7d080abd5e3d46.png';
 
 export const Footer: React.FC = () => {
   return (
@@ -22,7 +21,6 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <img src={emblemImg} alt="Dept of Consumer Affairs" className="h-7 w-auto object-contain" />
             <span className="text-[11px] font-bold text-slate-700">Consumer Affairs</span>
           </div>
 
@@ -33,7 +31,6 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <img src={emblemImg} alt="Emblem" className="h-6 w-auto object-contain" />
             <span className="text-[10px] font-bold text-slate-600">Legal Metrology</span>
           </div>
 
