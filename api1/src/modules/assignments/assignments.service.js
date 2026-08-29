@@ -1,0 +1,164 @@
+const ApiError = require('../../utils/ApiError');
+const repo = require('./assignments.repository');
+const {
+  ASSIGNMENT_STATUSES,
+  isValidAssignmentStatus,
+} = require('./assignments.validation');
+const { ROLES } = require('../../config/roles');
+
+async function createAssignment(user, data) {
+  const application = await repo.findApplicationById(
+    data.applicationId
+  );
+
+  if (!application) {
+    throw ApiError.notFound('Application not found');
+  }
+
+  // Don't assign applications that are already completed/rejected/cancelled
+  if (
+    application.status === 'COMPLETED' ||
+    application.status === 'REJECTED' ||
+    application.status === 'CANCELLED'
+  ) {
+    throw ApiError.badRequest(
+      `Cannot assign an application with status ${application.status}`
+    );
+  }
+
+  const assignee = await repo.findUserById(
+    data.assignedToId
+  );
+
+  if (!assignee) {
+    throw ApiError.notFound('Assigned user not found');
+  }
+
+  if (
+    assignee.role !== ROLES.LMO &&
+    assignee.role !== ROLES.GATC
+  ) {
+    throw ApiError.badRequest(
+      'Assigned user must have role LMO or GATC'
+    );
+  }
+
+  if (assignee.status !== 'ACTIVE') {
+    throw ApiError.badRequest(
+      'Assigned user account is not active'
+    );
+  }
+
+  const assignment = await repo.createAssignment({
+    applicationId: data.applicationId,
+    assignedToId: data.assignedToId,
+    assignedById: user.id,
+    remarks: data.remarks,
+  });
+
+  await repo.updateApplicationStatus(
+    data.applicationId,
+    'UNDER_REVIEW'
+  );
+
+  // Notify assigned officer
+  try {
+    const notificationsRepo = require('../notifications/notifications.repository');
+    await notificationsRepo.createNotification({
+      recipientId: data.assignedToId,
+      type: 'APPLICATION_UPDATE',
+      title: 'New Application Assigned',
+      message: `Application ${application.application_number} has been assigned to you.`,
+      relatedApplicationId: data.applicationId,
+    });
+  } catch (err) {
+    console.error('Assignment notification failed:', err.message);
+  }
+
+  return assignment;
+}
+
+async function getAssignments(user) {
+  if (user.role === ROLES.ADMIN) {
+    return repo.findAllAssignments();
+  }
+
+  return repo.findAssignmentsByAssigneeId(user.id);
+}
+
+async function getAssignmentById(user, assignmentId) {
+  const assignment = await repo.findAssignmentById(
+    assignmentId
+  );
+
+  if (!assignment) {
+    throw ApiError.notFound('Assignment not found');
+  }
+
+  if (user.role !== ROLES.ADMIN && assignment.assigned_to_id !== user.id) {
+    throw ApiError.forbidden('You do not have permission to access this assignment');
+  }
+
+  const attachmentsRepo = require('../attachments/attachments.repository');
+  const attachments = await attachmentsRepo.findAttachmentsByApplicationId(assignment.application_id);
+  assignment.attachments = attachments || [];
+
+  return assignment;
+}
+
+async function updateAssignmentStatus(
+  user,
+  assignmentId,
+  data
+) {
+  if (!isValidAssignmentStatus(data.status)) {
+    throw ApiError.badRequest(
+      `Invalid assignment status: ${data.status}`
+    );
+  }
+
+  const assignment = await repo.findAssignmentById(
+    assignmentId
+  );
+
+  if (!assignment) {
+    throw ApiError.notFound('Assignment not found');
+  }
+
+  // Only the assigned officer can update
+  if (
+    user.role !== ROLES.ADMIN &&
+    assignment.assigned_to_id !== user.id
+  ) {
+    throw ApiError.forbidden(
+      'You can only update assignments assigned to you'
+    );
+  }
+
+  // Update assignment
+  const updatedAssignment =
+    await repo.updateAssignmentStatus(
+      assignmentId,
+      data.status,
+      data.remarks
+    );
+
+  // IMPORTANT:
+  // If officer declines the assignment,
+  // update the application so Owner can see it
+  if (data.status === 'DECLINED') {
+    await repo.updateApplicationStatus(
+      assignment.application_id,
+      'DECLINED'
+    );
+  }
+
+  return updatedAssignment;
+}
+
+module.exports = {
+  createAssignment,
+  getAssignments,
+  getAssignmentById,
+  updateAssignmentStatus,
+};
