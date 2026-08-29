@@ -104,6 +104,25 @@ async function findAllCertificates() {
 
   return rows;
 }
+async function findCertificatesByOwnerId(ownerId) {
+  const { rows } = await pool.query(
+    `SELECT vc.*,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number,
+            app.application_number
+     FROM verification_certificates vc
+     JOIN instruments i ON i.id = vc.instrument_id
+     JOIN verifications v ON v.id = vc.verification_id
+     JOIN verification_applications app ON app.id = v.application_id
+     WHERE i.owner_id = $1
+     ORDER BY vc.created_at DESC`,
+    [ownerId]
+  );
+
+  return rows;
+}
 // Get certificate by ID
 async function findCertificateById(id) {
   const { rows } = await pool.query(
@@ -124,6 +143,26 @@ async function findCertificateById(id) {
        ON vr.verification_id = v.id
      WHERE vc.id = $1`,
     [id]
+  );
+
+  return rows[0] || null;
+}
+async function findCertificateByIdForOwner(id, ownerId) {
+  const { rows } = await pool.query(
+    `SELECT vc.*,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number,
+            app.application_number,
+            vr.decision
+     FROM verification_certificates vc
+     JOIN instruments i ON i.id = vc.instrument_id
+     JOIN verifications v ON v.id = vc.verification_id
+     JOIN verification_applications app ON app.id = v.application_id
+     JOIN verification_results vr ON vr.verification_id = v.id
+     WHERE vc.id = $1 AND i.owner_id = $2`,
+    [id, ownerId]
   );
 
   return rows[0] || null;
@@ -175,7 +214,9 @@ module.exports = {
   getNextCertificateNumber,
   createCertificate,
   findAllCertificates,
+  findCertificatesByOwnerId,
   findCertificateById,
+  findCertificateByIdForOwner,
   findCertificateByQrToken,
   updateCertificateStatus,
   updateCertificateFileUrl,

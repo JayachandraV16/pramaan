@@ -19,6 +19,7 @@ const notificationsRoutes = require('./notifications/notifications.routes');
 const schedulesRoutes = require('./schedules/schedules.routes');
 const attachmentsRoutes = require('./attachments/attachments.routes');
 const qrAuthRoutes = require('./qr-auth/qr-auth.routes');
+const adminRoutes = require('./admin/admin.routes');
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use('/notifications', notificationsRoutes);
 router.use('/schedules', schedulesRoutes);
 router.use('/attachments', attachmentsRoutes);
 router.use('/qr-auth', qrAuthRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;

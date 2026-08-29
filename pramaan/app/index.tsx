@@ -7,7 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
-  const { token, isLoading } = useAuth();
+  const { token, user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -23,8 +23,19 @@ export default function Index() {
     );
   }
 
-  if (token) {
-    return <Redirect href="/(tabs)" />;
+  if (!token || !user) {
+    return <Redirect href="/auth/login" />;
+  }
+
+  if (
+    user.role === 'LMO' ||
+    user.role === 'GATC'
+  ) {
+    return <Redirect href="/inspector" />;
+  }
+
+  if (user.role === 'ADMIN') {
+    return <Redirect href="/admin" />;
   }
 
   return <Redirect href="/auth/login" />;

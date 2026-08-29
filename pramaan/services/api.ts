@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://10.235.236.1:5000/api';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+
+const API_BASE_URL = 'http://localhost:5000/api';
+const TOKEN_KEY = 'pramaan_auth_token';
 
 type ApiOptions = {
   method?: string;
@@ -6,6 +10,14 @@ type ApiOptions = {
   body?: string;
   requiresAuth?: boolean;
 };
+
+async function getStoredToken() {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  return await SecureStore.getItemAsync(TOKEN_KEY);
+}
 
 export async function apiRequest(
   endpoint: string,
@@ -15,6 +27,7 @@ export async function apiRequest(
     method = 'GET',
     headers = {},
     body,
+    requiresAuth = false,
   } = options;
 
   const requestHeaders: Record<string, string> = {
@@ -22,31 +35,53 @@ export async function apiRequest(
     ...headers,
   };
 
+  if (requiresAuth) {
+    const token = await getStoredToken();
+
+    console.log('AUTH REQUIRED:', requiresAuth);
+    console.log('TOKEN EXISTS:', !!token);
+    console.log(
+      'TOKEN PREVIEW:',
+      token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
+    );
+
+    if (token) {
+      requestHeaders.Authorization = `Bearer ${token}`;
+    }
+
+    console.log(
+      'HAS AUTH HEADER:',
+      !!requestHeaders.Authorization
+    );
+  }
+
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
-
-    console.log('API URL:', url);
-    console.log('API METHOD:', method);
-    console.log('API BODY:', body);
-
-    const response = await fetch(url, {
-      method,
-      headers: requestHeaders,
-      body,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}${endpoint}`,
+      {
+        method,
+        headers: requestHeaders,
+        body,
+      }
+    );
 
     const text = await response.text();
 
+    console.log('API URL:', `${API_BASE_URL}${endpoint}`);
+    console.log('API METHOD:', method);
     console.log('API STATUS:', response.status);
-    console.log('API RESPONSE:', text);
 
-    let data;
+    let data: any = {};
 
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      throw new Error('Invalid response from server');
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error('Invalid response from server');
+      }
     }
+
+    console.log('API RESPONSE:', data);
 
     if (!response.ok) {
       throw new Error(
@@ -57,7 +92,11 @@ export async function apiRequest(
 
     return data;
   } catch (error: any) {
-    console.log('API REQUEST ERROR:', error.message);
+    console.log(
+      'API REQUEST ERROR:',
+      error?.message || error
+    );
+
     throw error;
   }
 }

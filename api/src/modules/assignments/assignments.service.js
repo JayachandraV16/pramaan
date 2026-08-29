@@ -115,7 +115,7 @@ async function updateAssignmentStatus(
     throw ApiError.notFound('Assignment not found');
   }
 
-  // Only the assigned LMO/GATC can update their assignment
+  // Only the assigned officer can update
   if (
     user.role !== ROLES.ADMIN &&
     assignment.assigned_to_id !== user.id
@@ -125,11 +125,25 @@ async function updateAssignmentStatus(
     );
   }
 
-  return repo.updateAssignmentStatus(
-    assignmentId,
-    data.status,
-    data.remarks
-  );
+  // Update assignment
+  const updatedAssignment =
+    await repo.updateAssignmentStatus(
+      assignmentId,
+      data.status,
+      data.remarks
+    );
+
+  // IMPORTANT:
+  // If officer declines the assignment,
+  // update the application so Owner can see it
+  if (data.status === 'DECLINED') {
+    await repo.updateApplicationStatus(
+      assignment.application_id,
+      'REJECTED'
+    );
+  }
+
+  return updatedAssignment;
 }
 
 module.exports = {

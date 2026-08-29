@@ -1,21 +1,33 @@
 import { apiRequest } from './api';
 
 export async function getApplications() {
-  return apiRequest('/applications');
+  const response = await apiRequest('/applications', {
+    method: 'GET',
+    requiresAuth: true,
+  });
+
+  return response.data;
 }
 
 export async function getApplicationById(
   id: string
 ) {
-  return apiRequest(`/applications/${id}`);
+  const response = await apiRequest(`/applications/${id}`, {
+    method: 'GET',
+    requiresAuth: true,
+  });
+
+  return response.data;
 }
 
 export async function createApplication(
   applicationData: Record<string, unknown>
 ) {
-  return apiRequest('/applications', {
+  const response = await apiRequest('/applications', {
     method: 'POST',
-
+    requiresAuth: true,
     body: JSON.stringify(applicationData),
   });
+
+  return response.data;
 }

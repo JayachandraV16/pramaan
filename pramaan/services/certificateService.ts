@@ -1,11 +1,21 @@
 import { apiRequest } from './api';
 
 export async function getCertificates() {
-  return apiRequest('/certificates');
+  const response = await apiRequest('/certificates', {
+    method: 'GET',
+    requiresAuth: true,
+  });
+
+  return response.data;
 }
 
 export async function getCertificateById(
   id: string
 ) {
-  return apiRequest(`/certificates/${id}`);
+  const response = await apiRequest(`/certificates/${id}`, {
+    method: 'GET',
+    requiresAuth: true,
+  });
+
+  return response.data;
 }

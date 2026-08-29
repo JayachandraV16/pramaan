@@ -232,12 +232,26 @@ async function findAllVerifications() {
   const { rows } = await pool.query(
     `SELECT v.*,
             app.application_number,
-            u.full_name AS performed_by_name
+            u.full_name AS performed_by_name,
+            va.assigned_to_id,
+            assigned_to.full_name AS assigned_to_name,
+            i.id AS instrument_id,
+            i.instrument_name,
+            i.serial_number,
+            vr.decision
      FROM verifications v
      JOIN verification_applications app
        ON app.id = v.application_id
      JOIN users u
        ON u.id = v.performed_by_id
+     JOIN verification_assignments va
+       ON va.id = v.assignment_id
+     JOIN users assigned_to
+       ON assigned_to.id = va.assigned_to_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN verification_results vr
+       ON vr.verification_id = v.id
      ORDER BY v.created_at DESC`
   );
 

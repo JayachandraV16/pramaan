@@ -40,7 +40,13 @@ export default function LoginScreen() {
 
       await login(token, user);
 
-      router.replace('/(tabs)');
+      router.replace(
+        user.role === 'LMO' || user.role === 'GATC'
+          ? '/inspector'
+          : user.role === 'ADMIN'
+            ? '/admin'
+            : '/(tabs)'
+      );
     } catch (error: any) {
       setError(
         error.message || 'Login failed. Please try again.'
