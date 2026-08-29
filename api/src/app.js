@@ -12,7 +12,9 @@ app.use(cors());
 app.use(express.json());
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, 'uploads'))
+  express.static(
+    path.join(process.cwd(), 'uploads')
+  )
 );
 
 app.get("/health", (req, res) => {

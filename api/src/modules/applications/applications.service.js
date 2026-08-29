@@ -1,16 +1,32 @@
 const ApiError = require('../../utils/ApiError');
 const repo = require('./applications.repository');
-const { isValidApplicationType } = require('./applications.validation');
+const {
+  isValidApplicationType,
+  isValidInstrumentOrigin,
+  APPLICATION_TYPES,
+} = require('./applications.validation');
 const { ROLES } = require('../../config/roles');
-
-function generateApplicationNumber() {
-  return `APP-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-}
 
 async function createApplication(user, data) {
   if (!isValidApplicationType(data.applicationType)) {
     throw ApiError.badRequest(
       `Invalid application type: ${data.applicationType}`
+    );
+  }
+
+  if (!data.division || typeof data.division !== 'string' || !data.division.trim()) {
+    throw ApiError.badRequest('division is required');
+  }
+
+  if (data.instrumentOrigin && !isValidInstrumentOrigin(data.instrumentOrigin)) {
+    throw ApiError.badRequest(`Invalid instrument origin: ${data.instrumentOrigin}`);
+  }
+
+  // Renewal applications must reference the certificate being renewed.
+  // New verifications must not (nothing to renew yet).
+  if (data.applicationType === APPLICATION_TYPES.RE_VERIFICATION && !data.lastCertificateId) {
+    throw ApiError.badRequest(
+      'lastCertificateId is required for RE_VERIFICATION applications'
     );
   }
 
@@ -30,15 +46,44 @@ async function createApplication(user, data) {
     );
   }
 
-  const applicationNumber = generateApplicationNumber();
+  // For renewals, confirm the referenced certificate exists and actually
+  // belongs to this instrument. Lightweight sanity check, not a rules
+  // engine — full document-checklist logic is out of scope here.
+  if (data.lastCertificateId) {
+    const lastCertificate = await repo.findCertificateById(data.lastCertificateId);
+
+    if (!lastCertificate) {
+      throw ApiError.badRequest(
+        'lastCertificateId does not reference an existing certificate'
+      );
+    }
+
+    if (lastCertificate.instrument_id !== data.instrumentId) {
+      throw ApiError.badRequest(
+        'lastCertificateId does not belong to the specified instrument'
+      );
+    }
+  }
+
+  // Normalized once here so both the stored `division` column and the
+  // application-number generation (repository layer) use the same value —
+  // avoids "Pune" vs "PUNE" silently creating two different counters.
+  const division = data.division.trim().toUpperCase();
 
   return repo.createApplication({
-    applicationNumber,
     applicantId: user.id,
     instrumentId: data.instrumentId,
     applicationType: data.applicationType,
     purpose: data.purpose,
     remarks: data.remarks,
+    division,
+    submissionOffice: data.submissionOffice,
+    instrumentOrigin: data.instrumentOrigin,
+    grasChallanNumber: data.grasChallanNumber,
+    grasChallanDate: data.grasChallanDate,
+    conveyanceFee: data.conveyanceFee,
+    quarterJumpFee: data.quarterJumpFee,
+    lastCertificateId: data.lastCertificateId,
   });
 }
 
