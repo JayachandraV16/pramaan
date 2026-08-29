@@ -4,9 +4,20 @@ const ApiError = require('../../utils/ApiError');
 const { hashPassword, comparePassword } = require('../../utils/password');
 const { signToken } = require('../../utils/jwt');
 const repo = require('./auth.repository');
-const { isValidRole } = require('./auth.validation');
+const { isValidRole, isValidApplicantType } = require('./auth.validation');
+const { ROLES } = require('../../config/roles');
 
-async function register({ fullName, email, phone, password, role, organizationName, address }) {
+async function register({
+  fullName,
+  email,
+  phone,
+  password,
+  role,
+  organizationName,
+  address,
+  lcrNumber,
+  applicantType,
+}) {
   if (!isValidRole(role)) {
     throw ApiError.badRequest(`Invalid role: ${role}`);
   }
@@ -16,6 +27,10 @@ async function register({ fullName, email, phone, password, role, organizationNa
   // constraint-violation error.
   if (!email && !phone) {
     throw ApiError.badRequest('Either email or phone is required');
+  }
+
+  if (applicantType && !isValidApplicantType(applicantType)) {
+    throw ApiError.badRequest(`Invalid applicant type: ${applicantType}`);
   }
 
   if (email) {
@@ -35,6 +50,10 @@ async function register({ fullName, email, phone, password, role, organizationNa
     );
   }
 
+  // lcrNumber/applicantType only apply to instrument owners — other roles
+  // (LMO/GATC/Admin/Public) never persist them, even if sent.
+  const isOwner = role === ROLES.INSTRUMENT_OWNER;
+
   const passwordHash = await hashPassword(password);
   const user = await repo.createUser({
     fullName,
@@ -44,6 +63,8 @@ async function register({ fullName, email, phone, password, role, organizationNa
     roleId,
     organizationName,
     address,
+    lcrNumber: isOwner ? lcrNumber : null,
+    applicantType: isOwner ? applicantType : null,
   });
 
   const token = signToken({ id: user.id, role });

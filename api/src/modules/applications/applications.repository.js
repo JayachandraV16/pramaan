@@ -11,38 +11,113 @@ async function findInstrumentById(id) {
   return rows[0] || null;
 }
 
+async function findCertificateById(id) {
+  const { rows } = await pool.query(
+    `SELECT id, instrument_id, status
+     FROM verification_certificates
+     WHERE id = $1`,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+// --- Application number generation -----------------------------------
+//
+// LM/{year}/{division}/{sequence} — sequence is per (division, year),
+// zero-padded to 6 digits, backed by application_number_counters
+// (migration 018). Must be called with a `client` inside the SAME
+// transaction as the following INSERT, so a failed insert rolls back the
+// counter increment too — no skipped numbers on failure.
+async function nextApplicationSequence(client, division, year) {
+  const { rows } = await client.query(
+    `INSERT INTO application_number_counters (division, year, last_sequence)
+     VALUES ($1, $2, 1)
+     ON CONFLICT (division, year)
+     DO UPDATE SET last_sequence = application_number_counters.last_sequence + 1
+     RETURNING last_sequence`,
+    [division, year]
+  );
+
+  return rows[0].last_sequence;
+}
+
+function formatApplicationNumber(year, division, sequence) {
+  const paddedSequence = String(sequence).padStart(6, '0');
+  return `LM/${year}/${division}/${paddedSequence}`;
+}
+
 async function createApplication({
-  applicationNumber,
   applicantId,
   instrumentId,
   applicationType,
   purpose,
   remarks,
+  division,
+  submissionOffice,
+  instrumentOrigin,
+  grasChallanNumber,
+  grasChallanDate,
+  conveyanceFee,
+  quarterJumpFee,
+  lastCertificateId,
 }) {
-  const { rows } = await pool.query(
-    `INSERT INTO verification_applications (
-      application_number,
-      applicant_id,
-      instrument_id,
-      application_type,
-      status,
-      purpose,
-      remarks,
-      submitted_at
-    )
-    VALUES ($1, $2, $3, $4, 'SUBMITTED', $5, $6, NOW())
-    RETURNING *`,
-    [
-      applicationNumber,
-      applicantId,
-      instrumentId,
-      applicationType,
-      purpose || null,
-      remarks || null,
-    ]
-  );
+  const client = await pool.connect();
 
-  return rows[0];
+  try {
+    await client.query('BEGIN');
+
+    const year = new Date().getFullYear();
+    const sequence = await nextApplicationSequence(client, division, year);
+    const applicationNumber = formatApplicationNumber(year, division, sequence);
+
+    const { rows } = await client.query(
+      `INSERT INTO verification_applications (
+        application_number,
+        applicant_id,
+        instrument_id,
+        application_type,
+        status,
+        purpose,
+        remarks,
+        submitted_at,
+        division,
+        submission_office,
+        instrument_origin,
+        gras_challan_number,
+        gras_challan_date,
+        conveyance_fee,
+        quarter_jump_fee,
+        last_certificate_id
+      )
+      VALUES ($1, $2, $3, $4, 'SUBMITTED', $5, $6, NOW(), $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *`,
+      [
+        applicationNumber,
+        applicantId,
+        instrumentId,
+        applicationType,
+        purpose || null,
+        remarks || null,
+        division,
+        submissionOffice || null,
+        instrumentOrigin || null,
+        grasChallanNumber || null,
+        grasChallanDate || null,
+        conveyanceFee ?? null,
+        quarterJumpFee ?? null,
+        lastCertificateId || null,
+      ]
+    );
+
+    await client.query('COMMIT');
+    return rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function findApplicationsByApplicantId(applicantId) {
@@ -93,6 +168,7 @@ async function findApplicationById(id) {
 
 module.exports = {
   findInstrumentById,
+  findCertificateById,
   createApplication,
   findApplicationsByApplicantId,
   findAllApplications,
