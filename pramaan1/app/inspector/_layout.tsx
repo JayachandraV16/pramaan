@@ -14,7 +14,11 @@ export default function InspectorLayout() {
     );
   }
 
-  if (!user || (user.role !== 'LMO' && user.role !== 'GATC')) {
+  if (!user) {
+    return <Redirect href="/auth/login" />;
+  }
+
+  if (user.role !== 'LMO' && user.role !== 'GATC') {
     return <Redirect href="/" />;
   }
 

@@ -46,6 +46,12 @@ type ApplicationDetails = {
   certificate_number?: string | null;
   certificate_file_url?: string | null;
   certificate_status?: string | null;
+  schedule_id?: string | null;
+  scheduled_date?: string | null;
+  scheduled_time?: string | null;
+  verification_location?: string | null;
+  schedule_status?: string | null;
+  schedule_remarks?: string | null;
   attachments?: any[];
   created_at?: string | null;
 };
@@ -546,6 +552,47 @@ export default function ApplicationDetailsScreen() {
                 </View>
               );
             })}
+          </View>
+        </View>
+      )}
+
+      {/* VERIFICATION SCHEDULE */}
+      {application.scheduled_date && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Verification Schedule</Text>
+          <View style={styles.card}>
+            <DetailRow
+              label="Scheduled Date"
+              value={
+                typeof application.scheduled_date === 'string'
+                  ? application.scheduled_date.split('T')[0]
+                  : new Date(application.scheduled_date).toISOString().split('T')[0]
+              }
+            />
+            {application.scheduled_time && (
+              <DetailRow
+                label="Scheduled Time"
+                value={application.scheduled_time}
+              />
+            )}
+            {application.verification_location && (
+              <DetailRow
+                label="Location"
+                value={application.verification_location}
+              />
+            )}
+            {application.schedule_status && (
+              <DetailRow
+                label="Schedule Status"
+                value={application.schedule_status}
+              />
+            )}
+            {application.schedule_remarks && (
+              <DetailRow
+                label="Remarks"
+                value={application.schedule_remarks}
+              />
+            )}
           </View>
         </View>
       )}

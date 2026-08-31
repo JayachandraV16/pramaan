@@ -58,6 +58,7 @@ type Assignment = {
   scheduled_time?: string | null;
   verification_location?: string | null;
   schedule_status?: string | null;
+  schedule_remarks?: string | null;
   verification_id?: string | null;
   verification_status?: string | null;
   verification_decision?: 'PASS' | 'FAIL' | null;
@@ -92,7 +93,7 @@ function getScheduleStatus(scheduledDate?: string | null, scheduledTime?: string
   if (now < scheduledDateTime) {
     return {
       isReady: false,
-      message: `Scheduled for ${new Date(scheduledDate).toLocaleDateString()} at ${scheduledTimeStr}. Verification cannot start before the scheduled time.`,
+      message: `Scheduled for ${scheduledDateStr} at ${scheduledTimeStr}. Verification cannot start before the scheduled time.`,
     };
   }
 
@@ -455,6 +456,9 @@ export default function AssignmentDetailScreen() {
             </Text>
             {assignment.verification_location && (
               <Text style={styles.value}>{assignment.verification_location}</Text>
+            )}
+            {assignment.schedule_remarks && (
+              <Text style={styles.value}>Remarks: {assignment.schedule_remarks}</Text>
             )}
           </>
         )}

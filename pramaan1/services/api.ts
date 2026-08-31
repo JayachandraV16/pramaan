@@ -4,16 +4,17 @@ import * as SecureStore from 'expo-secure-store';
 export const API_BASE_URL =
   Platform.OS === 'web'
     ? 'http://localhost:5000/api'
-    : 'http://10.235.236.1:5000/api';
+    : 'http://10.10.12.60:5000/api';
+
+export const API_ORIGIN = API_BASE_URL.replace(/\/api$/, '');
 
 export function getFileUrl(fileUrl: string): string {
   if (!fileUrl) return '';
   if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
     return fileUrl;
   }
-  const origin = API_BASE_URL.replace(/\/api$/, '');
   const cleanPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
-  return `${origin}${cleanPath}`;
+  return `${API_ORIGIN}${cleanPath}`;
 }
 
 const TOKEN_KEY = 'pramaan_auth_token';

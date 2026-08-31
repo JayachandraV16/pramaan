@@ -10,7 +10,11 @@ export default function AdminLayout() {
     return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" /></View>;
   }
 
-  if (!user || user.role !== 'ADMIN') {
+  if (!user) {
+    return <Redirect href="/auth/login" />;
+  }
+
+  if (user.role !== 'ADMIN') {
     return <Redirect href="/" />;
   }
 

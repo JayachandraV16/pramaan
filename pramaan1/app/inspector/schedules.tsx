@@ -48,6 +48,7 @@ export default function InspectorSchedulesScreen() {
             <Text>Date: {new Date(item.scheduled_date).toLocaleDateString()}</Text>
             {item.scheduled_time ? <Text>Time: {item.scheduled_time}</Text> : null}
             {item.verification_location ? <Text>Location: {item.verification_location}</Text> : null}
+            {item.remarks ? <Text>Remarks: {item.remarks}</Text> : null}
           </View>
         )}
       />

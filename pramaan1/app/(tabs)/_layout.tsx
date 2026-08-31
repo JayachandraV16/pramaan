@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 export default function TabsLayout() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <View
         style={{
@@ -18,6 +18,10 @@ export default function TabsLayout() {
         <ActivityIndicator size="large" />
       </View>
     );
+  }
+
+  if (!user) {
+    return <Redirect href="/auth/login" />;
   }
 
   if (user.role !== 'INSTRUMENT_OWNER') {
