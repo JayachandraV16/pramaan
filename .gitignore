@@ -1,0 +1,14 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Vite
+web/.vite/
+web/dist/
+
+# Generated uploads
+api/uploads/
