@@ -52,9 +52,20 @@ const updateAssignmentStatus = asyncHandler(async (req, res) => {
   ).send(res);
 });
 
+const getAvailableOfficers = asyncHandler(async (req, res) => {
+  const officers = await service.getAvailableOfficers();
+
+  new ApiResponse(
+    200,
+    officers,
+    'Available officers retrieved successfully'
+  ).send(res);
+});
+
 module.exports = {
   createAssignment,
   getAssignments,
   getAssignmentById,
+  getAvailableOfficers,
   updateAssignmentStatus,
 };

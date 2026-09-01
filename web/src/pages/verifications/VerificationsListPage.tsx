@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { verificationsApi } from '../../api/verifications.api';
+import { applicationsApi } from '../../api/applications.api';
+import { instrumentsApi } from '../../api/instruments.api';
 import { Verification, VerificationStatus } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -34,11 +36,50 @@ export const VerificationsListPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const list = await verificationsApi.listVerifications({
-        status: (selectedStatus as VerificationStatus) || undefined,
-        search: searchQuery || undefined,
+      const [list, apps, insts] = await Promise.all([
+        verificationsApi.listVerifications({
+          status: (selectedStatus as VerificationStatus) || undefined,
+          search: searchQuery || undefined,
+        }),
+        applicationsApi.listApplications().catch(() => []),
+        instrumentsApi.listInstruments().catch(() => []),
+      ]);
+
+      const enriched = list.map((v) => {
+        const matchingApp = apps.find(a => a.id === v.application_id);
+        const matchingInst = insts.find(i => (matchingApp && i.id === matchingApp.instrument_id) || (v.instrument_serial && i.serial_number === v.instrument_serial));
+
+        const resolvedOwner = [
+          v.owner_name,
+          matchingApp?.owner_name,
+          matchingApp?.applicant_name,
+          matchingInst?.owner_name,
+        ].find(n => n && n !== '—' && n !== 'Registered Owner' && n !== 'Instrument Custodian');
+
+        const resolvedOrg = v.owner_organization || matchingApp?.owner_organization || matchingApp?.applicant_organization || matchingInst?.owner_organization;
+        const resolvedAddress = [
+          v.location_address,
+          v.location,
+          matchingApp?.location_address,
+          matchingInst?.location_address,
+          matchingInst?.owner_address,
+        ].find(loc => loc && loc !== '—' && loc !== 'Registered Location' && loc !== 'Inspection Premises');
+
+        const resolvedInstName = v.instrument_name !== 'Instrument' ? v.instrument_name : matchingApp?.instrument_name || matchingInst?.instrument_name || 'Weighing Instrument';
+        const resolvedInstSerial = v.instrument_serial || matchingApp?.instrument_serial || matchingInst?.serial_number;
+
+        return {
+          ...v,
+          owner_name: resolvedOwner || v.owner_name || '—',
+          owner_organization: resolvedOrg,
+          location_address: resolvedAddress || v.location_address,
+          location: resolvedAddress || v.location,
+          instrument_name: resolvedInstName,
+          instrument_serial: resolvedInstSerial || v.instrument_serial,
+        };
       });
-      setVerifications(list);
+
+      setVerifications(enriched);
     } catch (err: any) {
       setError(err?.message || 'Failed to load field verification records.');
     } finally {
@@ -136,45 +177,107 @@ export const VerificationsListPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {verifications.map((ver) => (
                   <tr key={ver.id} className="hover:bg-slate-50 transition-colors">
+                    {/* Col 1: Instrument Under Test */}
                     <td className="py-4 px-4">
-                      <div className="font-semibold text-slate-900 text-sm">{ver.instrument_name}</div>
-                      <div className="font-mono text-[10px] text-slate-500">{ver.instrument_serial}</div>
-                      <div className="text-[11px] text-slate-600 truncate max-w-xs">{ver.location}</div>
-                    </td>
-                    <td className="py-4 px-4 font-medium text-slate-800">
-                      <p>{ver.verification_date}</p>
-                      <Badge status={ver.status} size="sm" className="mt-1" />
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="font-medium text-slate-900">{ver.performed_by_name || 'Assigned LMO'}</p>
-                      <p className="text-[10px] text-slate-500">Legal Metrology Directorate</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
-                          {ver.readings.length} Load Readings
-                        </span>
-                        <span className="inline-block ml-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
-                          {ver.observations.length} Qualitative Checks
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      {ver.result ? (
-                        <Badge status={ver.result.decision} size="md">
-                          {ver.result.decision === 'PASS' ? 'PASSED ✓' : 'FAILED ✗'}
-                        </Badge>
-                      ) : (
-                        <span className="text-amber-700 font-medium text-[11px]">Under Testing</span>
+                      <Link to={`/verifications/${ver.id}`} className="font-bold text-slate-900 text-sm hover:underline">
+                        {ver.instrument_name}
+                      </Link>
+                      {ver.instrument_serial && (
+                        <p className="font-mono text-[10px] text-slate-500">
+                          SN: {ver.instrument_serial}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-slate-700 mt-0.5">
+                        Owner: <strong>{ver.owner_name || '—'}</strong>
+                        {ver.owner_organization ? ` (${ver.owner_organization})` : ''}
+                      </p>
+                      {ver.location && (
+                        <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                          {ver.location}
+                        </p>
                       )}
                     </td>
+
+                    {/* Col 2: Verification Date & Status */}
+                    <td className="py-4 px-4 font-medium text-slate-800">
+                      <p className="font-mono text-[11px]">{ver.verification_date}</p>
+                      <Badge status={ver.status} size="sm" className="mt-1" />
+                    </td>
+
+                    {/* Col 3: Testing Officer */}
+                    <td className="py-4 px-4">
+                      <p className="font-semibold text-slate-900">{ver.performed_by_name || 'Assigned LMO'}</p>
+                      <p className="text-[10px] text-slate-500">Legal Metrology Directorate</p>
+                    </td>
+
+                    {/* Col 4: Measurements & Observations */}
+                    <td className="py-4 px-4">
+                      <div className="space-y-1.5">
+                        {ver.readings && ver.readings.length > 0 ? (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              {ver.readings.length} Test Load{ver.readings.length > 1 ? 's' : ''}
+                            </span>
+                            <span className="text-[10px] text-slate-600 font-mono">
+                              ({ver.readings.map(r => `${r.observed_value} ${r.unit}`).slice(0, 2).join(', ')}{ver.readings.length > 2 ? '...' : ''})
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="inline-block text-[10px] text-slate-400">
+                            No load readings recorded yet
+                          </span>
+                        )}
+
+                        {ver.observations && ver.observations.length > 0 ? (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              {ver.observations.length} Seal Check{ver.observations.length > 1 ? 's' : ''}
+                            </span>
+                            <span className="text-[10px] text-slate-600 font-medium">
+                              ({ver.observations.map(o => o.observed_value).slice(0, 2).join(', ')})
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="block text-[10px] text-slate-400">
+                            No qualitative checks recorded
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Col 5: Decision Outcome */}
+                    <td className="py-4 px-4">
+                      {ver.result ? (
+                        <div className="space-y-1">
+                          <Badge status={ver.result.decision} size="md">
+                            {ver.result.decision === 'PASS' ? 'PASSED' : 'FAILED'}
+                          </Badge>
+                          {ver.result.remarks && (
+                            <p className="text-[10px] text-slate-600 line-clamp-1">
+                              {ver.result.remarks}
+                            </p>
+                          )}
+                          {ver.result.decided_by_name && (
+                            <p className="text-[9px] text-slate-400 font-mono">
+                              Officer: {ver.result.decided_by_name}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                          Under Testing
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Col 6: Action */}
                     <td className="py-4 px-4 text-right">
                       <Link to={`/verifications/${ver.id}`}>
                         <Button
                           variant={ver.status === 'IN_PROGRESS' ? 'primary' : 'outline'}
                           size="sm"
                         >
-                          {ver.status === 'IN_PROGRESS' ? 'Enter Readings' : 'View Record →'}
+                          {ver.status === 'IN_PROGRESS' ? 'Record Readings' : 'View Record →'}
                         </Button>
                       </Link>
                     </td>

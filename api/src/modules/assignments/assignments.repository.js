@@ -60,11 +60,23 @@ async function findAllAssignments() {
             app.application_number,
             app.application_type,
             app.status AS application_status,
+            i.instrument_name,
+            i.serial_number AS instrument_serial,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.phone, applicant.phone) AS owner_phone,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
             assigned_to.full_name AS assigned_to_name,
             assigned_by.full_name AS assigned_by_name
      FROM verification_assignments va
      JOIN verification_applications app
        ON app.id = va.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
      JOIN users assigned_to
        ON assigned_to.id = va.assigned_to_id
      LEFT JOIN users assigned_by
@@ -81,10 +93,28 @@ async function findAssignmentsByAssigneeId(userId) {
     `SELECT va.*,
             app.application_number,
             app.application_type,
-            app.status AS application_status
+            app.status AS application_status,
+            i.instrument_name,
+            i.serial_number AS instrument_serial,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.phone, applicant.phone) AS owner_phone,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            assigned_to.full_name AS assigned_to_name,
+            assigned_by.full_name AS assigned_by_name
      FROM verification_assignments va
      JOIN verification_applications app
        ON app.id = va.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     JOIN users assigned_to
+       ON assigned_to.id = va.assigned_to_id
+     LEFT JOIN users assigned_by
+       ON assigned_by.id = va.assigned_by_id
      WHERE va.assigned_to_id = $1
      ORDER BY va.created_at DESC`,
     [userId]
@@ -100,11 +130,23 @@ async function findAssignmentById(id) {
             app.application_number,
             app.application_type,
             app.status AS application_status,
+            i.instrument_name,
+            i.serial_number AS instrument_serial,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.phone, applicant.phone) AS owner_phone,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
             assigned_to.full_name AS assigned_to_name,
             assigned_by.full_name AS assigned_by_name
      FROM verification_assignments va
      JOIN verification_applications app
        ON app.id = va.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
      JOIN users assigned_to
        ON assigned_to.id = va.assigned_to_id
      LEFT JOIN users assigned_by
@@ -145,9 +187,23 @@ async function updateApplicationStatus(
   return rows[0] || null;
 }
 
+async function findAvailableOfficers() {
+  const { rows } = await pool.query(
+    `SELECT u.id, u.full_name, u.email, u.phone, u.organization_name,
+            r.name AS role
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE r.name IN ('LMO', 'GATC') AND u.status = 'ACTIVE'
+     ORDER BY u.full_name ASC`
+  );
+
+  return rows;
+}
+
 module.exports = {
   findApplicationById,
   findUserById,
+  findAvailableOfficers,
   createAssignment,
   findAllAssignments,
   findAssignmentsByAssigneeId,

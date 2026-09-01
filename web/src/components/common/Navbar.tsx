@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "./Badge";
 import { useAuth } from "../../context/AuthContext";
-import { RoleName } from "../../types";
 export const Navbar: React.FC = () => {
-  const { user, isAuthenticated, logout, switchRole } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
@@ -53,42 +52,7 @@ export const Navbar: React.FC = () => {
       anchorId: "rules",
       action: () => setActModalOpen(true),
     },
-    { label: "Enforcement Activity", anchorId: "empower" },
   ];
-
-  const rolesList: Array<{ id: RoleName; label: string; desc: string }> = [
-    {
-      id: "INSTRUMENT_OWNER",
-      label: "Instrument Owner",
-      desc: "Traders, Mandi vendors & scale owners",
-    },
-    {
-      id: "LMO",
-      label: "Legal Metrology Officer",
-      desc: "Field inspection & verification officer",
-    },
-    {
-      id: "GATC",
-      label: "GATC / RRSL Lab",
-      desc: "Govt Approved Test Centre testing lab",
-    },
-    {
-      id: "ADMIN",
-      label: "System Admin",
-      desc: "Ministry & Metrology Directorate",
-    },
-    {
-      id: "PUBLIC_USER",
-      label: "Public Citizen",
-      desc: "General consumer / citizen",
-    },
-  ];
-
-  const handleRoleSelect = async (role: RoleName) => {
-    await switchRole(role);
-    setRoleDropdownOpen(false);
-    navigate("/dashboard");
-  };
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[#E0E0E0] shadow-xs">
@@ -234,105 +198,137 @@ export const Navbar: React.FC = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setRoleDropdownOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in duration-150 space-y-1">
-                      <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                        <p className="text-[10px] font-bold uppercase text-slate-400">
-                          Portal Services
-                        </p>
-                        <p className="text-xs font-bold text-slate-900">
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in duration-150 space-y-1">
+                      <div className="px-3 py-2.5 border-b border-slate-100 mb-1 space-y-1">
+                        <p className="text-xs font-bold text-slate-900 truncate">
                           {user.full_name}
                         </p>
+                        <p className="text-[10px] text-slate-500 truncate">
+                          {user.email || user.phone}
+                        </p>
+                        <div className="pt-0.5">
+                          <Badge status={user.role_id} size="sm" />
+                        </div>
                       </div>
 
-                      {/* Portal Links */}
+                      {/* Role-Specific Portal Links */}
                       <Link
                         to="/dashboard"
                         onClick={() => setRoleDropdownOpen(false)}
                         className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
                       >
-                        📊 My Dashboard
+                        My Dashboard
                       </Link>
-                      {(user.role_id === "INSTRUMENT_OWNER" ||
-                        user.role_id === "ADMIN") && (
-                        <Link
-                          to="/instruments"
-                          onClick={() => setRoleDropdownOpen(false)}
-                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                        >
-                          ⚖️ Weighing Instruments
-                        </Link>
+
+                      {/* INSTRUMENT_OWNER links */}
+                      {user.role_id === "INSTRUMENT_OWNER" && (
+                        <>
+                          <Link
+                            to="/instruments"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            My Weighing Instruments
+                          </Link>
+                          <Link
+                            to="/applications"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Verification Applications
+                          </Link>
+                        </>
                       )}
-                      {(user.role_id === "INSTRUMENT_OWNER" ||
-                        user.role_id === "GATC" ||
-                        user.role_id === "ADMIN") && (
-                        <Link
-                          to="/applications"
-                          onClick={() => setRoleDropdownOpen(false)}
-                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                        >
-                          📝 Verification Applications
-                        </Link>
+
+                      {/* LMO links */}
+                      {user.role_id === "LMO" && (
+                        <>
+                          <Link
+                            to="/assignments"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            My Assigned Applications
+                          </Link>
+                          <Link
+                            to="/verifications"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Field Verifications
+                          </Link>
+                        </>
                       )}
-                      {(user.role_id === "LMO" ||
-                        user.role_id === "GATC" ||
-                        user.role_id === "ADMIN") && (
-                        <Link
-                          to="/assignments"
-                          onClick={() => setRoleDropdownOpen(false)}
-                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                        >
-                          📋{" "}
-                          {user.role_id === "ADMIN"
-                            ? "All Assignments"
-                            : "My Assignments"}
-                        </Link>
+
+                      {/* GATC links */}
+                      {user.role_id === "GATC" && (
+                        <>
+                          <Link
+                            to="/applications"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Lab Applications
+                          </Link>
+                          <Link
+                            to="/assignments"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Lab Verification Queue
+                          </Link>
+                          <Link
+                            to="/verifications"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Calibration & Testing Logs
+                          </Link>
+                        </>
                       )}
-                      {(user.role_id === "LMO" ||
-                        user.role_id === "GATC" ||
-                        user.role_id === "ADMIN") && (
-                        <Link
-                          to="/verifications"
-                          onClick={() => setRoleDropdownOpen(false)}
-                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                        >
-                          🔍 Field Verifications
-                        </Link>
-                      )}
+
+                      {/* ADMIN links */}
                       {user.role_id === "ADMIN" && (
-                        <Link
-                          to="/certificates"
-                          onClick={() => setRoleDropdownOpen(false)}
-                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
-                        >
-                          📜 Digital Certificates
-                        </Link>
+                        <>
+                          <Link
+                            to="/instruments"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            All National Instruments
+                          </Link>
+                          <Link
+                            to="/applications"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Verification Applications
+                          </Link>
+                          <Link
+                            to="/assignments"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Officer Assignments
+                          </Link>
+                          <Link
+                            to="/verifications"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Field Verifications
+                          </Link>
+                          <Link
+                            to="/certificates"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            Digital Certificates Vault
+                          </Link>
+                        </>
                       )}
 
-                      <div className="pt-2 mt-1 border-t border-slate-100">
-                        <p className="px-3 py-1 text-[10px] font-bold uppercase text-slate-400">
-                          Switch Demo Role
-                        </p>
-                        <div className="space-y-0.5">
-                          {rolesList.map((r) => (
-                            <button
-                              key={r.id}
-                              type="button"
-                              onClick={() => handleRoleSelect(r.id)}
-                              className={`w-full text-left px-3 py-1.5 rounded-md text-xs flex items-center justify-between ${
-                                user.role_id === r.id
-                                  ? "bg-amber-50 text-amber-900 font-bold"
-                                  : "hover:bg-slate-50 text-slate-600"
-                              }`}
-                            >
-                              <span>{r.label}</span>
-                              {user.role_id === r.id && (
-                                <span className="text-emerald-600">✓</span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
+                      {/* Sign Out */}
                       <div className="pt-2 mt-1 border-t border-slate-100">
                         <button
                           type="button"
@@ -386,7 +382,7 @@ export const Navbar: React.FC = () => {
                         onClick={() => setLoginDropdownOpen(false)}
                         className="block px-3 py-2 rounded-lg text-xs font-bold text-[#1a1a2e] hover:bg-slate-100"
                       >
-                        Officer / Applicant Sign In
+                        Sign In
                       </Link>
                       <Link
                         to="/register"
@@ -395,9 +391,6 @@ export const Navbar: React.FC = () => {
                       >
                         Register New Account
                       </Link>
-                      <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-500 px-3">
-                        Switch demo roles easily once signed in.
-                      </div>
                     </div>
                   </>
                 )}
@@ -455,7 +448,7 @@ export const Navbar: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
               >
-                📊 Dashboard
+                Dashboard
               </Link>
               {(user.role_id === "INSTRUMENT_OWNER" ||
                 user.role_id === "ADMIN") && (
@@ -464,7 +457,7 @@ export const Navbar: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
                 >
-                  ⚖️ Instruments
+                  Instruments
                 </Link>
               )}
               {(user.role_id === "INSTRUMENT_OWNER" ||
@@ -475,7 +468,7 @@ export const Navbar: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
                 >
-                  📝 Applications
+                  Applications
                 </Link>
               )}
               {(user.role_id === "LMO" ||
@@ -486,7 +479,6 @@ export const Navbar: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
                 >
-                  📋{" "}
                   {user.role_id === "ADMIN"
                     ? "All Assignments"
                     : "My Assignments"}
@@ -500,7 +492,7 @@ export const Navbar: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
                 >
-                  🔍 Field Verifications
+                  Field Verifications
                 </Link>
               )}
               {user.role_id === "ADMIN" && (
@@ -509,7 +501,7 @@ export const Navbar: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
                 >
-                  📜 Digital Certificates
+                  Digital Certificates
                 </Link>
               )}
             </div>
@@ -534,8 +526,11 @@ export const Navbar: React.FC = () => {
                 type="button"
                 onClick={() => setActModalOpen(false)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                aria-label="Close"
               >
-                ✕
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 

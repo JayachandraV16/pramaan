@@ -133,10 +133,31 @@ async function findVerificationById(id) {
   const { rows } = await pool.query(
     `SELECT v.*,
             app.application_number,
+            app.application_type,
+            app.purpose,
+            i.id AS instrument_id,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            i.location_address,
+            i.location_lat,
+            i.location_lng,
+            owner.full_name AS owner_name,
+            owner.email AS owner_email,
+            owner.phone AS owner_phone,
+            owner.organization_name AS owner_organization,
             u.full_name AS performed_by_name
      FROM verifications v
      JOIN verification_applications app
        ON app.id = v.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
      JOIN users u
        ON u.id = v.performed_by_id
      WHERE v.id = $1`,
@@ -232,10 +253,62 @@ async function findAllVerifications() {
   const { rows } = await pool.query(
     `SELECT v.*,
             app.application_number,
-            u.full_name AS performed_by_name
+            app.application_type,
+            i.id AS instrument_id,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.phone, applicant.phone) AS owner_phone,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            u.full_name AS performed_by_name,
+            (SELECT json_agg(json_build_object(
+               'id', io.id,
+               'verification_id', io.verification_id,
+               'observation_type', io.observation_type,
+               'observation_description', io.observation_description,
+               'observed_value', io.observed_value,
+               'remarks', io.remarks,
+               'observed_at', io.observed_at
+             )) FROM inspection_observations io WHERE io.verification_id = v.id) AS observations,
+            (SELECT json_agg(json_build_object(
+               'id', vrg.id,
+               'verification_id', vrg.verification_id,
+               'reading_type', vrg.reading_type,
+               'expected_value', vrg.expected_value,
+               'observed_value', vrg.observed_value,
+               'unit', vrg.unit,
+               'tolerance', vrg.tolerance,
+               'result', vrg.result,
+               'remarks', vrg.remarks,
+               'recorded_at', vrg.recorded_at
+             )) FROM verification_readings vrg WHERE vrg.verification_id = v.id) AS readings,
+            (SELECT json_build_object(
+               'id', vr.id,
+               'verification_id', vr.verification_id,
+               'decision', vr.decision,
+               'decided_by_id', vr.decided_by_id,
+               'decided_by_name', decider.full_name,
+               'remarks', vr.remarks,
+               'result_date', vr.result_date,
+               'created_at', vr.created_at
+             ) FROM verification_results vr
+               LEFT JOIN users decider ON decider.id = vr.decided_by_id
+               WHERE vr.verification_id = v.id LIMIT 1) AS result
      FROM verifications v
      JOIN verification_applications app
        ON app.id = v.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
      JOIN users u
        ON u.id = v.performed_by_id
      ORDER BY v.created_at DESC`
@@ -248,10 +321,65 @@ async function findAllVerifications() {
 async function findVerificationsByOfficerId(userId) {
   const { rows } = await pool.query(
     `SELECT v.*,
-            app.application_number
+            app.application_number,
+            app.application_type,
+            i.id AS instrument_id,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.phone, applicant.phone) AS owner_phone,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            u.full_name AS performed_by_name,
+            (SELECT json_agg(json_build_object(
+               'id', io.id,
+               'verification_id', io.verification_id,
+               'observation_type', io.observation_type,
+               'observation_description', io.observation_description,
+               'observed_value', io.observed_value,
+               'remarks', io.remarks,
+               'observed_at', io.observed_at
+             )) FROM inspection_observations io WHERE io.verification_id = v.id) AS observations,
+            (SELECT json_agg(json_build_object(
+               'id', vrg.id,
+               'verification_id', vrg.verification_id,
+               'reading_type', vrg.reading_type,
+               'expected_value', vrg.expected_value,
+               'observed_value', vrg.observed_value,
+               'unit', vrg.unit,
+               'tolerance', vrg.tolerance,
+               'result', vrg.result,
+               'remarks', vrg.remarks,
+               'recorded_at', vrg.recorded_at
+             )) FROM verification_readings vrg WHERE vrg.verification_id = v.id) AS readings,
+            (SELECT json_build_object(
+               'id', vr.id,
+               'verification_id', vr.verification_id,
+               'decision', vr.decision,
+               'decided_by_id', vr.decided_by_id,
+               'decided_by_name', decider.full_name,
+               'remarks', vr.remarks,
+               'result_date', vr.result_date,
+               'created_at', vr.created_at
+             ) FROM verification_results vr
+               LEFT JOIN users decider ON decider.id = vr.decided_by_id
+               WHERE vr.verification_id = v.id LIMIT 1) AS result
      FROM verifications v
      JOIN verification_applications app
        ON app.id = v.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     JOIN users u
+       ON u.id = v.performed_by_id
      WHERE v.performed_by_id = $1
      ORDER BY v.created_at DESC`,
     [userId]
@@ -265,6 +393,13 @@ async function completeApplication(applicationId) {
      SET status = 'COMPLETED'
      WHERE id = $1
      RETURNING *`,
+    [applicationId]
+  );
+
+  await pool.query(
+    `UPDATE verification_assignments
+     SET status = 'COMPLETED'
+     WHERE application_id = $1 AND status != 'DECLINED'`,
     [applicationId]
   );
 

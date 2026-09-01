@@ -31,6 +31,12 @@ export function mapBackendAssignmentToFrontend(
       ((item.application_type || item.applicationType) as any) || undefined,
     application_status:
       ((item.application_status || item.applicationStatus) as any) || undefined,
+    instrument_name: item.instrument_name || item.instrumentName || undefined,
+    instrument_serial: item.instrument_serial || item.serial_number || undefined,
+    owner_name: item.owner_name || item.ownerName || undefined,
+    owner_phone: item.owner_phone || item.ownerPhone || undefined,
+    owner_organization: item.owner_organization || item.ownerOrganization || undefined,
+    location_address: item.location_address || item.locationAddress || undefined,
     status: (item.status as AssignmentStatus) || "ASSIGNED",
     assigned_at:
       item.assigned_at ||

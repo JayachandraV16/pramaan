@@ -12,7 +12,6 @@ const ROLES = Object.freeze({
   LMO: 'LMO', // Legal Metrology Officer — mobile field verification
   GATC: 'GATC',
   ADMIN: 'ADMIN',
-  PUBLIC_USER: 'PUBLIC_USER',
 });
 
 const ALL_ROLES = Object.values(ROLES);

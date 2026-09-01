@@ -15,12 +15,11 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const demoAccounts: Array<{ role: RoleName; label: string; email: string; badge: string }> = [
-    { role: 'INSTRUMENT_OWNER', label: 'Instrument Owner', email: 'dev.owner@pramaan.local', badge: 'Mandi Trader' },
-    { role: 'LMO', label: 'Legal Metrology Officer', email: 'dev.lmo@pramaan.local', badge: 'Zone Field Officer' },
-    { role: 'GATC', label: 'GATC / RRSL Lab', email: 'dev.gatc@pramaan.local', badge: 'Approved Test Lab' },
-    { role: 'ADMIN', label: 'Directorate Admin', email: 'dev.admin@pramaan.local', badge: 'Ministry Admin' },
-    { role: 'PUBLIC_USER', label: 'Public Citizen', email: 'dev.public@pramaan.local', badge: 'Citizen / Consumer' },
+  const demoAccounts: Array<{ role: RoleName; label: string; email: string }> = [
+    { role: 'INSTRUMENT_OWNER', label: 'Instrument Owner', email: 'dev.owner@pramaan.local' },
+    { role: 'LMO', label: 'Legal Metrology Officer', email: 'dev.lmo@pramaan.local' },
+    { role: 'GATC', label: 'GATC / RRSL Lab', email: 'dev.gatc@pramaan.local' },
+    { role: 'ADMIN', label: 'Directorate Admin', email: 'dev.admin@pramaan.local' },
   ];
 
   const handleQuickSelect = (acc: typeof demoAccounts[0]) => {
@@ -65,27 +64,20 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Demo Fast Switcher */}
-        <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3.5 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-              ⚡ Quick Demo Roles
-            </span>
-            <span className="text-[10px] text-amber-600">Click to fill</span>
-          </div>
+        <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3">
           <div className="grid grid-cols-2 gap-1.5">
             {demoAccounts.map((acc) => (
               <button
                 key={acc.role}
                 type="button"
                 onClick={() => handleQuickSelect(acc)}
-                className={`text-left p-1.5 px-2 rounded-lg border text-xs transition-all ${
+                className={`text-left py-2 px-2.5 rounded-lg border text-xs transition-all ${
                   role === acc.role
                     ? 'bg-white border-amber-500 font-semibold text-amber-900 shadow-xs'
                     : 'bg-amber-100/50 border-amber-200/60 text-amber-900 hover:bg-white'
                 }`}
               >
                 <div className="font-medium truncate">{acc.label}</div>
-                <div className="text-[10px] text-amber-700 truncate">{acc.badge}</div>
               </button>
             ))}
           </div>
@@ -106,11 +98,10 @@ export const LoginPage: React.FC = () => {
                 onChange={(e) => setRole(e.target.value as RoleName)}
                 className="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pramaan-navy-800 focus:bg-white"
               >
-                <option value="INSTRUMENT_OWNER">Instrument Owner / Mandi Trader</option>
+                <option value="INSTRUMENT_OWNER">Instrument Owner</option>
                 <option value="LMO">Legal Metrology Officer (LMO)</option>
                 <option value="GATC">GATC Testing Centre / RRSL Lab</option>
                 <option value="ADMIN">System / Directorate Administrator</option>
-                <option value="PUBLIC_USER">Public Citizen / Consumer</option>
               </select>
             </div>
 

@@ -3,9 +3,20 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { certificatesApi } from '../../api/certificates.api';
 import { PublicVerificationLookupResult } from '../../types';
 import { Button } from '../../components/common/Button';
-import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { getFileUrl } from '../../api/client';
+import pramaanLogoMain from '../../assets/pramaan_logo_main.png';
+function formatDate(d?: string | Date) {
+  if (!d) return 'N/A';
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return String(d);
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+}
 
 export const PublicVerifyPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -140,9 +151,6 @@ export const PublicVerifyPage: React.FC = () => {
             }`}
           >
             <div className="flex items-start gap-3.5">
-              <div className="shrink-0 text-2xl mt-0.5">
-                {result.result === 'VALID' ? '🛡️' : result.result === 'EXPIRED' ? '⚠️' : '❌'}
-              </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold">
@@ -159,57 +167,119 @@ export const PublicVerifyPage: React.FC = () => {
             </div>
 
             {result.certificate && (
-              <Link to={`/certificates/${result.certificate.id}`} className="shrink-0">
-                <Button variant="primary" size="sm">
-                  View Full Legal Certificate 📜
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link to={`/certificates/${result.certificate.id}`}>
+                  <Button variant="primary" size="sm">
+                    View Certificate
+                  </Button>
+                </Link>
+                <a
+                  href={getFileUrl(result.certificate.certificate_file_url || `/uploads/certificates/${result.certificate.certificate_number}.pdf`)}
+                  target="_blank"
+                  rel="noreferrer"
+                  download={`${result.certificate.certificate_number}.pdf`}
+                  onClick={(e) => {
+                    if (!result.certificate?.certificate_file_url) {
+                      e.preventDefault();
+                      window.print();
+                    }
+                  }}
+                >
+                  <Button variant="accent" size="sm">
+                    Download PDF
+                  </Button>
+                </a>
+              </div>
             )}
           </div>
 
-          {/* Authenticated Instrument Specs */}
-          {result.authenticated && result.certificate && result.instrument && (
-            <Card title="Authenticated Equipment Details" subtitle="Records retrieved from National Metrology Directory">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <span className="text-slate-500 block text-[11px]">Instrument Name:</span>
-                  <p className="font-bold text-slate-900 text-sm mt-0.5">{result.instrument.instrument_name}</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <span className="text-slate-500 block text-[11px]">Stamped Serial Number:</span>
-                  <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">{result.instrument.serial_number}</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <span className="text-slate-500 block text-[11px]">Capacity & Accuracy Class:</span>
-                  <p className="font-semibold text-slate-900 mt-0.5">
-                    {result.instrument.capacity} {result.instrument.capacity_unit} ({result.instrument.accuracy_class})
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <span className="text-slate-500 block text-[11px]">Certificate Validity Window:</span>
-                  <p className="font-semibold text-slate-900 mt-0.5">
-                    {result.certificate.valid_from} to {result.certificate.valid_until}
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 sm:col-span-2">
-                  <span className="text-slate-500 block text-[11px]">Trading Custodian & Mandi Location:</span>
-                  <p className="font-bold text-slate-900 mt-0.5">
-                    {result.owner_name} ({result.owner_organization})
-                  </p>
-                  <p className="text-slate-600 text-[11px] mt-0.5">{result.instrument.location_address}</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 sm:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Issuing Metrology Officer:</span>
-                    <p className="font-semibold text-slate-900 mt-0.5">{result.officer_name}</p>
+          {/* Generated Official Certificate Paper — Exactly matching official PDF Layout */}
+          {result.authenticated && result.certificate && (
+            <div className="certificate-container bg-white border border-[#1a3a5c] p-[10px] shadow-2xl relative">
+              <div className="border-2 border-[#1a3a5c] p-6 sm:p-8 space-y-4 bg-white">
+                {/* Header Section: Logo + Department Text */}
+                <div className="flex items-center gap-5 pb-2">
+                  <img
+                    src={pramaanLogoMain}
+                    alt="Pramaan Logo"
+                    className="w-[100px] h-[100px] object-contain shrink-0"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-[#555555] uppercase tracking-wider font-sans font-medium">
+                      DEPARTMENT OF CONSUMER AFFAIRS
+                    </p>
+                    <h2 className="text-2xl sm:text-[24px] font-bold text-[#1a3a5c] font-sans tracking-tight leading-none">
+                      CERTIFICATE OF VERIFICATION
+                    </h2>
+                    <p className="text-[10px] text-[#555555] font-sans font-medium">
+                      Legal Metrology — Weighing & Measuring Instruments
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-slate-500 block text-[11px]">Verification Stamped Date:</span>
-                    <p className="font-mono font-semibold text-slate-800 mt-0.5">{result.verification_date}</p>
+                </div>
+
+                {/* Divider */}
+                <div className="border-b border-[#cccccc] w-full" />
+
+                {/* Certificate Number */}
+                <div className="text-[11px] text-[#222222] font-sans pt-1">
+                  Certificate No: <strong className="font-bold text-[#222222] font-mono">{result.certificate.certificate_number || 'N/A'}</strong>
+                </div>
+
+                {/* Body Statement */}
+                <p className="text-[12.5px] text-[#222222] font-sans leading-relaxed text-justify">
+                  This is to certify that the weighing/measuring instrument described below has been examined and verified in accordance with the applicable Legal Metrology standards, and found to conform to the prescribed requirements of accuracy.
+                </p>
+
+                {/* Details Table & QR Code Block (Matching PDF structure) */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pt-2">
+                  {/* Details Table (Left Side) */}
+                  <div className="flex-1 space-y-0 text-[11px] font-sans">
+                    <div className="flex items-center justify-between py-1.5 border-b border-[#cccccc]">
+                      <span className="font-bold text-[#555555] uppercase w-36 shrink-0">INSTRUMENT</span>
+                      <span className="text-[12px] text-[#222222] text-left flex-1">{result.certificate.instrument_name || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1.5 border-b border-[#cccccc]">
+                      <span className="font-bold text-[#555555] uppercase w-36 shrink-0">MANUFACTURER</span>
+                      <span className="text-[12px] text-[#222222] text-left flex-1">{result.certificate.manufacturer || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1.5 border-b border-[#cccccc]">
+                      <span className="font-bold text-[#555555] uppercase w-36 shrink-0">MODEL</span>
+                      <span className="text-[12px] text-[#222222] text-left flex-1 font-mono">{result.certificate.model || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1.5 border-b border-[#cccccc]">
+                      <span className="font-bold text-[#555555] uppercase w-36 shrink-0">VALID FROM</span>
+                      <span className="text-[12px] text-[#222222] text-left flex-1">{formatDate(result.certificate.valid_from)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1.5 border-b border-[#cccccc]">
+                      <span className="font-bold text-[#555555] uppercase w-36 shrink-0">VALID UNTIL</span>
+                      <span className="text-[12px] text-[#222222] text-left flex-1">{formatDate(result.certificate.valid_until)}</span>
+                    </div>
                   </div>
+
+                  {/* QR Code Block (Right Side) */}
+                  <div className="w-[110px] shrink-0 flex flex-col items-center justify-center text-center space-y-1 self-center sm:self-start">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=${encodeURIComponent(`${window.location.origin}/verify-public?q=${result.certificate.qr_token || result.certificate.certificate_number}`)}`}
+                      alt="QR Code"
+                      className="w-[110px] h-[110px] object-contain border border-slate-200"
+                    />
+                    <p className="text-[9px] text-[#555555] font-sans text-center">Scan to verify authenticity</p>
+                  </div>
+                </div>
+
+                {/* Footer: Signature + Issue Date */}
+                <div className="pt-8 space-y-1">
+                  <div className="w-44 border-b border-[#222222]" />
+                  <p className="text-[10px] text-[#222222] font-sans font-normal pt-0.5">Authorised Signatory</p>
+                  <p className="text-[9px] text-[#555555] font-sans">Issued on: {formatDate(result.certificate.issue_date || result.verification_date || result.certificate.valid_from)}</p>
+                </div>
+
+                {/* Disclaimer at Bottom */}
+                <div className="pt-4 text-[8px] text-[#555555] font-sans">
+                  This certificate is system-generated and can be verified online using the QR code or certificate number above.
                 </div>
               </div>
-            </Card>
+            </div>
           )}
         </div>
       )}

@@ -23,13 +23,14 @@ router.post(
 
 // Get applications
 // INSTRUMENT_OWNER -> own applications
-// ADMIN / GATC -> all applications
+// ADMIN / GATC / LMO -> all applications
 router.get(
   '/',
   authorize(
     ROLES.INSTRUMENT_OWNER,
     ROLES.ADMIN,
-    ROLES.GATC
+    ROLES.GATC,
+    ROLES.LMO
   ),
   controller.getApplications
 );
@@ -40,7 +41,8 @@ router.get(
   authorize(
     ROLES.INSTRUMENT_OWNER,
     ROLES.ADMIN,
-    ROLES.GATC
+    ROLES.GATC,
+    ROLES.LMO
   ),
   controller.getApplicationById
 );

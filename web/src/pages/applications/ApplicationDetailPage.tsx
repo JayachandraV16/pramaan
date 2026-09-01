@@ -2,14 +2,18 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { applicationsApi } from "../../api/applications.api";
+import { instrumentsApi } from "../../api/instruments.api";
 import { assignmentsApi, AvailableOfficer } from "../../api/assignments.api";
-import { VerificationApplication } from "../../types";
+import { verificationsApi } from "../../api/verifications.api";
+import { certificatesApi } from "../../api/certificates.api";
+import { VerificationApplication, VerificationCertificate, Instrument } from "../../types";
 import { Card } from "../../components/common/Card";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { ErrorMessage } from "../../components/common/ErrorMessage";
 import { EmptyState } from "../../components/common/EmptyState";
+import { getFileUrl } from "../../api/client";
 
 export const ApplicationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,9 +22,12 @@ export const ApplicationDetailPage: React.FC = () => {
   const isAuthorized =
     user?.role_id === "INSTRUMENT_OWNER" ||
     user?.role_id === "GATC" ||
-    user?.role_id === "ADMIN";
+    user?.role_id === "ADMIN" ||
+    user?.role_id === "LMO";
 
   const [app, setApp] = useState<VerificationApplication | null>(null);
+  const [instrument, setInstrument] = useState<Instrument | null>(null);
+  const [certificate, setCertificate] = useState<VerificationCertificate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +40,13 @@ export const ApplicationDetailPage: React.FC = () => {
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [assignSuccess, setAssignSuccess] = useState(false);
+
+  // --- Certificate issuance state ---
+  const [validFrom, setValidFrom] = useState(new Date().toISOString().split('T')[0]);
+  const [validUntil, setValidUntil] = useState(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [isIssuingCert, setIsIssuingCert] = useState(false);
+  const [certError, setCertError] = useState<string | null>(null);
+  const [certSuccess, setCertSuccess] = useState(false);
 
   useEffect(() => {
     if (!isAuthLoading && isAuthorized && id) {
@@ -62,16 +76,94 @@ export const ApplicationDetailPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await applicationsApi.getApplicationById(appId);
+      const [data, allVers] = await Promise.all([
+        applicationsApi.getApplicationById(appId),
+        verificationsApi.listVerifications().catch(() => []),
+      ]);
       if (!data) {
         setError("Verification application record not found.");
       } else {
+        const matchingVer = allVers.find(
+          (v) => v.application_id === appId || (data.instrument_id && v.instrument_id === data.instrument_id)
+        );
+        if (matchingVer) {
+          data.verification_id = matchingVer.id;
+        }
         setApp(data);
+
+        // Fetch authoritative instrument specifications from database
+        if (data.instrument_id) {
+          try {
+            const inst = await instrumentsApi.getInstrumentById(data.instrument_id);
+            if (inst) {
+              setInstrument(inst);
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        if (data.certificate_id) {
+          try {
+            const cert = await certificatesApi.getCertificateById(data.certificate_id);
+            if (cert) setCertificate(cert);
+          } catch {
+            // ignore
+          }
+        } else if (data.status === "COMPLETED") {
+          try {
+            const allCerts = await certificatesApi.listCertificates();
+            const found = allCerts.find(
+              (c) =>
+                (data.verification_id && c.verification_id === data.verification_id) ||
+                (data.instrument_id && c.instrument_id === data.instrument_id)
+            );
+            if (found) setCertificate(found);
+          } catch {
+            // ignore
+          }
+        }
       }
     } catch (err: any) {
       setError(err?.message || "Failed to retrieve application details.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleIssueCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!app) return;
+    setIsIssuingCert(true);
+    setCertError(null);
+    setCertSuccess(false);
+    try {
+      let targetVerId = app.verification_id;
+      if (!targetVerId) {
+        const allVers = await verificationsApi.listVerifications();
+        const matchingVer = allVers.find(
+          (v) => v.application_id === app.id || (app.instrument_id && v.instrument_id === app.instrument_id)
+        );
+        targetVerId = matchingVer?.id;
+      }
+
+      if (!targetVerId) {
+        throw new Error("No completed inspection verification record found for this application. Please ensure the inspection was performed.");
+      }
+
+      const newCert = await certificatesApi.createCertificate({
+        verificationId: targetVerId,
+        instrumentId: app.instrument_id,
+        validFrom,
+        validUntil,
+      });
+      setCertificate(newCert);
+      setCertSuccess(true);
+      await loadApp(app.id);
+    } catch (err: any) {
+      setCertError(err?.message || "Failed to issue digital certificate.");
+    } finally {
+      setIsIssuingCert(false);
     }
   };
 
@@ -173,9 +265,13 @@ export const ApplicationDetailPage: React.FC = () => {
     },
     {
       title: "Digital Certificate Issuance",
-      date: app.status === "COMPLETED" ? "Certified" : "Pending PASS decision",
-      done: app.status === "COMPLETED",
-      desc: "Digital Stamped Certificate with encrypted QR code generated.",
+      date: certificate || app.certificate_id ? "Certified" : app.status === "COMPLETED" ? "Awaiting Directorate Sign-off" : "Pending PASS decision",
+      done: Boolean(certificate || app.certificate_id),
+      desc: certificate || app.certificate_id
+        ? "Digital Stamped Certificate with encrypted QR code generated."
+        : app.status === "COMPLETED"
+        ? "Verification passed. Awaiting Admin to issue official stamped certificate."
+        : "Pending physical inspection completion.",
     },
   ];
 
@@ -220,7 +316,7 @@ export const ApplicationDetailPage: React.FC = () => {
           {app.certificate_id && (
             <Link to={`/certificates/${app.certificate_id}`}>
               <Button variant="accent" size="md">
-                View Digital Certificate 📜
+                View Digital Certificate
               </Button>
             </Link>
           )}
@@ -274,19 +370,34 @@ export const ApplicationDetailPage: React.FC = () => {
             <div className="flex justify-between border-b border-slate-100 pb-2">
               <dt className="text-slate-500">Instrument Name:</dt>
               <dd className="font-semibold text-slate-900">
-                {app.instrument_name}
+                {instrument?.instrument_name || app.instrument_name}
               </dd>
             </div>
             <div className="flex justify-between border-b border-slate-100 pb-2">
               <dt className="text-slate-500">Serial Number:</dt>
               <dd className="font-mono font-bold text-slate-800">
-                {app.instrument_serial}
+                {instrument?.serial_number || app.instrument_serial}
               </dd>
             </div>
             <div className="flex justify-between border-b border-slate-100 pb-2">
+              <dt className="text-slate-500">Manufacturer & Model:</dt>
+              <dd className="font-medium text-slate-800 text-right">
+                {[instrument?.manufacturer || app.manufacturer, instrument?.model || app.model].filter(Boolean).join(' — ') || '—'}
+              </dd>
+            </div>
+            {((instrument?.capacity ?? app.capacity) !== undefined) && (
+              <div className="flex justify-between border-b border-slate-100 pb-2">
+                <dt className="text-slate-500">Max Capacity & Class:</dt>
+                <dd className="font-bold text-emerald-800">
+                  {instrument?.capacity ?? app.capacity} {instrument?.capacity_unit || app.capacity_unit || ''}{' '}
+                  {(instrument?.accuracy_class || app.accuracy_class) ? `(${instrument?.accuracy_class || app.accuracy_class})` : ''}
+                </dd>
+              </div>
+            )}
+            <div className="flex justify-between border-b border-slate-100 pb-2">
               <dt className="text-slate-500">Classification Type:</dt>
               <dd className="text-slate-800 text-right">
-                {app.instrument_type_name}
+                {instrument?.instrument_type_name || app.instrument_type_name || 'Standard Measuring Instrument'}
               </dd>
             </div>
             <div className="pt-2">
@@ -297,6 +408,78 @@ export const ApplicationDetailPage: React.FC = () => {
                 View Full Instrument Dossier →
               </Link>
             </div>
+          </dl>
+        </Card>
+
+        {/* Owner / Custodian Card */}
+        <Card
+          title="Instrument Custodian / Owner"
+          subtitle="Registered trader details"
+        >
+          <dl className="space-y-3 text-xs">
+            {(() => {
+              const resolvedOwner = [app.owner_name, instrument?.owner_name, app.applicant_name]
+                .find(name => name && name !== 'Registered Owner' && name !== 'Registered Applicant') ||
+                app.owner_name || instrument?.owner_name || app.applicant_name || '—';
+
+              const resolvedOrg = (app.owner_organization || instrument?.owner_organization || app.applicant_organization);
+              const resolvedPhone = (app.owner_phone || instrument?.owner_phone || app.applicant_phone);
+              const resolvedEmail = (app.owner_email || instrument?.owner_email || app.applicant_email);
+              const resolvedAddress = [instrument?.location_address, app.location_address, (app as any).owner_address, (instrument as any)?.owner_address]
+                .find(addr => addr && addr !== 'Registered Location' && addr !== 'Operating Premises' && addr !== '—') ||
+                instrument?.location_address || app.location_address || '—';
+
+              const resolvedLat = instrument?.location_lat ?? app.location_lat;
+              const resolvedLng = instrument?.location_lng ?? app.location_lng;
+
+              return (
+                <>
+                  <div className="flex justify-between border-b border-slate-100 pb-2">
+                    <dt className="text-slate-500">Owner Name:</dt>
+                    <dd className="font-bold text-slate-900">
+                      {resolvedOwner}
+                    </dd>
+                  </div>
+                  {resolvedOrg && (
+                    <div className="flex justify-between border-b border-slate-100 pb-2">
+                      <dt className="text-slate-500">Firm / Establishment:</dt>
+                      <dd className="font-semibold text-slate-800">
+                        {resolvedOrg}
+                      </dd>
+                    </div>
+                  )}
+                  {resolvedPhone && (
+                    <div className="flex justify-between border-b border-slate-100 pb-2">
+                      <dt className="text-slate-500">Contact Number:</dt>
+                      <dd className="font-mono font-bold text-emerald-700">
+                        <a href={`tel:${resolvedPhone}`} className="hover:underline">
+                          {resolvedPhone}
+                        </a>
+                      </dd>
+                    </div>
+                  )}
+                  {resolvedEmail && (
+                    <div className="flex justify-between border-b border-slate-100 pb-2">
+                      <dt className="text-slate-500">Email Address:</dt>
+                      <dd className="font-mono text-slate-700">
+                        {resolvedEmail}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="flex justify-between pb-1">
+                    <dt className="text-slate-500">Physical Site Address:</dt>
+                    <dd className="text-slate-800 font-medium text-right max-w-[240px]">
+                      {resolvedAddress}
+                      {(resolvedLat || resolvedLng) ? (
+                        <span className="block text-[10px] text-slate-500 font-mono mt-0.5">
+                          ({resolvedLat?.toFixed(4)}° N, {resolvedLng?.toFixed(4)}° E)
+                        </span>
+                      ) : null}
+                    </dd>
+                  </div>
+                </>
+              );
+            })()}
           </dl>
         </Card>
 
@@ -323,6 +506,43 @@ export const ApplicationDetailPage: React.FC = () => {
                   {app.remarks}
                 </p>
               </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Verification & Officer Context */}
+        <Card
+          title="Verification & Field Inspection"
+          subtitle="Execution workflow details"
+        >
+          <div className="space-y-3 text-xs">
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Application Status:</span>
+                <Badge status={app.status} size="sm" />
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Submission Date:</span>
+                <span className="font-mono text-slate-800">{new Date(app.submitted_at || app.created_at).toLocaleDateString()}</span>
+              </div>
+              {app.schedule && (
+                <div className="flex justify-between border-t border-slate-200 pt-2">
+                  <span className="text-slate-500">Scheduled Inspection:</span>
+                  <span className="font-bold text-slate-900">{app.schedule.scheduled_date}</span>
+                </div>
+              )}
+            </div>
+
+            {app.verification_id ? (
+              <Link to={`/verifications/${app.verification_id}`}>
+                <Button variant="primary" size="sm" className="w-full">
+                  Open Inspection Dossier →
+                </Button>
+              </Link>
+            ) : (
+              <p className="text-[11px] text-slate-500 italic text-center pt-2">
+                Physical field inspection will be conducted once assigned to the LMO.
+              </p>
             )}
           </div>
         </Card>
@@ -394,8 +614,8 @@ export const ApplicationDetailPage: React.FC = () => {
                   )}
 
                   {assignedToId && !isManualEntry && (
-                    <p className="text-[10px] text-emerald-700 mt-1 font-mono">
-                      ✓ Auto-selected Officer ID: {assignedToId}
+                    <p className="text-[10px] text-slate-600 mt-1 font-mono">
+                      Officer ID: {assignedToId}
                     </p>
                   )}
                   {availableOfficers.length === 0 && !isManualEntry && (
@@ -430,6 +650,85 @@ export const ApplicationDetailPage: React.FC = () => {
             </form>
           </Card>
         )}
+
+      {/* Certificate Section when Completed */}
+      {app.status === "COMPLETED" && (certificate || isAdmin) && (
+        <Card
+          title={certificate ? "Official Verification Certificate Issued" : "Issue Digital Verification Certificate"}
+          subtitle={certificate ? `Certificate ${certificate.certificate_number} registered in National Metrology Database` : "Finalize and generate tamper-proof digital certificate with encrypted QR token and PDF document"}
+        >
+          {certificate ? (
+            <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-emerald-950 text-sm">{certificate.certificate_number}</span>
+                  <Badge status={certificate.status} size="sm" />
+                </div>
+                <p className="text-slate-600">
+                  Validity Window: <strong>{certificate.valid_from}</strong> to <strong>{certificate.valid_until}</strong>
+                </p>
+                <p className="text-[11px] text-slate-500 font-mono">QR Token: {certificate.qr_token}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link to={`/certificates/${certificate.id}`}>
+                  <Button variant="primary" size="sm">
+                    View Certificate
+                  </Button>
+                </Link>
+                <a
+                  href={getFileUrl(certificate.certificate_file_url || `/uploads/certificates/${certificate.certificate_number}.pdf`)}
+                  target="_blank"
+                  rel="noreferrer"
+                  download={`${certificate.certificate_number}.pdf`}
+                >
+                  <Button variant="accent" size="sm">
+                    Download PDF
+                  </Button>
+                </a>
+              </div>
+            </div>
+          ) : isAdmin ? (
+            <form onSubmit={handleIssueCertificate} className="space-y-4">
+              {certError && <ErrorMessage message={certError} title="Issuance Failed" />}
+              {certSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-medium">
+                  Digital Certificate generated successfully!
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Validity Start Date (Valid From)</label>
+                  <input
+                    type="date"
+                    value={validFrom}
+                    onChange={(e) => setValidFrom(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pramaan-navy-800 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Validity Expiry Date (Valid Until)</label>
+                  <input
+                    type="date"
+                    value={validUntil}
+                    onChange={(e) => setValidUntil(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pramaan-navy-800 focus:outline-none"
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                variant="accent"
+                size="md"
+                isLoading={isIssuingCert}
+              >
+                Issue & Generate Official Certificate
+              </Button>
+            </form>
+          ) : null}
+        </Card>
+      )}
     </div>
   );
 };

@@ -9,8 +9,6 @@ import overviewImg from '@/emaap_extracted_resources/static/media/overview.f6e52
 import step1Img from '@/emaap_extracted_resources/static/media/1.aa361debdf6367c02e06.jpg';
 import step3Img from '@/emaap_extracted_resources/static/media/3.fe227c904904ad6539b6.jpg';
 import step4Img from '@/emaap_extracted_resources/static/media/4.3f5816f32dfe650e9789.jpg';
-import statesBg from '@/emaap_extracted_resources/static/media/states-bg.97dd7fe1f6581370564d.png';
-
 // Genuine SVG icons
 import iconFastSecure from '@/emaap_extracted_resources/static/media/fastandsecure.daf59fbe4522382ddd49e9953f348297.svg';
 import iconFastProc from '@/emaap_extracted_resources/static/media/fastprocessing.ba9259b219b78ec4890728c740fca8a3.svg';
@@ -24,13 +22,6 @@ import iconLogin from '@/emaap_extracted_resources/static/media/clms-login.00531
 import iconDesktop from '@/emaap_extracted_resources/static/media/clms-desktop.5423220759ed7cedd8a41d09cce4a8c2.svg';
 import iconDoc from '@/emaap_extracted_resources/static/media/clms-document.eb9ec0873229a7a0763ffa5590901764.svg';
 import iconArrow from '@/emaap_extracted_resources/static/media/clms-arrow.e47fae9e97b63d65d36d2174491fd7cc.svg';
-
-// State silhouette maps
-import stateMh from '@/emaap_extracted_resources/static/media/maharashtra.b08a9b278285bfa8e9fe86b1158ba024.svg';
-import stateUp from '@/emaap_extracted_resources/static/media/uttar-pradesh.eb124a58ec0b15a3c30d2426470446ad.svg';
-import stateMp from '@/emaap_extracted_resources/static/media/bg-mp.746798794d1b8acb975f.png';
-import stateKa from '@/emaap_extracted_resources/static/media/karnataka.2e8487aa698fef086f5d2d3528f2fceb.svg';
-import stateCg from '@/emaap_extracted_resources/static/media/chhattisgarh.feeb5aafdf6975e2741fd2afdf1a1009.svg';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,14 +43,6 @@ export const LandingPage: React.FC = () => {
       navigate(`/verify-public?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
-
-  const statesList = [
-    { name: 'Maharashtra', gradient: 'from-[#FF6B35] to-[#F85A20]', icon: stateMh },
-    { name: 'Uttar Pradesh', gradient: 'from-[#8B44F7] to-[#7322E2]', icon: stateUp },
-    { name: 'Madhya Pradesh', gradient: 'from-[#EBA834] to-[#D98E16]', icon: stateMp },
-    { name: 'Odisha', gradient: 'from-[#0A66C2] to-[#084D94]', icon: stateKa },
-    { name: 'Rajasthan', gradient: 'from-[#E86228] to-[#C9470F]', icon: stateCg },
-  ];
 
   return (
     <div className="w-full bg-white text-[#222429] min-h-screen scroll-smooth">
@@ -410,148 +393,6 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. SELECT STATE AND SUBMIT YOUR REQUEST (Screenshots 5 & 6) */}
-      <section
-        id="states"
-        className="w-full py-16 bg-cover bg-center scroll-mt-14"
-        style={{ backgroundImage: `url(${statesBg})` }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="text-center space-y-1">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#222429]">
-              Select State and Submit Your Request
-            </h2>
-          </div>
-
-          {/* 5 State Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {statesList.map((st) => (
-              <div
-                key={st.name}
-                onClick={() => navigate('/applications/new')}
-                className={`bg-gradient-to-b ${st.gradient} text-white p-5 rounded-2xl shadow-lg relative min-h-[220px] flex flex-col justify-between cursor-pointer hover:-translate-y-1 transition-all overflow-hidden group`}
-              >
-                {/* State Silhouette Map */}
-                <img
-                  src={st.icon}
-                  alt={st.name}
-                  className="absolute right-0 bottom-0 w-32 h-32 object-contain opacity-20 group-hover:opacity-35 transition-opacity pointer-events-none"
-                />
-
-                <div className="space-y-2 relative z-10">
-                  <h3 className="font-extrabold text-base text-white">{st.name}</h3>
-                  <p className="text-[11px] text-white/90 leading-tight">
-                    Let's delve into the application process for certificates.
-                  </p>
-                </div>
-
-                <div className="relative z-10 pt-4">
-                  <div className="w-8 h-8 rounded-full bg-white text-[#222429] flex items-center justify-center font-bold text-xs shadow-md group-hover:bg-[#FFAA17] transition-colors">
-                    ↗
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 5. EMPOWER ROLE, SUBMIT REQUEST (Screenshots 6 & 7) */}
-      <section id="empower" className="w-full py-16 bg-white scroll-mt-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#222429]">
-              Empower <span className="text-[#FFAA17]">Role</span>, Submit Request
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Card 1 */}
-            <div className="rounded-xl overflow-hidden shadow-md border border-slate-200 flex flex-col justify-between group">
-              <div className="h-48 w-full overflow-hidden bg-slate-100">
-                <img src={step1Img} alt="Importers" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div className="bg-[#FFAA17] p-4 flex flex-col justify-between min-h-[110px]">
-                <h3 className="font-bold text-xs text-[#222429] leading-snug">
-                  Certificates of Importers of Weights & Measures
-                </h3>
-                <div
-                  onClick={() => navigate('/applications/new')}
-                  className="flex items-center justify-between pt-2 cursor-pointer"
-                >
-                  <span className="text-xs font-semibold text-[#222429]">Visit Portal</span>
-                  <div className="w-6 h-6 rounded-full bg-[#222429] text-white flex items-center justify-center text-xs">
-                    ➔
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="rounded-xl overflow-hidden shadow-md border border-slate-200 flex flex-col justify-between group">
-              <div className="h-48 w-full overflow-hidden bg-slate-100">
-                <img src={banner3} alt="Directors" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div className="bg-[#FFAA17] p-4 flex flex-col justify-between min-h-[110px]">
-                <h3 className="font-bold text-xs text-[#222429] leading-snug">
-                  Directors of the Companies Nominated
-                </h3>
-                <div
-                  onClick={() => navigate('/applications/new')}
-                  className="flex items-center justify-between pt-2 cursor-pointer"
-                >
-                  <span className="text-xs font-semibold text-[#222429]">Visit Portal</span>
-                  <div className="w-6 h-6 rounded-full bg-[#222429] text-white flex items-center justify-center text-xs">
-                    ➔
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="rounded-xl overflow-hidden shadow-md border border-slate-200 flex flex-col justify-between group">
-              <div className="h-48 w-full overflow-hidden bg-slate-100">
-                <img src={banner2} alt="Model Approval" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div className="bg-[#FFAA17] p-4 flex flex-col justify-between min-h-[110px]">
-                <h3 className="font-bold text-xs text-[#222429] leading-snug">
-                  Model Approvel System
-                </h3>
-                <div
-                  onClick={() => navigate('/applications/new')}
-                  className="flex items-center justify-between pt-2 cursor-pointer"
-                >
-                  <span className="text-xs font-semibold text-[#222429]">Visit Portal</span>
-                  <div className="w-6 h-6 rounded-full bg-[#222429] text-white flex items-center justify-center text-xs">
-                    ➔
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4 */}
-            <div className="rounded-xl overflow-hidden shadow-md border border-slate-200 flex flex-col justify-between group">
-              <div className="h-48 w-full overflow-hidden bg-slate-100">
-                <img src={step4Img} alt="Packaged Commodities" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div className="bg-[#FFAA17] p-4 flex flex-col justify-between min-h-[110px]">
-                <h3 className="font-bold text-xs text-[#222429] leading-snug">
-                  Packaged Commodities Registration
-                </h3>
-                <div
-                  onClick={() => navigate('/applications/new')}
-                  className="flex items-center justify-between pt-2 cursor-pointer"
-                >
-                  <span className="text-xs font-semibold text-[#222429]">Visit Portal</span>
-                  <div className="w-6 h-6 rounded-full bg-[#222429] text-white flex items-center justify-center text-xs">
-                    ➔
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

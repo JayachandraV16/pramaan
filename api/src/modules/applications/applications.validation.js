@@ -16,7 +16,7 @@ const INSTRUMENT_ORIGINS = Object.freeze({
 const createApplicationRules = {
   instrumentId: { required: true, type: 'string' },
   applicationType: { required: true, type: 'string' },
-  division: { required: true, type: 'string' },
+  division: { required: false, type: 'string' },
   purpose: { required: false, type: 'string' },
   remarks: { required: false, type: 'string' },
 

@@ -151,6 +151,26 @@ export const NewApplicationPage: React.FC = () => {
                 ))}
               </select>
             )}
+
+            {/* Selected Instrument & Owner Info Box */}
+            {(() => {
+              const selected = instruments.find((i) => i.id === selectedInstrumentId);
+              if (!selected) return null;
+              return (
+                <div className="mt-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                  <div className="flex justify-between items-center border-b border-slate-200/60 pb-1.5">
+                    <span className="font-semibold text-slate-700">Custodian / Owner:</span>
+                    <span className="font-bold text-slate-900">{selected.owner_name || user?.full_name}</span>
+                  </div>
+                  <div className="flex justify-between items-start pt-0.5">
+                    <span className="text-slate-500 shrink-0">Physical Inspection Address:</span>
+                    <span className="font-medium text-slate-800 text-right max-w-[280px]">
+                      {selected.location_address || 'Registered Location'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Verification Type */}

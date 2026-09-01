@@ -124,9 +124,30 @@ async function findApplicationsByApplicantId(applicantId) {
   const { rows } = await pool.query(
     `SELECT va.*,
             i.instrument_name,
-            i.serial_number
+            i.serial_number,
+            i.manufacturer,
+            i.model,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            i.location_address,
+            i.location_lat,
+            i.location_lng,
+            it.name AS instrument_type_name,
+            owner.full_name AS owner_name,
+            owner.phone AS owner_phone,
+            owner.email AS owner_email,
+            owner.organization_name AS owner_organization,
+            owner.address AS owner_address,
+            u.full_name AS applicant_name,
+            u.phone AS applicant_phone,
+            u.email AS applicant_email,
+            u.organization_name AS applicant_organization
      FROM verification_applications va
      JOIN instruments i ON i.id = va.instrument_id
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users owner ON owner.id = i.owner_id
+     JOIN users u ON u.id = va.applicant_id
      WHERE va.applicant_id = $1
      ORDER BY va.created_at DESC`,
     [applicantId]
@@ -140,9 +161,28 @@ async function findAllApplications() {
     `SELECT va.*,
             i.instrument_name,
             i.serial_number,
-            u.full_name AS applicant_name
+            i.manufacturer,
+            i.model,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            i.location_address,
+            i.location_lat,
+            i.location_lng,
+            it.name AS instrument_type_name,
+            owner.full_name AS owner_name,
+            owner.phone AS owner_phone,
+            owner.email AS owner_email,
+            owner.organization_name AS owner_organization,
+            owner.address AS owner_address,
+            u.full_name AS applicant_name,
+            u.phone AS applicant_phone,
+            u.email AS applicant_email,
+            u.organization_name AS applicant_organization
      FROM verification_applications va
      JOIN instruments i ON i.id = va.instrument_id
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users owner ON owner.id = i.owner_id
      JOIN users u ON u.id = va.applicant_id
      ORDER BY va.created_at DESC`
   );
@@ -155,9 +195,28 @@ async function findApplicationById(id) {
     `SELECT va.*,
             i.instrument_name,
             i.serial_number,
-            u.full_name AS applicant_name
+            i.manufacturer,
+            i.model,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            i.location_address,
+            i.location_lat,
+            i.location_lng,
+            it.name AS instrument_type_name,
+            owner.full_name AS owner_name,
+            owner.phone AS owner_phone,
+            owner.email AS owner_email,
+            owner.organization_name AS owner_organization,
+            owner.address AS owner_address,
+            u.full_name AS applicant_name,
+            u.phone AS applicant_phone,
+            u.email AS applicant_email,
+            u.organization_name AS applicant_organization
      FROM verification_applications va
      JOIN instruments i ON i.id = va.instrument_id
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users owner ON owner.id = i.owner_id
      JOIN users u ON u.id = va.applicant_id
      WHERE va.id = $1`,
     [id]
@@ -166,11 +225,60 @@ async function findApplicationById(id) {
   return rows[0] || null;
 }
 
+async function findApplicationsAssignedToOfficerId(officerId) {
+  const { rows } = await pool.query(
+    `SELECT va.*,
+            i.instrument_name,
+            i.serial_number,
+            i.manufacturer,
+            i.model,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            i.location_address,
+            i.location_lat,
+            i.location_lng,
+            it.name AS instrument_type_name,
+            owner.full_name AS owner_name,
+            owner.phone AS owner_phone,
+            owner.email AS owner_email,
+            owner.organization_name AS owner_organization,
+            owner.address AS owner_address,
+            u.full_name AS applicant_name,
+            u.phone AS applicant_phone,
+            u.email AS applicant_email,
+            u.organization_name AS applicant_organization
+     FROM verification_applications va
+     JOIN verification_assignments vas ON vas.application_id = va.id
+     JOIN instruments i ON i.id = va.instrument_id
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users owner ON owner.id = i.owner_id
+     JOIN users u ON u.id = va.applicant_id
+     WHERE vas.assigned_to_id = $1
+     ORDER BY va.created_at DESC`,
+    [officerId]
+  );
+
+  return rows;
+}
+
+async function isApplicationAssignedToOfficer(applicationId, officerId) {
+  const { rows } = await pool.query(
+    `SELECT id FROM verification_assignments
+     WHERE application_id = $1 AND assigned_to_id = $2`,
+    [applicationId, officerId]
+  );
+
+  return rows.length > 0;
+}
+
 module.exports = {
   findInstrumentById,
   findCertificateById,
   createApplication,
   findApplicationsByApplicantId,
+  findApplicationsAssignedToOfficerId,
+  isApplicationAssignedToOfficer,
   findAllApplications,
   findApplicationById,
 };

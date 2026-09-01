@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { verificationsApi } from '../../api/verifications.api';
-import { Verification } from '../../types';
+import { certificatesApi } from '../../api/certificates.api';
+import { instrumentsApi } from '../../api/instruments.api';
+import { Verification, VerificationCertificate, Instrument } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
@@ -10,14 +12,18 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useAuth } from '../../context/AuthContext';
+import { getFileUrl } from '../../api/client';
 
 export const VerificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isLoading: isAuthLoading } = useAuth();
   const isAuthorized = user?.role_id === 'LMO' || user?.role_id === 'GATC' || user?.role_id === 'ADMIN';
+  const isAdmin = user?.role_id === 'ADMIN';
 
   const [verification, setVerification] = useState<Verification | null>(null);
+  const [instrument, setInstrument] = useState<Instrument | null>(null);
+  const [certificate, setCertificate] = useState<VerificationCertificate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +49,13 @@ export const VerificationDetailPage: React.FC = () => {
   const [decisionRemarks, setDecisionRemarks] = useState('All metrological error tolerances and qualitative seal verifications satisfied.');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Certificate issuance state
+  const [validFrom, setValidFrom] = useState(new Date().toISOString().split('T')[0]);
+  const [validUntil, setValidUntil] = useState(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [isIssuingCert, setIsIssuingCert] = useState(false);
+  const [certError, setCertError] = useState<string | null>(null);
+  const [certSuccess, setCertSuccess] = useState(false);
+
   useEffect(() => {
     if (!isAuthLoading && isAuthorized && id) {
       loadVerification(id);
@@ -61,11 +74,59 @@ export const VerificationDetailPage: React.FC = () => {
         setError('Verification record not found.');
       } else {
         setVerification(data);
+
+        // Fetch authoritative instrument details
+        if (data.instrument_id) {
+          try {
+            const inst = await instrumentsApi.getInstrumentById(data.instrument_id);
+            if (inst) {
+              setInstrument(inst);
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // Look up if certificate already exists
+        if (data.certificate) {
+          setCertificate(data.certificate);
+        } else {
+          try {
+            const allCerts = await certificatesApi.listCertificates();
+            const found = allCerts.find(c => c.verification_id === verId || (data.instrument_id && c.instrument_id === data.instrument_id));
+            if (found) setCertificate(found);
+          } catch {
+            // Ignore if certificates list fails
+          }
+        }
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to load verification inspection record.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleIssueCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verification) return;
+    setIsIssuingCert(true);
+    setCertError(null);
+    setCertSuccess(false);
+    try {
+      const newCert = await certificatesApi.createCertificate({
+        verificationId: verification.id,
+        instrumentId: verification.instrument_id,
+        validFrom,
+        validUntil,
+      });
+      setCertificate(newCert);
+      setCertSuccess(true);
+      await loadVerification(verification.id);
+    } catch (err: any) {
+      setCertError(err?.message || 'Failed to issue certificate.');
+    } finally {
+      setIsIssuingCert(false);
     }
   };
 
@@ -193,7 +254,7 @@ export const VerificationDetailPage: React.FC = () => {
           </span>
           <h1 className="text-2xl font-bold text-slate-900 mt-0.5">{verification.instrument_name}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Serial: <strong className="font-mono text-slate-800">{verification.instrument_serial}</strong> • Location: {verification.location}
+            Application: <strong className="font-mono text-slate-800">{verification.application_number}</strong> • Serial: <strong className="font-mono text-slate-800">{verification.instrument_serial}</strong>
           </p>
         </div>
 
@@ -213,20 +274,149 @@ export const VerificationDetailPage: React.FC = () => {
           )}
 
           {verification.result && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Badge status={verification.result.decision} size="lg">
                 Decision: {verification.result.decision}
               </Badge>
-              {verification.result.decision === 'PASS' && (
-                <Link to="/certificates">
-                  <Button variant="primary" size="sm">
-                    View Stamped Certificate →
-                  </Button>
-                </Link>
+              {verification.result.decision === 'PASS' && certificate && (
+                <div className="flex items-center gap-2">
+                  <Link to={`/certificates/${certificate.id}`}>
+                    <Button variant="primary" size="sm">
+                      View Certificate
+                    </Button>
+                  </Link>
+                  <a
+                    href={getFileUrl(certificate.certificate_file_url || `/uploads/certificates/${certificate.certificate_number}.pdf`)}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={`${certificate.certificate_number}.pdf`}
+                  >
+                    <Button variant="accent" size="sm">
+                      Download PDF
+                    </Button>
+                  </a>
+                </div>
               )}
             </div>
           )}
         </div>
+      </div>
+
+      {/* Physical Inspection Dossier: Owner, Location & Specifications */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card 1: Owner / Trader Details */}
+        <Card title="Custodian / Owner Profile" subtitle="Physical party present during inspection">
+          {(() => {
+            const resolvedOwner = [verification.owner_name, instrument?.owner_name]
+              .find(name => name && name !== 'Registered Owner' && name !== 'Registered Applicant') ||
+              verification.owner_name || instrument?.owner_name || '—';
+
+            const resolvedOrg = verification.owner_organization || instrument?.owner_organization;
+            const resolvedPhone = verification.owner_phone || instrument?.owner_phone;
+            const resolvedEmail = verification.owner_email || instrument?.owner_email;
+
+            return (
+              <div className="space-y-2.5 text-xs">
+                <div>
+                  <span className="text-slate-500">Legal Custodian / Trader:</span>
+                  <p className="font-bold text-slate-900 mt-0.5">{resolvedOwner}</p>
+                </div>
+                {resolvedOrg && (
+                  <div>
+                    <span className="text-slate-500">Establishment / Mandi Firm:</span>
+                    <p className="font-semibold text-slate-800 mt-0.5">{resolvedOrg}</p>
+                  </div>
+                )}
+                {resolvedPhone && (
+                  <div>
+                    <span className="text-slate-500">Registered Contact Number:</span>
+                    <p className="font-mono font-bold text-emerald-700 mt-0.5">
+                      <a href={`tel:${resolvedPhone}`} className="hover:underline">
+                        {resolvedPhone}
+                      </a>
+                    </p>
+                  </div>
+                )}
+                {resolvedEmail && (
+                  <div>
+                    <span className="text-slate-500">Official Email:</span>
+                    <p className="font-mono text-slate-700 mt-0.5">{resolvedEmail}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </Card>
+
+        {/* Card 2: Physical Location & Geo Coordinates */}
+        <Card title="Inspection Site & Location" subtitle="Geo-tagged physical verification site">
+          {(() => {
+            const resolvedAddress = [instrument?.location_address, verification.location_address, verification.location, (instrument as any)?.owner_address]
+              .find(addr => addr && addr !== 'Registered Location' && addr !== 'Operating Premises' && addr !== '—') ||
+              instrument?.location_address || verification.location_address || verification.location || '—';
+
+            const resolvedLat = instrument?.location_lat ?? verification.location_lat;
+            const resolvedLng = instrument?.location_lng ?? verification.location_lng;
+
+            return (
+              <div className="space-y-2.5 text-xs">
+                <div>
+                  <span className="text-slate-500">Premises Address:</span>
+                  <p className="font-semibold text-slate-800 mt-0.5">{resolvedAddress}</p>
+                </div>
+                {(resolvedLat || resolvedLng) ? (
+                  <div className="pt-2 border-t border-slate-100 flex items-center gap-4">
+                    <div>
+                      <span className="text-[10px] text-slate-400">GPS Latitude</span>
+                      <p className="font-mono text-slate-700">{resolvedLat?.toFixed(4)}° N</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400">GPS Longitude</span>
+                      <p className="font-mono text-slate-700">{resolvedLng?.toFixed(4)}° E</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                    <span>Jurisdiction: Standard Operating District</span>
+                  </div>
+                )}
+                <div className="pt-1">
+                  <span className="text-[11px] text-slate-500">
+                    Verification Date: <strong>{verification.verification_date}</strong>
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+        </Card>
+
+        {/* Card 3: Instrument Technical Specs */}
+        <Card title="Technical Specifications" subtitle="Legal metrology asset under test">
+          <div className="space-y-2.5 text-xs">
+            <div className="flex justify-between border-b border-slate-100 pb-1.5">
+              <span className="text-slate-500">Manufacturer:</span>
+              <span className="font-semibold text-slate-900 text-right">{instrument?.manufacturer || verification.manufacturer || '—'}</span>
+            </div>
+            <div className="flex justify-between border-b border-slate-100 pb-1.5">
+              <span className="text-slate-500">Model:</span>
+              <span className="font-mono font-bold text-slate-800">{instrument?.model || verification.model || '—'}</span>
+            </div>
+            <div className="flex justify-between border-b border-slate-100 pb-1.5">
+              <span className="text-slate-500">Serial Number:</span>
+              <span className="font-mono font-bold text-slate-900">{instrument?.serial_number || verification.instrument_serial}</span>
+            </div>
+            {(instrument?.capacity ?? verification.capacity) !== undefined && (
+              <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                <span className="text-slate-500">Max Capacity:</span>
+                <span className="font-bold text-slate-800">{instrument?.capacity ?? verification.capacity} {instrument?.capacity_unit || verification.capacity_unit || 'kg'}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-0.5">
+              <span className="text-slate-500">Accuracy Class:</span>
+              <span className="font-semibold text-emerald-700">{instrument?.accuracy_class || verification.accuracy_class || 'Class III'}</span>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Final Decision Banner if Completed */}
@@ -242,7 +432,7 @@ export const VerificationDetailPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold">
-                  {verification.result.decision === 'PASS' ? '✓ STATUTORY PASS DECISION' : '✗ FAILED TOLERANCE VERIFICATION'}
+                  {verification.result.decision === 'PASS' ? 'STATUTORY PASS DECISION' : 'FAILED TOLERANCE VERIFICATION'}
                 </span>
                 <span className="text-xs font-mono">
                   {new Date(verification.result.result_date).toLocaleDateString()}
@@ -256,6 +446,85 @@ export const VerificationDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Certificate Section: Form only visible to ADMIN; Issued certificate visible to all */}
+      {verification.result && verification.result.decision === 'PASS' && (certificate || isAdmin) && (
+        <Card
+          title={certificate ? "Official Verification Certificate Issued" : "Issue Digital Verification Certificate"}
+          subtitle={certificate ? `Certificate ${certificate.certificate_number} registered in National Metrology Database` : "Generate tamper-proof digital certificate with encrypted QR token and PDF document"}
+        >
+          {certificate ? (
+            <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-emerald-950 text-sm">{certificate.certificate_number}</span>
+                  <Badge status={certificate.status} size="sm" />
+                </div>
+                <p className="text-slate-600">
+                  Validity Window: <strong>{certificate.valid_from}</strong> to <strong>{certificate.valid_until}</strong>
+                </p>
+                <p className="text-[11px] text-slate-500 font-mono">QR Token: {certificate.qr_token}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link to={`/certificates/${certificate.id}`}>
+                  <Button variant="primary" size="sm">
+                    View Certificate
+                  </Button>
+                </Link>
+                <a
+                  href={getFileUrl(certificate.certificate_file_url || `/uploads/certificates/${certificate.certificate_number}.pdf`)}
+                  target="_blank"
+                  rel="noreferrer"
+                  download={`${certificate.certificate_number}.pdf`}
+                >
+                  <Button variant="accent" size="sm">
+                    Download PDF
+                  </Button>
+                </a>
+              </div>
+            </div>
+          ) : isAdmin ? (
+            <form onSubmit={handleIssueCertificate} className="space-y-4">
+              {certError && <ErrorMessage message={certError} title="Issuance Failed" />}
+              {certSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-medium">
+                  Digital Certificate generated successfully!
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Validity Start Date (Valid From)</label>
+                  <input
+                    type="date"
+                    value={validFrom}
+                    onChange={(e) => setValidFrom(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pramaan-navy-800 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Validity Expiry Date (Valid Until)</label>
+                  <input
+                    type="date"
+                    value={validUntil}
+                    onChange={(e) => setValidUntil(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pramaan-navy-800 focus:outline-none"
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                variant="accent"
+                size="md"
+                isLoading={isIssuingCert}
+              >
+                Issue & Generate Official Certificate
+              </Button>
+            </form>
+          ) : null}
+        </Card>
       )}
 
       {/* Section 1: Quantitative Measurement Readings Table */}

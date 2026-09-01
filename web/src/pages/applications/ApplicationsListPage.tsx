@@ -13,7 +13,7 @@ import { EmptyState } from '../../components/common/EmptyState';
 export const ApplicationsListPage: React.FC = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
-  const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'GATC' || user?.role_id === 'ADMIN';
+  const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'GATC' || user?.role_id === 'LMO' || user?.role_id === 'ADMIN';
   const canCreate = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'ADMIN';
 
   const [applications, setApplications] = useState<VerificationApplication[]>([]);

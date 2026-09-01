@@ -91,7 +91,16 @@ async function findAllCertificates() {
             i.instrument_name,
             i.manufacturer,
             i.model,
-            app.application_number
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            app.application_number,
+            vr.decision,
+            u.full_name AS performed_by_name
      FROM verification_certificates vc
      JOIN instruments i
        ON i.id = vc.instrument_id
@@ -99,6 +108,14 @@ async function findAllCertificates() {
        ON v.id = vc.verification_id
      JOIN verification_applications app
        ON app.id = v.application_id
+     LEFT JOIN verification_results vr
+       ON vr.verification_id = v.id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     LEFT JOIN users u
+       ON u.id = v.performed_by_id
      ORDER BY vc.created_at DESC`
   );
 
@@ -111,8 +128,16 @@ async function findCertificateById(id) {
             i.instrument_name,
             i.manufacturer,
             i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
             app.application_number,
-            vr.decision
+            vr.decision,
+            u.full_name AS performed_by_name
      FROM verification_certificates vc
      JOIN instruments i
        ON i.id = vc.instrument_id
@@ -120,8 +145,14 @@ async function findCertificateById(id) {
        ON v.id = vc.verification_id
      JOIN verification_applications app
        ON app.id = v.application_id
-     JOIN verification_results vr
+     LEFT JOIN verification_results vr
        ON vr.verification_id = v.id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     LEFT JOIN users u
+       ON u.id = v.performed_by_id
      WHERE vc.id = $1`,
     [id]
   );
@@ -134,10 +165,32 @@ async function findCertificateByQrToken(qrToken) {
     `SELECT vc.*,
             i.instrument_name,
             i.manufacturer,
-            i.model
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            app.application_number,
+            vr.decision,
+            u.full_name AS performed_by_name
      FROM verification_certificates vc
      JOIN instruments i
        ON i.id = vc.instrument_id
+     JOIN verifications v
+       ON v.id = vc.verification_id
+     JOIN verification_applications app
+       ON app.id = v.application_id
+     LEFT JOIN verification_results vr
+       ON vr.verification_id = v.id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     LEFT JOIN users u
+       ON u.id = v.performed_by_id
      WHERE vc.qr_token = $1`,
     [qrToken]
   );
@@ -168,6 +221,46 @@ async function updateCertificateFileUrl(id, fileUrl) {
   return rows[0] || null;
 }
 
+// Owner: get certificates for owned instruments
+async function findCertificatesByOwnerId(ownerId) {
+  const { rows } = await pool.query(
+    `SELECT vc.*,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            app.application_number,
+            vr.decision,
+            u.full_name AS performed_by_name
+     FROM verification_certificates vc
+     JOIN instruments i
+       ON i.id = vc.instrument_id
+     JOIN verifications v
+       ON v.id = vc.verification_id
+     JOIN verification_applications app
+       ON app.id = v.application_id
+     LEFT JOIN verification_results vr
+       ON vr.verification_id = v.id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     LEFT JOIN users u
+       ON u.id = v.performed_by_id
+     WHERE i.owner_id = $1
+     ORDER BY vc.created_at DESC`,
+    [ownerId]
+  );
+
+  return rows;
+}
+
 module.exports = {
   findVerificationById,
   findInstrumentById,
@@ -175,6 +268,7 @@ module.exports = {
   getNextCertificateNumber,
   createCertificate,
   findAllCertificates,
+  findCertificatesByOwnerId,
   findCertificateById,
   findCertificateByQrToken,
   updateCertificateStatus,

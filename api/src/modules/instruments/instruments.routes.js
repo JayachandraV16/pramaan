@@ -23,17 +23,18 @@ router.post(
 
 // Get instruments
 // ADMIN -> all instruments
+// LMO/GATC -> assigned instruments
 // INSTRUMENT_OWNER -> own instruments
 router.get(
   '/',
-  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN),
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN, ROLES.LMO, ROLES.GATC),
   controller.getInstruments
 );
 
 // Get one instrument
 router.get(
   '/:id',
-  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN),
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN, ROLES.LMO, ROLES.GATC),
   controller.getInstrumentById
 );
 

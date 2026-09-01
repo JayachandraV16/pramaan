@@ -71,13 +71,13 @@ export const Footer: React.FC = () => {
             type="button"
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border border-[#FFAA17] text-[#FFAA17] hover:bg-[#FFAA17] hover:text-[#004B87] transition-colors text-xs font-bold"
           >
-            <span>🗺️</span> Site Map
+            Site Map
           </button>
           <button
             type="button"
             className="inline-flex items-center gap-1.5 hover:text-[#FFAA17] transition-colors text-xs"
           >
-            <span>✈</span> Feedback
+            Feedback
           </button>
         </div>
 
@@ -85,8 +85,8 @@ export const Footer: React.FC = () => {
         <div className="space-y-2 pt-2">
           <p className="text-xs text-white/80">Have suggestions?</p>
           <div className="flex items-center justify-center gap-4 text-white">
-            <span className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs hover:border-[#FFAA17] hover:text-[#FFAA17] cursor-pointer">
-              🌐
+            <span className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs font-bold hover:border-[#FFAA17] hover:text-[#FFAA17] cursor-pointer">
+              X
             </span>
             <span className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs font-bold hover:border-[#FFAA17] hover:text-[#FFAA17] cursor-pointer">
               f
@@ -94,8 +94,8 @@ export const Footer: React.FC = () => {
             <span className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs font-bold hover:border-[#FFAA17] hover:text-[#FFAA17] cursor-pointer">
               in
             </span>
-            <span className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs hover:border-[#FFAA17] hover:text-[#FFAA17] cursor-pointer">
-              📸
+            <span className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs font-bold hover:border-[#FFAA17] hover:text-[#FFAA17] cursor-pointer">
+              ig
             </span>
           </div>
         </div>

@@ -40,14 +40,14 @@ router.post(
 // Get all certificates
 router.get(
   '/',
-  authorize(ROLES.ADMIN),
+  authorize(ROLES.ADMIN, ROLES.LMO, ROLES.GATC, ROLES.INSTRUMENT_OWNER),
   controller.getCertificates
 );
 
 // Get certificate by ID
 router.get(
   '/:id',
-  authorize(ROLES.ADMIN),
+  authorize(ROLES.ADMIN, ROLES.LMO, ROLES.GATC, ROLES.INSTRUMENT_OWNER),
   controller.getCertificateById
 );
 

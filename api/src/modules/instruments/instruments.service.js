@@ -15,15 +15,21 @@ async function createInstrument(user, data) {
     throw ApiError.conflict('An instrument with this serial number already exists');
   }
 
-  return repo.createInstrument({
+  const created = await repo.createInstrument({
     ownerId: user.id,
     ...data,
   });
+
+  return repo.findInstrumentById(created.id);
 }
 
 async function getInstruments(user) {
   if (user.role === ROLES.ADMIN) {
     return repo.findAllInstruments();
+  }
+
+  if (user.role === ROLES.LMO || user.role === ROLES.GATC) {
+    return repo.findInstrumentsAssignedToOfficerId(user.id);
   }
 
   return repo.findInstrumentsByOwnerId(user.id);
@@ -36,10 +42,19 @@ async function getInstrumentById(user, instrumentId) {
     throw ApiError.notFound('Instrument not found');
   }
 
-  if (
-    user.role !== ROLES.ADMIN &&
-    instrument.owner_id !== user.id
-  ) {
+  if (user.role === ROLES.ADMIN) {
+    return instrument;
+  }
+
+  if (user.role === ROLES.LMO || user.role === ROLES.GATC) {
+    const isAssigned = await repo.isInstrumentAssignedToOfficer(instrumentId, user.id);
+    if (!isAssigned) {
+      throw ApiError.forbidden('You can only access instruments assigned to you by the Administrator');
+    }
+    return instrument;
+  }
+
+  if (instrument.owner_id !== user.id) {
     throw ApiError.forbidden('You do not have permission to access this instrument');
   }
 

@@ -3,3 +3,10 @@ web/dist/
 web/.vite/
 api/node_modules/
 .env
+.env.*
+api/.env
+api/.env.*
+web/.env
+web/.env.*
+api/uploads/certificates/
+

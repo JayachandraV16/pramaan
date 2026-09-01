@@ -132,9 +132,14 @@ async function updateAssignmentStatus(
   );
 }
 
+async function getAvailableOfficers() {
+  return repo.findAvailableOfficers();
+}
+
 module.exports = {
   createAssignment,
   getAssignments,
   getAssignmentById,
+  getAvailableOfficers,
   updateAssignmentStatus,
 };

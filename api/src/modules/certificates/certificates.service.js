@@ -149,25 +149,27 @@ async function createCertificate(user, data) {
   return updatedCertificate;
 }
 
-// Get all certificates
+// Get certificates
 async function getCertificates(user) {
-  if (user.role !== ROLES.ADMIN) {
-    throw ApiError.forbidden(
-      'You do not have permission to view certificates'
-    );
+  if (user.role === ROLES.ADMIN) {
+    return repo.findAllCertificates();
   }
 
-  return repo.findAllCertificates();
+  if (user.role === ROLES.INSTRUMENT_OWNER) {
+    return repo.findCertificatesByOwnerId(user.id);
+  }
+
+  if (user.role === ROLES.LMO || user.role === ROLES.GATC) {
+    return repo.findAllCertificates();
+  }
+
+  throw ApiError.forbidden(
+    'You do not have permission to view certificates'
+  );
 }
 
 // Get certificate by ID
 async function getCertificateById(user, certificateId) {
-  if (user.role !== ROLES.ADMIN) {
-    throw ApiError.forbidden(
-      'You do not have permission to view this certificate'
-    );
-  }
-
   const certificate =
     await repo.findCertificateById(certificateId);
 

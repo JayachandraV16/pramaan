@@ -14,6 +14,9 @@ export const NewInstrumentPage: React.FC = () => {
   const isAuthorized = user?.role_id === 'INSTRUMENT_OWNER' || user?.role_id === 'ADMIN';
 
   const [types, setTypes] = useState<InstrumentType[]>([]);
+  const [ownerName, setOwnerName] = useState(user?.full_name || '');
+  const [ownerOrganization, setOwnerOrganization] = useState(user?.organization_name || '');
+  const [ownerPhone, setOwnerPhone] = useState(user?.phone || '');
   const [instrumentName, setInstrumentName] = useState('');
   const [instrumentTypeId, setInstrumentTypeId] = useState('');
   const [manufacturer, setManufacturer] = useState('');
@@ -22,13 +25,22 @@ export const NewInstrumentPage: React.FC = () => {
   const [capacity, setCapacity] = useState('');
   const [capacityUnit, setCapacityUnit] = useState('kg');
   const [accuracyClass, setAccuracyClass] = useState('Class III (Medium Accuracy)');
-  const [locationAddress, setLocationAddress] = useState('');
+  const [locationAddress, setLocationAddress] = useState(user?.address || '');
   const [locationLat, setLocationLat] = useState('19.0760');
   const [locationLng, setLocationLng] = useState('72.9980');
 
   const [isLoadingTypes, setIsLoadingTypes] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      if (!ownerName && user.full_name) setOwnerName(user.full_name);
+      if (!ownerOrganization && user.organization_name) setOwnerOrganization(user.organization_name);
+      if (!ownerPhone && user.phone) setOwnerPhone(user.phone);
+      if (!locationAddress && user.address) setLocationAddress(user.address);
+    }
+  }, [user]);
 
   useEffect(() => {
     async function loadTypes() {
@@ -89,7 +101,7 @@ export const NewInstrumentPage: React.FC = () => {
         location_lat: locationLat ? Number(locationLat) : undefined,
         location_lng: locationLng ? Number(locationLng) : undefined,
         owner_id: user?.id,
-        owner_name: user?.full_name,
+        owner_name: ownerName.trim() || user?.full_name,
       });
       navigate(`/instruments/${created.id}`);
     } catch (err: any) {
@@ -141,7 +153,54 @@ export const NewInstrumentPage: React.FC = () => {
 
         {error && <ErrorMessage message={error} />}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Section A: Owner / Custodian Profile */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Instrument Custodian & Ownership Details
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Instrument Owner / Custodian Name *
+                </label>
+                <input
+                  type="text"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  placeholder="e.g. Sejal / Trader Legal Name"
+                  required
+                  className="w-full px-3.5 py-2 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pramaan-navy-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Trading Firm / Mandi Establishment
+                </label>
+                <input
+                  type="text"
+                  value={ownerOrganization}
+                  onChange={(e) => setOwnerOrganization(e.target.value)}
+                  placeholder="e.g. APMC Trading Co."
+                  className="w-full px-3.5 py-2 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pramaan-navy-800"
+                />
+              </div>
+            </div>
+            {ownerPhone && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Registered Contact Phone
+                </label>
+                <input
+                  type="text"
+                  value={ownerPhone}
+                  onChange={(e) => setOwnerPhone(e.target.value)}
+                  placeholder="e.g. +91 98201 44552"
+                  className="w-full px-3.5 py-2 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pramaan-navy-800"
+                />
+              </div>
+            )}
+          </div>
           {/* Category & Type */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">

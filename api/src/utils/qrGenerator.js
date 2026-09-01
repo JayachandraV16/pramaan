@@ -1,8 +1,8 @@
 const QRCode = require('qrcode');
 
 async function generateQRCode(qrToken) {
-  const verificationUrl =
-    `http://localhost:5000/api/certificates/verify/${qrToken}`;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const verificationUrl = `${frontendUrl}/verify-public?q=${encodeURIComponent(qrToken)}`;
 
   const qrCodeBuffer = await QRCode.toBuffer(verificationUrl, {
     type: 'png',

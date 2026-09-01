@@ -14,20 +14,12 @@ async function createApplication(user, data) {
     );
   }
 
-  if (!data.division || typeof data.division !== 'string' || !data.division.trim()) {
-    throw ApiError.badRequest('division is required');
-  }
+  const division = (data.division && typeof data.division === 'string' && data.division.trim())
+    ? data.division.trim().toUpperCase()
+    : 'HQ';
 
   if (data.instrumentOrigin && !isValidInstrumentOrigin(data.instrumentOrigin)) {
     throw ApiError.badRequest(`Invalid instrument origin: ${data.instrumentOrigin}`);
-  }
-
-  // Renewal applications must reference the certificate being renewed.
-  // New verifications must not (nothing to renew yet).
-  if (data.applicationType === APPLICATION_TYPES.RE_VERIFICATION && !data.lastCertificateId) {
-    throw ApiError.badRequest(
-      'lastCertificateId is required for RE_VERIFICATION applications'
-    );
   }
 
   const instrument = await repo.findInstrumentById(data.instrumentId);
@@ -46,9 +38,7 @@ async function createApplication(user, data) {
     );
   }
 
-  // For renewals, confirm the referenced certificate exists and actually
-  // belongs to this instrument. Lightweight sanity check, not a rules
-  // engine — full document-checklist logic is out of scope here.
+  // If lastCertificateId is provided, confirm the referenced certificate exists
   if (data.lastCertificateId) {
     const lastCertificate = await repo.findCertificateById(data.lastCertificateId);
 
@@ -65,16 +55,11 @@ async function createApplication(user, data) {
     }
   }
 
-  // Normalized once here so both the stored `division` column and the
-  // application-number generation (repository layer) use the same value —
-  // avoids "Pune" vs "PUNE" silently creating two different counters.
-  const division = data.division.trim().toUpperCase();
-
-  return repo.createApplication({
+  const created = await repo.createApplication({
     applicantId: user.id,
     instrumentId: data.instrumentId,
     applicationType: data.applicationType,
-    purpose: data.purpose,
+    purpose: data.purpose || 'Statutory verification for commercial use',
     remarks: data.remarks,
     division,
     submissionOffice: data.submissionOffice,
@@ -83,16 +68,19 @@ async function createApplication(user, data) {
     grasChallanDate: data.grasChallanDate,
     conveyanceFee: data.conveyanceFee,
     quarterJumpFee: data.quarterJumpFee,
-    lastCertificateId: data.lastCertificateId,
+    lastCertificateId: data.lastCertificateId || null,
   });
+
+  return repo.findApplicationById(created.id);
 }
 
 async function getApplications(user) {
-  if (
-    user.role === ROLES.ADMIN ||
-    user.role === ROLES.GATC
-  ) {
+  if (user.role === ROLES.ADMIN) {
     return repo.findAllApplications();
+  }
+
+  if (user.role === ROLES.LMO || user.role === ROLES.GATC) {
+    return repo.findApplicationsAssignedToOfficerId(user.id);
   }
 
   return repo.findApplicationsByApplicantId(user.id);
@@ -105,11 +93,21 @@ async function getApplicationById(user, applicationId) {
     throw ApiError.notFound('Application not found');
   }
 
-  const canAccessAll =
-    user.role === ROLES.ADMIN ||
-    user.role === ROLES.GATC;
+  if (user.role === ROLES.ADMIN) {
+    return application;
+  }
 
-  if (!canAccessAll && application.applicant_id !== user.id) {
+  if (user.role === ROLES.LMO || user.role === ROLES.GATC) {
+    const isAssigned = await repo.isApplicationAssignedToOfficer(applicationId, user.id);
+    if (!isAssigned) {
+      throw ApiError.forbidden(
+        'You can only access applications assigned to you by the Administrator'
+      );
+    }
+    return application;
+  }
+
+  if (application.applicant_id !== user.id) {
     throw ApiError.forbidden(
       'You do not have permission to access this application'
     );

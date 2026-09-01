@@ -4,8 +4,7 @@ export type RoleName =
   | "INSTRUMENT_OWNER"
   | "LMO"
   | "GATC"
-  | "ADMIN"
-  | "PUBLIC_USER";
+  | "ADMIN";
 
 export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 
@@ -109,6 +108,14 @@ export interface BackendInstrumentResponse {
   ownerId?: string;
   owner_name?: string;
   ownerName?: string;
+  owner_phone?: string;
+  ownerPhone?: string;
+  owner_email?: string;
+  ownerEmail?: string;
+  owner_organization?: string;
+  ownerOrganization?: string;
+  owner_address?: string;
+  ownerAddress?: string;
   instrument_type_id?: string;
   instrumentTypeId?: string;
   instrument_type_name?: string;
@@ -145,6 +152,10 @@ export interface Instrument {
   id: string;
   owner_id: string;
   owner_name?: string;
+  owner_phone?: string;
+  owner_email?: string;
+  owner_organization?: string;
+  owner_address?: string;
   instrument_type_id: string;
   instrument_type_name?: string;
   instrument_name: string;
@@ -180,11 +191,25 @@ export interface VerificationApplication {
   application_number: string;
   applicant_id: string;
   applicant_name?: string;
+  applicant_phone?: string;
+  applicant_email?: string;
   applicant_organization?: string;
+  owner_name?: string;
+  owner_phone?: string;
+  owner_email?: string;
+  owner_organization?: string;
   instrument_id: string;
   instrument_name?: string;
   instrument_serial?: string;
   instrument_type_name?: string;
+  manufacturer?: string;
+  model?: string;
+  capacity?: number;
+  capacity_unit?: string;
+  accuracy_class?: string;
+  location_address?: string;
+  location_lat?: number;
+  location_lng?: number;
   application_type: ApplicationType;
   status: ApplicationStatus;
   purpose: string;
@@ -216,6 +241,12 @@ export interface VerificationAssignment {
   application_number?: string;
   application_type?: ApplicationType;
   application_status?: ApplicationStatus;
+  instrument_name?: string;
+  instrument_serial?: string;
+  owner_name?: string;
+  owner_phone?: string;
+  owner_organization?: string;
+  location_address?: string;
   status: AssignmentStatus;
   assigned_at: string;
   remarks?: string;
@@ -282,11 +313,25 @@ export interface Verification {
   id: string;
   application_id: string;
   application_number?: string;
+  application_type?: ApplicationType;
   assignment_id: string;
   schedule_id?: string;
   instrument_id: string;
   instrument_name?: string;
   instrument_serial?: string;
+  manufacturer?: string;
+  model?: string;
+  capacity?: number;
+  capacity_unit?: string;
+  accuracy_class?: string;
+  location_address?: string;
+  location_lat?: number;
+  location_lng?: number;
+  owner_name?: string;
+  owner_phone?: string;
+  owner_email?: string;
+  owner_organization?: string;
+  purpose?: string;
   performed_by_id: string;
   performed_by_name?: string;
   verification_date: string;
@@ -312,6 +357,8 @@ export interface VerificationCertificate {
   instrument_name: string;
   instrument_serial: string;
   instrument_type_name: string;
+  manufacturer?: string;
+  model?: string;
   owner_name: string;
   owner_organization?: string;
   certificate_number: string;

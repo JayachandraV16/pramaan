@@ -4,6 +4,14 @@
  */
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+export const API_HOST = API_BASE_URL.replace(/\/api\/?$/, '');
+
+export function getFileUrl(filePath?: string): string {
+  if (!filePath) return '';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
+  const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  return `${API_HOST}${cleanPath}`;
+}
 
 export interface ApiResponseEnvelope<T> {
   success: boolean;

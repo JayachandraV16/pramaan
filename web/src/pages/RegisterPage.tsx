@@ -80,7 +80,6 @@ export const RegisterPage: React.FC = () => {
                 <option value="INSTRUMENT_OWNER">Instrument Owner / Commercial Trader</option>
                 <option value="LMO">Legal Metrology Officer (LMO)</option>
                 <option value="GATC">GATC / Approved Testing Lab</option>
-                <option value="PUBLIC_USER">Public Citizen / Consumer</option>
               </select>
             </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { instrumentsApi } from '../../api/instruments.api';
+import { applicationsApi } from '../../api/applications.api';
 import { Instrument } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
@@ -33,10 +34,31 @@ export const InstrumentDetailPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await instrumentsApi.getInstrumentById(instId);
+      const [data, apps] = await Promise.all([
+        instrumentsApi.getInstrumentById(instId),
+        applicationsApi.listApplications().catch(() => []),
+      ]);
       if (!data) {
         setError('Instrument not found in registration database.');
       } else {
+        const relatedApp = apps.find(a => a.instrument_id === instId);
+        if (relatedApp) {
+          if (!data.owner_name || data.owner_name === '—' || data.owner_name === 'Registered Owner') {
+            data.owner_name = relatedApp.owner_name || relatedApp.applicant_name;
+          }
+          if (!data.owner_organization) {
+            data.owner_organization = relatedApp.owner_organization || relatedApp.applicant_organization;
+          }
+          if (!data.owner_phone) {
+            data.owner_phone = relatedApp.owner_phone || relatedApp.applicant_phone;
+          }
+          if (!data.owner_email) {
+            data.owner_email = relatedApp.owner_email || relatedApp.applicant_email;
+          }
+          if (!data.location_address || data.location_address === '—') {
+            data.location_address = relatedApp.location_address || data.location_address || '—';
+          }
+        }
         setInstrument(data);
       }
     } catch (err: any) {
@@ -154,11 +176,37 @@ export const InstrumentDetailPage: React.FC = () => {
           <div className="space-y-3 text-xs">
             <div>
               <span className="text-slate-500">Custodian / Owner:</span>
-              <p className="font-semibold text-slate-900 mt-0.5">{instrument.owner_name || 'Registered Owner'}</p>
+              <p className="font-semibold text-slate-900 mt-0.5">
+                {instrument.owner_name || '—'}
+              </p>
             </div>
+            {instrument.owner_organization && (
+              <div>
+                <span className="text-slate-500">Firm / Establishment:</span>
+                <p className="font-semibold text-slate-800 mt-0.5">{instrument.owner_organization}</p>
+              </div>
+            )}
+            {instrument.owner_phone && (
+              <div>
+                <span className="text-slate-500">Registered Contact Phone:</span>
+                <p className="font-mono font-bold text-emerald-700 mt-0.5">
+                  <a href={`tel:${instrument.owner_phone}`} className="hover:underline">
+                    {instrument.owner_phone}
+                  </a>
+                </p>
+              </div>
+            )}
+            {instrument.owner_email && (
+              <div>
+                <span className="text-slate-500">Owner Email:</span>
+                <p className="font-mono text-slate-700 mt-0.5">{instrument.owner_email}</p>
+              </div>
+            )}
             <div>
-              <span className="text-slate-500">Physical Address:</span>
-              <p className="font-medium text-slate-800 mt-0.5">{instrument.location_address}</p>
+              <span className="text-slate-500">Physical Site Address:</span>
+              <p className="font-medium text-slate-800 mt-0.5">
+                {instrument.location_address || instrument.owner_address || '—'}
+              </p>
             </div>
             {(instrument.location_lat || instrument.location_lng) && (
               <div className="pt-2 border-t border-slate-100 flex items-center gap-4">

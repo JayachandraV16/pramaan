@@ -39,6 +39,13 @@ router.get(
   controller.getAssignments
 );
 
+// Get available active LMO/GATC officers (for Admin assignment picker)
+router.get(
+  '/available-officers',
+  authorize(ROLES.ADMIN),
+  controller.getAvailableOfficers
+);
+
 // Get one assignment
 router.get(
   '/:id',

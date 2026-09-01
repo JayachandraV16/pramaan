@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { certificatesApi } from '../../api/certificates.api';
-import { VerificationCertificate, CertificateStatus } from '../../types';
+import { verificationsApi } from '../../api/verifications.api';
+import { VerificationCertificate, CertificateStatus, Verification } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { EmptyState } from '../../components/common/EmptyState';
+import { getFileUrl } from '../../api/client';
 
 export const CertificatesListPage: React.FC = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -16,6 +18,7 @@ export const CertificatesListPage: React.FC = () => {
   const isAuthorized = user?.role_id === 'ADMIN';
 
   const [certificates, setCertificates] = useState<VerificationCertificate[]>([]);
+  const [pendingVerifications, setPendingVerifications] = useState<Verification[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<CertificateStatus | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -34,11 +37,23 @@ export const CertificatesListPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const list = await certificatesApi.listCertificates({
-        status: (selectedStatus as CertificateStatus) || undefined,
-        search: searchQuery || undefined,
-      });
+      const [list, vers] = await Promise.all([
+        certificatesApi.listCertificates({
+          status: (selectedStatus as CertificateStatus) || undefined,
+          search: searchQuery || undefined,
+        }),
+        verificationsApi.listVerifications().catch(() => []),
+      ]);
       setCertificates(list);
+
+      // Find verifications that passed but don't have a certificate issued yet
+      const pending = vers.filter(
+        (v) =>
+          v.status === 'COMPLETED' &&
+          v.result?.decision === 'PASS' &&
+          !list.some((c) => c.verification_id === v.id || (v.instrument_id && c.instrument_id === v.instrument_id))
+      );
+      setPendingVerifications(pending);
     } catch (err: any) {
       setError(err?.message || 'Failed to load verification certificates.');
     } finally {
@@ -59,8 +74,8 @@ export const CertificatesListPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <EmptyState
           title="Section Not Available for Your Role"
-          description="Digital Certificate registry management is restricted to Directorate Administrators. To verify an instrument certificate by QR code or serial number, please use the Public Citizen Portal."
-          actionText="Open Citizen Verification Tool"
+          description="Digital Certificate registry management is restricted to Directorate Administrators. To verify an instrument certificate by QR code or serial number, please use the Public Verification Portal."
+          actionText="Open Public Verification Tool"
           onAction={() => navigate('/verify-public')}
         />
       </div>
@@ -114,6 +129,38 @@ export const CertificatesListPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* Pending Verifications Awaiting Certificate Issuance Banner */}
+      {pendingVerifications.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-amber-700 font-bold text-sm">
+                {pendingVerifications.length} Completed Verification(s) Awaiting Official Certificate Issuance
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {pendingVerifications.map((pv) => (
+              <div
+                key={pv.id}
+                className="bg-white p-3.5 rounded-xl border border-amber-200/80 flex items-center justify-between gap-3 shadow-xs"
+              >
+                <div className="text-xs space-y-0.5">
+                  <p className="font-bold text-slate-900">{pv.instrument_name || 'Weighing Asset'}</p>
+                  <p className="text-[11px] text-slate-500 font-mono">Serial: {pv.instrument_serial || '—'}</p>
+                  <p className="text-[10px] text-emerald-700 font-bold">Inspection Passed: {pv.verification_date}</p>
+                </div>
+                <Link to={`/verifications/${pv.id}`}>
+                  <Button variant="accent" size="sm">
+                    Issue Certificate →
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Certificates Table */}
       {isLoading ? (
         <LoadingSpinner label="Loading certified records vault..." />
@@ -163,12 +210,24 @@ export const CertificatesListPage: React.FC = () => {
                     <td className="py-4 px-4">
                       <Badge status={cert.status} size="sm" />
                     </td>
-                    <td className="py-4 px-4 text-right space-x-2">
-                      <Link to={`/certificates/${cert.id}`}>
-                        <Button variant="primary" size="sm">
-                          View Certificate 📜
-                        </Button>
-                      </Link>
+                    <td className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link to={`/certificates/${cert.id}`}>
+                          <Button variant="primary" size="sm">
+                            View
+                          </Button>
+                        </Link>
+                        <a
+                          href={getFileUrl(cert.certificate_file_url || `/uploads/certificates/${cert.certificate_number}.pdf`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          download={`${cert.certificate_number}.pdf`}
+                        >
+                          <Button variant="outline" size="sm">
+                            Download PDF
+                          </Button>
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))}

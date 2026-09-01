@@ -77,6 +77,7 @@ export interface CreateInstrumentPayload {
   owner_name?: string;
 }
 
+
 /**
  * Data Mapper: Maps backend instrument response to the frontend Instrument interface
  */
@@ -95,18 +96,22 @@ export function mapBackendInstrumentToFrontend(item: BackendInstrumentResponse):
   return {
     id: item.id,
     owner_id: item.ownerId || item.owner_id || '',
-    owner_name: item.ownerName || item.owner_name || 'Instrument Custodian',
+    owner_name: item.ownerName || item.owner_name || undefined,
+    owner_phone: item.ownerPhone || item.owner_phone || undefined,
+    owner_email: item.ownerEmail || item.owner_email || undefined,
+    owner_organization: item.ownerOrganization || item.owner_organization || undefined,
+    owner_address: item.ownerAddress || item.owner_address || undefined,
     instrument_type_id: typeId,
     instrument_type_name: typeName,
-    instrument_name: item.instrumentName || item.instrument_name || item.model || 'Weighing / Measuring Asset',
-    manufacturer: item.manufacturer || 'OEM Manufacturer',
-    model: item.model || 'Standard Series',
+    instrument_name: item.instrumentName || item.instrument_name || item.model || 'Weighing Asset',
+    manufacturer: item.manufacturer || '',
+    model: item.model || '',
     serial_number: item.serialNumber || item.serial_number || `SN-${item.id}`,
     registration_number: item.registrationNumber ?? item.registration_number ?? null,
     capacity: rawCap !== null && rawCap !== undefined && rawCap !== '' ? Number(rawCap) : 0,
     capacity_unit: item.capacityUnit || item.capacity_unit || 'kg',
     accuracy_class: item.accuracyClass || item.accuracy_class || 'Class III (Medium Accuracy)',
-    location_address: item.locationAddress || item.location_address || 'Operating Premises',
+    location_address: item.locationAddress || item.location_address || '',
     location_lat: rawLat !== null && rawLat !== undefined && rawLat !== '' ? Number(rawLat) : undefined,
     location_lng: rawLng !== null && rawLng !== undefined && rawLng !== '' ? Number(rawLng) : undefined,
     registration_date:
