@@ -1,13 +1,13 @@
 // Pramaan Types & Database Entity Definitions matching PostgreSQL Schema (Migrations 001-017)
 
-export type RoleName = 
-  | 'INSTRUMENT_OWNER'
-  | 'LMO'
-  | 'GATC'
-  | 'ADMIN'
-  | 'PUBLIC_USER';
+export type RoleName =
+  | "INSTRUMENT_OWNER"
+  | "LMO"
+  | "GATC"
+  | "ADMIN"
+  | "PUBLIC_USER";
 
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 
 export interface User {
   id: string;
@@ -22,11 +22,11 @@ export interface User {
   updated_at?: string;
 }
 
-export type InstrumentStatus = 
-  | 'REGISTERED'
-  | 'ACTIVE'
-  | 'INACTIVE'
-  | 'DECOMMISSIONED';
+export type InstrumentStatus =
+  | "REGISTERED"
+  | "ACTIVE"
+  | "INACTIVE"
+  | "DECOMMISSIONED";
 
 export interface InstrumentType {
   id: string;
@@ -164,16 +164,16 @@ export interface Instrument {
   updated_at: string;
 }
 
-export type ApplicationType = 'VERIFICATION' | 'RE_VERIFICATION';
+export type ApplicationType = "VERIFICATION" | "RE_VERIFICATION";
 
-export type ApplicationStatus = 
-  | 'DRAFT'
-  | 'SUBMITTED'
-  | 'UNDER_REVIEW'
-  | 'SCHEDULED'
-  | 'COMPLETED'
-  | 'REJECTED'
-  | 'CANCELLED';
+export type ApplicationStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "SCHEDULED"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED";
 
 export interface VerificationApplication {
   id: string;
@@ -199,29 +199,33 @@ export interface VerificationApplication {
   certificate_id?: string;
 }
 
-export type AssignmentStatus = 
-  | 'ASSIGNED'
-  | 'ACCEPTED'
-  | 'DECLINED'
-  | 'REASSIGNED'
-  | 'COMPLETED';
+export type AssignmentStatus =
+  | "ASSIGNED"
+  | "ACCEPTED"
+  | "DECLINED"
+  | "REASSIGNED"
+  | "COMPLETED";
 
 export interface VerificationAssignment {
   id: string;
   application_id: string;
   assigned_to_id: string;
   assigned_to_name?: string;
-  assigned_to_role?: 'LMO' | 'GATC';
+  assigned_to_role?: "LMO" | "GATC";
+  assigned_by_name?: string;
+  application_number?: string;
+  application_type?: ApplicationType;
+  application_status?: ApplicationStatus;
   status: AssignmentStatus;
   assigned_at: string;
   remarks?: string;
 }
 
-export type ScheduleStatus = 
-  | 'SCHEDULED'
-  | 'RESCHEDULED'
-  | 'COMPLETED'
-  | 'CANCELLED';
+export type ScheduleStatus =
+  | "SCHEDULED"
+  | "RESCHEDULED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface VerificationSchedule {
   id: string;
@@ -234,14 +238,11 @@ export interface VerificationSchedule {
   notes?: string;
 }
 
-export type VerificationStatus = 
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'ABORTED';
+export type VerificationStatus = "IN_PROGRESS" | "COMPLETED" | "ABORTED";
 
-export type ReadingResult = 'PASS' | 'FAIL';
+export type ReadingResult = "PASS" | "FAIL";
 
-export type VerificationDecision = 'PASS' | 'FAIL';
+export type VerificationDecision = "PASS" | "FAIL";
 
 export interface InspectionObservation {
   id: string;
@@ -302,7 +303,7 @@ export interface Verification {
   certificate?: VerificationCertificate;
 }
 
-export type CertificateStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+export type CertificateStatus = "ACTIVE" | "EXPIRED" | "REVOKED";
 
 export interface VerificationCertificate {
   id: string;
@@ -320,7 +321,7 @@ export interface VerificationCertificate {
   status: CertificateStatus;
   certificate_file_url?: string;
   qr_token: string;
-  verification_decision: 'PASS';
+  verification_decision: "PASS";
   issued_by_name: string;
   issued_by_designation: string;
   jurisdiction_zone: string;
@@ -333,7 +334,7 @@ export interface VerificationCertificate {
   updated_at: string;
 }
 
-export type QrAuthResult = 'VALID' | 'INVALID' | 'EXPIRED' | 'REVOKED';
+export type QrAuthResult = "VALID" | "INVALID" | "EXPIRED" | "REVOKED";
 
 export interface QrAuthenticationLog {
   id: string;
@@ -391,7 +392,7 @@ export interface DashboardOverviewStats {
   avgTurnaround?: string;
   recentActivity: Array<{
     id: string;
-    type: 'INSTRUMENT' | 'APPLICATION' | 'VERIFICATION' | 'CERTIFICATE';
+    type: "INSTRUMENT" | "APPLICATION" | "VERIFICATION" | "CERTIFICATE";
     title: string;
     description: string;
     timestamp: string;

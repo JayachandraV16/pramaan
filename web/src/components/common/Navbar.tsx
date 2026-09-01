@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Badge } from './Badge';
-import { useAuth } from '../../context/AuthContext';
-import { RoleName } from '../../types';
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Badge } from "./Badge";
+import { useAuth } from "../../context/AuthContext";
+import { RoleName } from "../../types";
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout, switchRole } = useAuth();
   const location = useLocation();
@@ -13,12 +13,12 @@ export const Navbar: React.FC = () => {
   const [actModalOpen, setActModalOpen] = useState(false);
 
   useEffect(() => {
-    if (location.pathname === '/' && location.hash) {
-      const id = location.hash.replace('#', '');
+    if (location.pathname === "/" && location.hash) {
+      const id = location.hash.replace("#", "");
       const el = document.getElementById(id);
       if (el) {
         setTimeout(() => {
-          el.scrollIntoView({ behavior: 'smooth' });
+          el.scrollIntoView({ behavior: "smooth" });
         }, 100);
       }
     }
@@ -27,18 +27,18 @@ export const Navbar: React.FC = () => {
   const handleNavClick = (anchorId?: string) => {
     setMobileMenuOpen(false);
     if (!anchorId) {
-      if (location.pathname === '/') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (location.pathname === "/") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        navigate('/');
+        navigate("/");
       }
       return;
     }
 
-    if (location.pathname === '/') {
+    if (location.pathname === "/") {
       const el = document.getElementById(anchorId);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
+        el.scrollIntoView({ behavior: "smooth" });
       }
     } else {
       navigate(`/#${anchorId}`);
@@ -46,24 +46,48 @@ export const Navbar: React.FC = () => {
   };
 
   const navMenuItems = [
-    { label: 'Home', anchorId: '' },
-    { label: 'About Us', anchorId: 'overview' },
-    { label: 'Act & Rules', anchorId: 'rules', action: () => setActModalOpen(true) },
-    { label: 'Enforcement Activity', anchorId: 'empower' },
+    { label: "Home", anchorId: "" },
+    { label: "About Us", anchorId: "overview" },
+    {
+      label: "Act & Rules",
+      anchorId: "rules",
+      action: () => setActModalOpen(true),
+    },
+    { label: "Enforcement Activity", anchorId: "empower" },
   ];
 
   const rolesList: Array<{ id: RoleName; label: string; desc: string }> = [
-    { id: 'INSTRUMENT_OWNER', label: 'Instrument Owner', desc: 'Traders, Mandi vendors & scale owners' },
-    { id: 'LMO', label: 'Legal Metrology Officer', desc: 'Field inspection & verification officer' },
-    { id: 'GATC', label: 'GATC / RRSL Lab', desc: 'Govt Approved Test Centre testing lab' },
-    { id: 'ADMIN', label: 'System Admin', desc: 'Ministry & Metrology Directorate' },
-    { id: 'PUBLIC_USER', label: 'Public Citizen', desc: 'General consumer / citizen' },
+    {
+      id: "INSTRUMENT_OWNER",
+      label: "Instrument Owner",
+      desc: "Traders, Mandi vendors & scale owners",
+    },
+    {
+      id: "LMO",
+      label: "Legal Metrology Officer",
+      desc: "Field inspection & verification officer",
+    },
+    {
+      id: "GATC",
+      label: "GATC / RRSL Lab",
+      desc: "Govt Approved Test Centre testing lab",
+    },
+    {
+      id: "ADMIN",
+      label: "System Admin",
+      desc: "Ministry & Metrology Directorate",
+    },
+    {
+      id: "PUBLIC_USER",
+      label: "Public Citizen",
+      desc: "General consumer / citizen",
+    },
   ];
 
   const handleRoleSelect = async (role: RoleName) => {
     await switchRole(role);
     setRoleDropdownOpen(false);
-    navigate('/dashboard');
+    navigate("/dashboard");
   };
 
   return (
@@ -94,14 +118,18 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-3 text-xs">
           <button
             type="button"
-            onClick={() => handleNavClick('hero')}
+            onClick={() => handleNavClick("hero")}
             className="hidden md:inline-flex px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-md transition-colors"
           >
             Skip to Main Content
           </button>
 
           <div className="w-6 h-6 rounded-full bg-[#1a1a2e] text-white flex items-center justify-center text-[10px] font-bold">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
               <path d="M12 2a2 2 0 100 4 2 2 0 000-4zm-8 7a1 1 0 011-1h14a1 1 0 110 2h-5v12a1 1 0 11-2 0V15h-2v7a1 1 0 11-2 0V10H5a1 1 0 01-1-1z" />
             </svg>
           </div>
@@ -121,7 +149,10 @@ export const Navbar: React.FC = () => {
           {/* Main Nav Links (Matching Screenshots 1 & navbar.json) */}
           <nav className="hidden lg:flex items-center space-x-6">
             {navMenuItems.map((item) => {
-              const isHome = item.label === 'Home' && location.pathname === '/' && !location.hash;
+              const isHome =
+                item.label === "Home" &&
+                location.pathname === "/" &&
+                !location.hash;
               return (
                 <button
                   key={item.label}
@@ -135,8 +166,8 @@ export const Navbar: React.FC = () => {
                   }}
                   className={`text-sm font-semibold transition-colors relative py-4 ${
                     isHome
-                      ? 'text-[#FFAA17] font-bold'
-                      : 'text-[#1a1a2e] hover:text-[#FFAA17]'
+                      ? "text-[#FFAA17] font-bold"
+                      : "text-[#1a1a2e] hover:text-[#FFAA17]"
                   }`}
                 >
                   {item.label}
@@ -154,8 +185,18 @@ export const Navbar: React.FC = () => {
               to="/verify-public"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#FFAA17] text-[#1a1a2e] shadow-xs hover:bg-[#f8aa24] uppercase tracking-wider"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                />
               </svg>
               Verify documents
             </Link>
@@ -170,20 +211,37 @@ export const Navbar: React.FC = () => {
                   <div className="w-6 h-6 rounded-full bg-[#1a1a2e] text-[#FFAA17] flex items-center justify-center text-xs">
                     {user.full_name.charAt(0)}
                   </div>
-                  <span>{user.full_name.split(' ')[0]}</span>
+                  <span>{user.full_name.split(" ")[0]}</span>
                   <Badge status={user.role_id} size="sm" />
-                  <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="w-3.5 h-3.5 text-slate-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
 
                 {roleDropdownOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setRoleDropdownOpen(false)} />
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setRoleDropdownOpen(false)}
+                    />
                     <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in duration-150 space-y-1">
                       <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                        <p className="text-[10px] font-bold uppercase text-slate-400">Portal Services</p>
-                        <p className="text-xs font-bold text-slate-900">{user.full_name}</p>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">
+                          Portal Services
+                        </p>
+                        <p className="text-xs font-bold text-slate-900">
+                          {user.full_name}
+                        </p>
                       </div>
 
                       {/* Portal Links */}
@@ -194,7 +252,8 @@ export const Navbar: React.FC = () => {
                       >
                         📊 My Dashboard
                       </Link>
-                      {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'ADMIN') && (
+                      {(user.role_id === "INSTRUMENT_OWNER" ||
+                        user.role_id === "ADMIN") && (
                         <Link
                           to="/instruments"
                           onClick={() => setRoleDropdownOpen(false)}
@@ -203,7 +262,9 @@ export const Navbar: React.FC = () => {
                           ⚖️ Weighing Instruments
                         </Link>
                       )}
-                      {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+                      {(user.role_id === "INSTRUMENT_OWNER" ||
+                        user.role_id === "GATC" ||
+                        user.role_id === "ADMIN") && (
                         <Link
                           to="/applications"
                           onClick={() => setRoleDropdownOpen(false)}
@@ -212,7 +273,23 @@ export const Navbar: React.FC = () => {
                           📝 Verification Applications
                         </Link>
                       )}
-                      {(user.role_id === 'LMO' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+                      {(user.role_id === "LMO" ||
+                        user.role_id === "GATC" ||
+                        user.role_id === "ADMIN") && (
+                        <Link
+                          to="/assignments"
+                          onClick={() => setRoleDropdownOpen(false)}
+                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                        >
+                          📋{" "}
+                          {user.role_id === "ADMIN"
+                            ? "All Assignments"
+                            : "My Assignments"}
+                        </Link>
+                      )}
+                      {(user.role_id === "LMO" ||
+                        user.role_id === "GATC" ||
+                        user.role_id === "ADMIN") && (
                         <Link
                           to="/verifications"
                           onClick={() => setRoleDropdownOpen(false)}
@@ -221,7 +298,7 @@ export const Navbar: React.FC = () => {
                           🔍 Field Verifications
                         </Link>
                       )}
-                      {user.role_id === 'ADMIN' && (
+                      {user.role_id === "ADMIN" && (
                         <Link
                           to="/certificates"
                           onClick={() => setRoleDropdownOpen(false)}
@@ -232,7 +309,9 @@ export const Navbar: React.FC = () => {
                       )}
 
                       <div className="pt-2 mt-1 border-t border-slate-100">
-                        <p className="px-3 py-1 text-[10px] font-bold uppercase text-slate-400">Switch Demo Role</p>
+                        <p className="px-3 py-1 text-[10px] font-bold uppercase text-slate-400">
+                          Switch Demo Role
+                        </p>
                         <div className="space-y-0.5">
                           {rolesList.map((r) => (
                             <button
@@ -241,12 +320,14 @@ export const Navbar: React.FC = () => {
                               onClick={() => handleRoleSelect(r.id)}
                               className={`w-full text-left px-3 py-1.5 rounded-md text-xs flex items-center justify-between ${
                                 user.role_id === r.id
-                                  ? 'bg-amber-50 text-amber-900 font-bold'
-                                  : 'hover:bg-slate-50 text-slate-600'
+                                  ? "bg-amber-50 text-amber-900 font-bold"
+                                  : "hover:bg-slate-50 text-slate-600"
                               }`}
                             >
                               <span>{r.label}</span>
-                              {user.role_id === r.id && <span className="text-emerald-600">✓</span>}
+                              {user.role_id === r.id && (
+                                <span className="text-emerald-600">✓</span>
+                              )}
                             </button>
                           ))}
                         </div>
@@ -258,7 +339,7 @@ export const Navbar: React.FC = () => {
                           onClick={async () => {
                             await logout();
                             setRoleDropdownOpen(false);
-                            navigate('/');
+                            navigate("/");
                           }}
                           className="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
                         >
@@ -278,14 +359,27 @@ export const Navbar: React.FC = () => {
                   className="px-6 py-2 rounded-md border-2 border-[#1a1a2e] text-xs font-bold uppercase tracking-wider text-[#1a1a2e] hover:bg-[#1a1a2e] hover:text-white transition-all flex items-center gap-1.5"
                 >
                   <span>LOGIN</span>
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
 
                 {loginDropdownOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setLoginDropdownOpen(false)} />
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setLoginDropdownOpen(false)}
+                    />
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in duration-150 space-y-1">
                       <Link
                         to="/login"
@@ -316,8 +410,18 @@ export const Navbar: React.FC = () => {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2 text-slate-700 hover:bg-slate-100 rounded-lg"
             >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
               </svg>
             </button>
           </div>
@@ -353,7 +457,8 @@ export const Navbar: React.FC = () => {
               >
                 📊 Dashboard
               </Link>
-              {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'ADMIN') && (
+              {(user.role_id === "INSTRUMENT_OWNER" ||
+                user.role_id === "ADMIN") && (
                 <Link
                   to="/instruments"
                   onClick={() => setMobileMenuOpen(false)}
@@ -362,7 +467,9 @@ export const Navbar: React.FC = () => {
                   ⚖️ Instruments
                 </Link>
               )}
-              {(user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+              {(user.role_id === "INSTRUMENT_OWNER" ||
+                user.role_id === "GATC" ||
+                user.role_id === "ADMIN") && (
                 <Link
                   to="/applications"
                   onClick={() => setMobileMenuOpen(false)}
@@ -371,7 +478,23 @@ export const Navbar: React.FC = () => {
                   📝 Applications
                 </Link>
               )}
-              {(user.role_id === 'LMO' || user.role_id === 'GATC' || user.role_id === 'ADMIN') && (
+              {(user.role_id === "LMO" ||
+                user.role_id === "GATC" ||
+                user.role_id === "ADMIN") && (
+                <Link
+                  to="/assignments"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
+                >
+                  📋{" "}
+                  {user.role_id === "ADMIN"
+                    ? "All Assignments"
+                    : "My Assignments"}
+                </Link>
+              )}
+              {(user.role_id === "LMO" ||
+                user.role_id === "GATC" ||
+                user.role_id === "ADMIN") && (
                 <Link
                   to="/verifications"
                   onClick={() => setMobileMenuOpen(false)}
@@ -380,7 +503,7 @@ export const Navbar: React.FC = () => {
                   🔍 Field Verifications
                 </Link>
               )}
-              {user.role_id === 'ADMIN' && (
+              {user.role_id === "ADMIN" && (
                 <Link
                   to="/certificates"
                   onClick={() => setMobileMenuOpen(false)}
@@ -400,8 +523,12 @@ export const Navbar: React.FC = () => {
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[10px] font-bold uppercase text-[#FFAA17] tracking-wider">Statutory Framework</span>
-                <h3 className="text-lg font-bold text-[#1a1a2e]">Legal Metrology Acts & Rules</h3>
+                <span className="text-[10px] font-bold uppercase text-[#FFAA17] tracking-wider">
+                  Statutory Framework
+                </span>
+                <h3 className="text-lg font-bold text-[#1a1a2e]">
+                  Legal Metrology Acts & Rules
+                </h3>
               </div>
               <button
                 type="button"
@@ -414,23 +541,36 @@ export const Navbar: React.FC = () => {
 
             <div className="space-y-3 text-xs text-slate-700 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <h4 className="font-bold text-[#1a1a2e]">1. The Legal Metrology Act, 2009 (Act 1 of 2010)</h4>
+                <h4 className="font-bold text-[#1a1a2e]">
+                  1. The Legal Metrology Act, 2009 (Act 1 of 2010)
+                </h4>
                 <p className="mt-1 text-slate-600">
-                  Enforces standards of weights and measures across commercial transactions, manufacturing, and consumer retail in India. Effective from 1st April, 2011.
+                  Enforces standards of weights and measures across commercial
+                  transactions, manufacturing, and consumer retail in India.
+                  Effective from 1st April, 2011.
                 </p>
               </div>
 
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <h4 className="font-bold text-[#1a1a2e]">2. Legal Metrology (General) Rules, 2011</h4>
+                <h4 className="font-bold text-[#1a1a2e]">
+                  2. Legal Metrology (General) Rules, 2011
+                </h4>
                 <p className="mt-1 text-slate-600">
-                  Prescribes specifications, tolerances, verification intervals, and inspection methodologies for non-automatic weighing instruments, weighbridges, fuel dispensers, and precision laboratory balances.
+                  Prescribes specifications, tolerances, verification intervals,
+                  and inspection methodologies for non-automatic weighing
+                  instruments, weighbridges, fuel dispensers, and precision
+                  laboratory balances.
                 </p>
               </div>
 
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <h4 className="font-bold text-[#1a1a2e]">3. Legal Metrology (Packaged Commodities) Rules, 2011</h4>
+                <h4 className="font-bold text-[#1a1a2e]">
+                  3. Legal Metrology (Packaged Commodities) Rules, 2011
+                </h4>
                 <p className="mt-1 text-slate-600">
-                  Mandates standard pack sizes, declarations (MRP, Net Quantity, Unit Sale Price, Best Before, Consumer Care), and registration of pre-packaged goods.
+                  Mandates standard pack sizes, declarations (MRP, Net Quantity,
+                  Unit Sale Price, Best Before, Consumer Care), and registration
+                  of pre-packaged goods.
                 </p>
               </div>
             </div>

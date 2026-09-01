@@ -34,7 +34,7 @@ import stateCg from '@/emaap_extracted_resources/static/media/chhattisgarh.feeb5
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [certType, setCertType] = useState('Weights & Measures');
+  const [certType, setCertType] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBanner, setActiveBanner] = useState(0);
   const banners = [banner1, banner2, banner3];

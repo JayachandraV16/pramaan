@@ -1,21 +1,22 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Navbar } from './components/common/Navbar';
-import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { InstrumentsListPage } from './pages/instruments/InstrumentsListPage';
-import { InstrumentDetailPage } from './pages/instruments/InstrumentDetailPage';
-import { NewInstrumentPage } from './pages/instruments/NewInstrumentPage';
-import { ApplicationsListPage } from './pages/applications/ApplicationsListPage';
-import { ApplicationDetailPage } from './pages/applications/ApplicationDetailPage';
-import { NewApplicationPage } from './pages/applications/NewApplicationPage';
-import { VerificationsListPage } from './pages/verifications/VerificationsListPage';
-import { VerificationDetailPage } from './pages/verifications/VerificationDetailPage';
-import { CertificatesListPage } from './pages/certificates/CertificatesListPage';
-import { CertificateDetailPage } from './pages/certificates/CertificateDetailPage';
-import { PublicVerifyPage } from './pages/verify/PublicVerifyPage';
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Navbar } from "./components/common/Navbar";
+import { LandingPage } from "./pages/LandingPage";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { InstrumentsListPage } from "./pages/instruments/InstrumentsListPage";
+import { InstrumentDetailPage } from "./pages/instruments/InstrumentDetailPage";
+import { NewInstrumentPage } from "./pages/instruments/NewInstrumentPage";
+import { ApplicationsListPage } from "./pages/applications/ApplicationsListPage";
+import { ApplicationDetailPage } from "./pages/applications/ApplicationDetailPage";
+import { NewApplicationPage } from "./pages/applications/NewApplicationPage";
+import { VerificationsListPage } from "./pages/verifications/VerificationsListPage";
+import { VerificationDetailPage } from "./pages/verifications/VerificationDetailPage";
+import { AssignmentsListPage } from "./pages/assignments/AssignmentsListPage";
+import { CertificatesListPage } from "./pages/certificates/CertificatesListPage";
+import { CertificateDetailPage } from "./pages/certificates/CertificateDetailPage";
+import { PublicVerifyPage } from "./pages/verify/PublicVerifyPage";
 
 export const App: React.FC = () => {
   return (
@@ -40,9 +41,15 @@ export const App: React.FC = () => {
           <Route path="/applications/new" element={<NewApplicationPage />} />
           <Route path="/applications/:id" element={<ApplicationDetailPage />} />
 
+          {/* Assignments route (LMO/GATC queue, ADMIN overview) */}
+          <Route path="/assignments" element={<AssignmentsListPage />} />
+
           {/* Verifications routes */}
           <Route path="/verifications" element={<VerificationsListPage />} />
-          <Route path="/verifications/:id" element={<VerificationDetailPage />} />
+          <Route
+            path="/verifications/:id"
+            element={<VerificationDetailPage />}
+          />
 
           {/* Certificates routes */}
           <Route path="/certificates" element={<CertificatesListPage />} />

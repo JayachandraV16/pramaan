@@ -9,6 +9,7 @@ import {
 import {
   apiClient,
 } from './client';
+import { recordKnownOfficer } from './assignments.api';
 
 export interface LoginCredentials {
   email?: string;
@@ -62,6 +63,7 @@ export const authApi = {
       if (response && response.id) {
         const mapped = mapBackendUserToFrontend(response);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mapped));
+        recordKnownOfficer(mapped);
         return mapped;
       }
       return null;
@@ -102,6 +104,7 @@ export const authApi = {
 
     const mapped = mapBackendUserToFrontend(response.user);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mapped));
+    recordKnownOfficer(mapped);
     return mapped;
   },
 
@@ -129,6 +132,7 @@ export const authApi = {
 
     const mapped = mapBackendUserToFrontend(response.user);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mapped));
+    recordKnownOfficer(mapped);
     return mapped;
   },
 
