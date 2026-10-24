@@ -17,6 +17,7 @@
 const ApiError = require('../../utils/ApiError');
 const audit = require('../../utils/audit');
 const { sha256Hex } = require('../../utils/integrity');
+const { verifyPdfSignature } = require('../../utils/pdfSigner');
 const { recordFingerprint, verifyQrSignature } = require('../../utils/certificateIntegrity');
 const repo = require('./qr-auth.repository');
 const { QR_AUTH_RESULTS } = require('./qr-auth.validation');
@@ -162,6 +163,9 @@ async function verifyPublic({ identifier, signature }, metadata = {}) {
       signature: signatureStatus,
       recordHash: recordHashStatus,
       pdfSha256: certificate.pdf_sha256 || null,
+      pdfSigned: !!certificate.pdf_signed,
+      signerSubject: certificate.signature_subject || null,
+      signedAt: certificate.signed_at || null,
       recordFingerprint: certificate.record_sha256 ? certificate.record_sha256.slice(0, 16) : null,
     },
     verifiedAt,
@@ -181,11 +185,14 @@ function toLegacyShape(outcome) {
 async function checkDocument(buffer, metadata = {}) {
   const pdfSha256 = sha256Hex(buffer);
   const certificate = await repo.findCertificateByPdfSha256(pdfSha256);
+  // Independent of the registry: does the file's own embedded signature verify?
+  const signature = verifyPdfSignature(buffer);
 
   if (!certificate) {
     return {
       matches: false,
       sha256: pdfSha256,
+      signature,
       message: 'This file does not match any certificate issued by Pramaan.',
     };
   }
@@ -201,6 +208,7 @@ async function checkDocument(buffer, metadata = {}) {
   return {
     matches: true,
     sha256: pdfSha256,
+    signature,
     certificateNumber: certificate.certificate_number,
     status: certificate.status,
     validUntil: certificate.valid_until,

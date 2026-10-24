@@ -13,6 +13,7 @@ const { hashPassword, comparePassword } = require('../../utils/password');
 const { validatePasswordStrength } = require('../../utils/passwordPolicy');
 const authRepo = require('../auth/auth.repository');
 const repo = require('./users.repository');
+const { SUPPORTED: SUPPORTED_LANGUAGES } = require('../../utils/i18n');
 const { isValidStatus, isValidRole, USER_STATUSES } = require('./users.validation');
 const { ROLES } = require('../../config/roles');
 
@@ -137,6 +138,9 @@ async function updateStatus(actor, userId, status) {
 }
 
 async function updateOwnProfile(userId, data) {
+  if (data.preferredLanguage !== undefined && !SUPPORTED_LANGUAGES.includes(data.preferredLanguage)) {
+    throw ApiError.badRequest(`preferredLanguage must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`);
+  }
   await repo.updateProfile(userId, data);
   return repo.findById(userId);
 }

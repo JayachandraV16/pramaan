@@ -34,6 +34,12 @@ if (isProduction) {
   if (!process.env.INTEGRITY_SECRET || process.env.INTEGRITY_SECRET.length < 32) {
     throw new Error('INTEGRITY_SECRET (>= 32 chars) is required in production.');
   }
+  if (process.env.STORAGE_DRIVER === 's3' && !process.env.S3_BUCKET) {
+    throw new Error('STORAGE_DRIVER=s3 needs S3_BUCKET.');
+  }
+  if (process.env.DELIVERY_MODE === 'live' && !process.env.SMTP_URL && !process.env.SMS_GATEWAY_URL) {
+    throw new Error('DELIVERY_MODE=live needs SMTP_URL and/or SMS_GATEWAY_URL.');
+  }
 }
 
 const integritySecret =
@@ -82,6 +88,44 @@ const config = {
   // When true an ADMIN must confirm the GRAS challan payment
   // (POST /api/applications/:id/payment-verified) before an officer is assigned.
   requirePaymentBeforeAssignment: process.env.REQUIRE_PAYMENT_BEFORE_ASSIGNMENT === 'true',
+
+  // Object storage (see utils/storage.js). STORAGE_DRIVER=local (default) | s3
+  storage: {
+    driver: process.env.STORAGE_DRIVER === 's3' ? 's3' : 'local',
+    s3: {
+      bucket: process.env.S3_BUCKET || '',
+      region: process.env.S3_REGION || 'ap-south-1',
+      endpoint: process.env.S3_ENDPOINT || '', // MinIO / Cloudflare R2 / other S3-compatible services
+      accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+      prefix: (process.env.S3_PREFIX || '').replace(/^\/+|\/+$/g, '').replace(/(.+)/, '$1/'),
+      serverSideEncryption: process.env.S3_SERVER_SIDE_ENCRYPTION || '', // e.g. AES256
+    },
+  },
+
+  // Digital signature of certificate PDFs (see utils/pdfSigner.js). Unset = PDFs are not signed.
+  signing: {
+    p12Path: process.env.SIGNING_P12_PATH ? path.resolve(process.env.SIGNING_P12_PATH) : '',
+    passphrase: process.env.SIGNING_P12_PASSPHRASE || '',
+    reason: 'Certificate of verification issued under the Legal Metrology Act, 2009',
+    location: process.env.SIGNING_LOCATION || 'India',
+    contactInfo: process.env.SIGNING_CONTACT || '',
+    signerName: process.env.SIGNING_NAME || 'Pramaan',
+  },
+
+  // E-mail / SMS delivery of notifications (see utils/delivery.js).
+  //   DELIVERY_MODE=off|log|live   SMTP_URL=smtps://user:pass@host:465   EMAIL_FROM="Pramaan <no-reply@...>"
+  //   SMS_GATEWAY_URL / SMS_GATEWAY_TOKEN / SMS_SENDER_ID (generic JSON gateway)
+  delivery: {
+    mode: ['log', 'live'].includes(process.env.DELIVERY_MODE) ? process.env.DELIVERY_MODE : 'off',
+    smtpUrl: process.env.SMTP_URL || '',
+    emailFrom: process.env.EMAIL_FROM || 'Pramaan <no-reply@pramaan.local>',
+    smsUrl: process.env.SMS_GATEWAY_URL || '',
+    smsToken: process.env.SMS_GATEWAY_TOKEN || '',
+    smsSender: process.env.SMS_SENDER_ID || 'PRAMAN',
+    intervalSeconds: parseInt(process.env.DELIVERY_INTERVAL_SECONDS, 10) || 60,
+  },
 
   // Lifetime of signed /uploads links handed out in API responses.
   fileUrlTtlSeconds: parseInt(process.env.FILE_URL_TTL_SECONDS, 10) || 1800,

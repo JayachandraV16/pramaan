@@ -24,6 +24,9 @@ const updateProfileRules = {
   phone: { required: false, type: 'string' },
   organizationName: { required: false, type: 'string' },
   address: { required: false, type: 'string' },
+  preferredLanguage: { required: false, type: 'string' },
+  notifyEmail: { required: false, type: 'boolean' },
+  notifySms: { required: false, type: 'boolean' },
 };
 
 const changePasswordRules = {

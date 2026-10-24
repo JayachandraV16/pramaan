@@ -8,7 +8,7 @@ const pool = require('../../pool');
 const USER_COLUMNS = `
   u.id, u.full_name, u.email, u.phone, u.status,
   u.organization_name, u.address, u.lcr_number, u.applicant_type,
-  u.created_at, u.updated_at, r.name AS role`;
+  u.created_at, u.updated_at, u.preferred_language, u.notify_email, u.notify_sms, r.name AS role`;
 
 async function findById(id, client = pool) {
   const { rows } = await client.query(
@@ -66,16 +66,19 @@ async function setStatus(client, id, status) {
   return rows[0] || null;
 }
 
-async function updateProfile(id, { fullName, phone, organizationName, address }) {
+async function updateProfile(id, { fullName, phone, organizationName, address, preferredLanguage, notifyEmail, notifySms }) {
   const { rows } = await pool.query(
     `UPDATE users SET
        full_name = COALESCE($2, full_name),
        phone = COALESCE($3, phone),
        organization_name = COALESCE($4, organization_name),
-       address = COALESCE($5, address)
+       address = COALESCE($5, address),
+       preferred_language = COALESCE($6, preferred_language),
+       notify_email = COALESCE($7, notify_email),
+       notify_sms = COALESCE($8, notify_sms)
      WHERE id = $1
      RETURNING id`,
-    [id, fullName ?? null, phone ?? null, organizationName ?? null, address ?? null]
+    [id, fullName ?? null, phone ?? null, organizationName ?? null, address ?? null, preferredLanguage ?? null, notifyEmail ?? null, notifySms ?? null]
   );
   return rows[0] || null;
 }

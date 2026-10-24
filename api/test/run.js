@@ -50,6 +50,8 @@ async function main() {
     user: 'postgres',
     password: 'postgres',
     port,
+    // Windows defaults to a WIN1252 cluster, which cannot store Hindi text.
+    initdbFlags: ['--encoding=UTF8'],
     persistent: false,
     onLog: () => {},
     onError: () => {},

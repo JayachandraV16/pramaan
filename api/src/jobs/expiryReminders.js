@@ -59,14 +59,13 @@ async function sendExpiryReminders() {
 
       certificates += 1;
       const days = Number(cert.days_left);
-      const when = days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
       const recipients = new Set([cert.applicant_id, cert.owner_id].filter(Boolean));
       for (const recipientId of recipients) {
         await notify(client, {
           recipientId,
           type: 'CERTIFICATE_EXPIRING',
-          title: 'Verification certificate expiring soon',
-          message: `Certificate ${cert.certificate_number} for ${cert.instrument_name} expires ${when} (${String(cert.valid_until).slice(0, 10)}). Apply for re-verification to avoid a lapse.`,
+          key: 'certificate.expiring',
+          params: { number: cert.certificate_number, instrument: cert.instrument_name, days, date: String(cert.valid_until).slice(0, 10) },
           relatedApplicationId: cert.application_id,
           relatedCertificateId: cert.id,
         });

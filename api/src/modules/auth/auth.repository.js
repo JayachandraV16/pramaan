@@ -23,7 +23,7 @@ async function findUserByEmail(email) {
   const { rows } = await pool.query(
     `SELECT u.id, u.full_name, u.email, u.phone, u.password_hash, u.status,
             u.organization_name, u.address, u.lcr_number, u.applicant_type,
-            u.created_at,
+            u.created_at, u.preferred_language,
             r.name AS role
      FROM users u
      JOIN roles r ON r.id = u.role_id
@@ -37,7 +37,7 @@ async function findUserById(id) {
   const { rows } = await pool.query(
     `SELECT u.id, u.full_name, u.email, u.phone, u.status,
             u.organization_name, u.address, u.lcr_number, u.applicant_type,
-            u.created_at,
+            u.created_at, u.preferred_language, u.notify_email, u.notify_sms,
             r.name AS role
      FROM users u
      JOIN roles r ON r.id = u.role_id

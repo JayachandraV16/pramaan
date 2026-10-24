@@ -3,7 +3,10 @@ const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
 
+const os = require('os');
+
 const config = require('../config');
+const objectStorage = require('../utils/storage');
 const ApiError = require('../utils/ApiError');
 
 // Absolute path to the uploads directory (single source of truth in config;
@@ -17,7 +20,8 @@ fs.mkdirSync(uploadDirectory, {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDirectory);
+    // With object storage the file is only staged here until it has been verified.
+    cb(null, config.storage.driver === 'local' ? uploadDirectory : os.tmpdir());
   },
 
   filename: (req, file, cb) => {
@@ -122,7 +126,18 @@ function uploadSingle(fieldName) {
 
       req.file.mimetype = MIME_BY_EXTENSION[extension];
       req.file.sha256 = require('../utils/integrity').sha256Hex(fs.readFileSync(req.file.path));
-      next();
+
+      if (config.storage.driver === 'local') return next();
+      objectStorage
+        .put(req.file.filename, req.file.path)
+        .then(() => {
+          fs.unlink(req.file.path, () => {});
+          next();
+        })
+        .catch((storeErr) => {
+          fs.unlink(req.file.path, () => {});
+          next(storeErr);
+        });
     });
   };
 }

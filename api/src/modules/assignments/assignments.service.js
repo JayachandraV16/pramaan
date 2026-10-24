@@ -121,8 +121,8 @@ async function createAssignment(user, data) {
     await notify(client, {
       recipientId: data.assignedToId,
       type: 'APPLICATION_UPDATE',
-      title: 'New verification assigned',
-      message: `Application ${application.application_number} has been assigned to you.`,
+      key: 'assignment.new',
+      params: { applicationNumber: application.application_number },
       relatedApplicationId: data.applicationId,
     });
 

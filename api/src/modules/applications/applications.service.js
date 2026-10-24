@@ -182,8 +182,8 @@ async function verifyPayment(user, applicationId) {
     await notify(client, {
       recipientId: application.applicant_id,
       type: 'APPLICATION_UPDATE',
-      title: 'Payment verified',
-      message: `Your payment (challan ${application.gras_challan_number}) for application ${application.application_number} has been verified.`,
+      key: 'payment.verified',
+      params: { challan: application.gras_challan_number, applicationNumber: application.application_number },
       relatedApplicationId: applicationId,
     });
     const { rows } = await client.query('SELECT * FROM verification_applications WHERE id = $1', [applicationId]);

@@ -41,8 +41,8 @@ async function expireDueCertificates() {
       await notify(client, {
         recipientId: cert.applicant_id,
         type: 'CERTIFICATE_EXPIRED',
-        title: 'Certificate expired',
-        message: `Certificate ${cert.certificate_number} for ${cert.instrument_name} has expired. Apply for re-verification to continue using the instrument.`,
+        key: 'certificate.expired',
+        params: { number: cert.certificate_number, instrument: cert.instrument_name },
         relatedApplicationId: cert.application_id,
         relatedCertificateId: cert.id,
       });

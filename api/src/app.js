@@ -7,6 +7,7 @@ const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 const { securityHeaders, corsAllowList } = require("./middleware/security");
 const { verifyUploadSignature } = require("./utils/integrity");
+const storage = require("./utils/storage");
 
 const app = express();
 
@@ -33,16 +34,26 @@ app.get("/uploads/*splat", (req, res, next) => {
         });
     }
 
-    const absolute = path.resolve(config.uploadDir, "." + requested);
-    if (!absolute.startsWith(config.uploadDir + path.sep)) {
+    const key = requested.replace(/^\/+/, "");
+    try {
+        storage.assertKey(key);
+    } catch {
         return res.status(403).json({ success: false, message: "Forbidden" });
     }
 
-    res.setHeader("Cache-Control", "private, max-age=300");
-    res.setHeader("Content-Disposition", "inline");
-    res.sendFile(absolute, { dotfiles: "deny" }, (err) => {
-        if (err) next(err.code === "ENOENT" ? undefined : err);
-    });
+    storage
+        .open(key)
+        .then((file) => {
+            if (!file) return next(); // unknown file: falls through to the 404 handler
+            res.setHeader("Content-Type", storage.contentTypeFor(key));
+            if (file.size !== undefined) res.setHeader("Content-Length", file.size);
+            res.setHeader("Cache-Control", "private, max-age=300");
+            res.setHeader("Content-Disposition", "inline");
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            file.stream.on("error", next);
+            file.stream.pipe(res);
+        })
+        .catch(next);
 });
 
 app.get("/health", (req, res) => {

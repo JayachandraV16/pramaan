@@ -410,11 +410,8 @@ async function submitResult(
       await notify(client, {
         recipientId: app[0].applicant_id,
         type: 'APPLICATION_UPDATE',
-        title: `Verification ${data.decision === 'PASS' ? 'passed' : 'failed'}`,
-        message:
-          data.decision === 'PASS'
-            ? `Your instrument passed verification for application ${app[0].application_number}. The certificate will be issued shortly.`
-            : `Your instrument did not pass verification for application ${app[0].application_number}. You may apply again after correcting the issues.`,
+        key: data.decision === 'PASS' ? 'verification.passed' : 'verification.failed',
+        params: { applicationNumber: app[0].application_number },
         relatedApplicationId: locked[0].application_id,
       });
     }

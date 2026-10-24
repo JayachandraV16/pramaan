@@ -1,15 +1,14 @@
-const fs = require('fs');
-const path = require('path');
 
 const pool = require('../../pool');
-const config = require('../../config');
 const ApiError = require('../../utils/ApiError');
 const audit = require('../../utils/audit');
 const { notify } = require('../../utils/notify');
 const { sha256Hex } = require('../../utils/integrity');
+const storage = require('../../utils/storage');
 const { recordFingerprint } = require('../../utils/certificateIntegrity');
 const { generateQRCode } = require('../../utils/qrGenerator');
 const { generateCertificatePDF } = require('../../utils/certificateGenerator');
+const { signPdf } = require('../../utils/pdfSigner');
 const repo = require('./certificates.repository');
 const { isValidCertificateStatus, CERTIFICATE_STATUSES } = require('./certificates.validation');
 const { ROLES } = require('../../config/roles');
@@ -98,9 +97,7 @@ async function createCertificate(user, data) {
 
   const { validFrom, validUntil } = resolveValidity(data, context.default_validity_months);
 
-  const certificatesDir = path.join(config.uploadDir, 'certificates');
-  fs.mkdirSync(certificatesDir, { recursive: true });
-  let writtenFile = null;
+  let storedKey = null;
 
   const client = await pool.connect();
   try {
@@ -119,7 +116,7 @@ async function createCertificate(user, data) {
     const recordSha256 = recordFingerprint(certificate);
 
     const qrCodeBuffer = await generateQRCode(certificate.qr_token, certificate.certificate_number);
-    const pdfBuffer = await generateCertificatePDF(
+    let pdfBuffer = await generateCertificatePDF(
       {
         ...certificate,
         instrument_name: context.instrument_name,
@@ -130,17 +127,22 @@ async function createCertificate(user, data) {
       },
       qrCodeBuffer
     );
+    // Digitally sign when a signing identity is configured; the stored hash is of the final (signed) file.
+    const signature = await signPdf(pdfBuffer);
+    if (signature) pdfBuffer = signature.pdf;
     const pdfSha256 = sha256Hex(pdfBuffer);
 
     const fileName = `${certificate.certificate_number}.pdf`;
-    writtenFile = path.join(certificatesDir, fileName);
-    fs.writeFileSync(writtenFile, pdfBuffer);
+    const key = `certificates/${fileName}`;
+    await storage.put(key, pdfBuffer);
+    storedKey = key;
 
     const updated = await repo.setIntegrityFields(client, {
       id: certificate.id,
       fileUrl: `/uploads/certificates/${fileName}`,
       pdfSha256,
       recordSha256,
+      signature: signature ? signature.info : null,
     });
 
     await audit.record(client, {
@@ -156,14 +158,15 @@ async function createCertificate(user, data) {
         validUntil,
         recordSha256,
         pdfSha256,
+        signedBy: signature ? signature.info.subject : null,
       },
     });
 
     await notify(client, {
       recipientId: context.applicant_id,
       type: 'CERTIFICATE_ISSUED',
-      title: 'Verification certificate issued',
-      message: `Certificate ${certificate.certificate_number} for ${context.instrument_name} is valid until ${validUntil}.`,
+      key: 'certificate.issued',
+      params: { number: certificate.certificate_number, instrument: context.instrument_name, validUntil },
       relatedApplicationId: context.application_id,
       relatedCertificateId: certificate.id,
     });
@@ -172,7 +175,7 @@ async function createCertificate(user, data) {
     return updated;
   } catch (err) {
     await client.query('ROLLBACK');
-    if (writtenFile) fs.unlink(writtenFile, () => {});
+    if (storedKey) storage.remove(storedKey).catch(() => {});
     throw err;
   } finally {
     client.release();
@@ -299,11 +302,8 @@ async function updateCertificateStatus(user, certificateId, data) {
       await notify(client, {
         recipientId: recipients.applicant_id,
         type: data.status === 'REVOKED' ? 'CERTIFICATE_REVOKED' : 'CERTIFICATE_EXPIRED',
-        title: data.status === 'REVOKED' ? 'Certificate revoked' : 'Certificate expired',
-        message:
-          data.status === 'REVOKED'
-            ? `Certificate ${certificate.certificate_number} has been revoked. Reason: ${reason}`
-            : `Certificate ${certificate.certificate_number} has expired. Apply for re-verification.`,
+        key: data.status === 'REVOKED' ? 'certificate.revoked' : 'certificate.expired',
+        params: { number: certificate.certificate_number, reason },
         relatedApplicationId: recipients.application_id,
         relatedCertificateId: certificateId,
       });

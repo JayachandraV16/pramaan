@@ -309,13 +309,14 @@ async function insertCertificate(client, { verificationId, instrumentId, certifi
   return rows[0];
 }
 
-async function setIntegrityFields(client, { id, fileUrl, pdfSha256, recordSha256 }) {
+async function setIntegrityFields(client, { id, fileUrl, pdfSha256, recordSha256, signature = null }) {
   const { rows } = await client.query(
     `UPDATE verification_certificates
-     SET certificate_file_url = $2, pdf_sha256 = $3, record_sha256 = $4
+     SET certificate_file_url = $2, pdf_sha256 = $3, record_sha256 = $4,
+         pdf_signed = $5, signature_subject = $6, signature_fingerprint = $7, signed_at = $8
      WHERE id = $1
      RETURNING *`,
-    [id, fileUrl, pdfSha256, recordSha256]
+    [id, fileUrl, pdfSha256, recordSha256, !!signature, signature ? signature.subject : null, signature ? signature.fingerprint : null, signature ? signature.signedAt : null]
   );
   return rows[0];
 }

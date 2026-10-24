@@ -7,6 +7,7 @@ const PUBLIC_CERTIFICATE_SELECT = `
     vc.id, vc.certificate_number, vc.verification_id, vc.instrument_id,
     vc.issue_date, vc.valid_from, vc.valid_until, vc.status,
     vc.qr_token, vc.record_sha256, vc.pdf_sha256,
+    vc.pdf_signed, vc.signature_subject, vc.signed_at,
     vc.revoked_at, vc.revocation_reason,
     i.instrument_name, i.manufacturer, i.model, i.serial_number,
     i.capacity, i.capacity_unit, i.accuracy_class, i.location_address,
