@@ -1,14 +1,68 @@
 # Pramaan
 
-A Unified Digital Platform for Legal Metrology Verification and Certification.
+A Unified Digital Platform for Legal Metrology Verification and Certification (SIH problem statement 26036).
 
 **Team:** Fulcrum
 
-## Repository Structure
+Owners register weighing/measuring instruments and apply for (re-)verification; an administrator assigns and schedules an LMO/GATC officer; the officer records the field verification; the administrator issues a PDF certificate whose QR code anyone can validate online. Expiring certificates trigger reminders.
 
-- `api/` — Express backend
-- `web/` — React + Vite web Application
-- `mobile/` — Expo mobile application
-- `docs/` — Architecture, API, database, and technical decisions
+## Repository structure
 
-- testing 
+- `api/` — Express + PostgreSQL backend (`npm test` runs the full test suite against a temporary database)
+- `web/` — React + Vite + TypeScript web application
+- `mobile/` — Expo mobile application (work in progress on the `pushkar-mobile-auth` branch)
+- `docs/` — architecture & security framework, API contracts, database schema, decisions, context and roadmap
+
+## Quick start (development)
+
+Requirements: Node.js 20+ and PostgreSQL 14+ (with the `pgcrypto` and `citext` extensions).
+
+```bash
+# 1. API
+cd api
+cp .env.example .env            # fill in DB settings and two long random secrets
+npm install
+npm run db:setup                # DEV ONLY: reset + migrate + seed an empty database
+npm run dev                     # http://localhost:5000  (GET /health)
+
+# 2. Web (second terminal)
+cd web
+cp .env.example .env
+npm install
+npm run dev                     # http://localhost:5173
+```
+
+`npm run db:setup` deletes everything in the database it points at — use a database you can lose. On an existing database use `npm run migrate` instead.
+
+The seed creates one development user per role (`dev.admin@pramaan.local`, `dev.owner@…`, `dev.lmo@…`, `dev.gatc@…`, `dev.public@…`). Their password hash is shared and the password is not documented; create your own accounts for testing and **remove the seeded users before any real deployment**. New LMO/GATC accounts that register online must be approved on the admin "User Accounts" page.
+
+## Demo accounts and walkthrough
+
+```bash
+cd api && npm run demo:users      # creates demo.admin@ / demo.owner@ / demo.lmo@pramaan.local, prints a password once
+```
+
+Development only (refuses to run when `NODE_ENV=production`); it never modifies other users. Use `-- --reset-password` to set a new password on the demo accounts, or `DEMO_PASSWORD=...` to choose one. Delete the accounts before a real deployment.
+
+Owner-to-certificate demo (three browser windows or profiles, or log out and in):
+1. **Owner:** *Instruments → Add*, then *Applications → New application* for it.
+2. **Admin:** open the application, *assign* the officer (`demo.lmo`), then *schedule* a date (the owner and officer get notifications).
+3. **Officer:** *My Assigned Applications* → accept → start the inspection, add readings (PASS/FAIL is computed from expected value and tolerance), upload a photo, submit the PASS result.
+4. **Admin:** open the completed application → *Issue certificate* (PDF + QR are generated).
+5. **Anyone (no login):** *Verify documents* → enter the certificate number or upload the PDF. Then, as admin, revoke the certificate and verify again to see the revoked verdict.
+
+## Tests
+
+```bash
+cd api && npm test              # starts a throw-away PostgreSQL, applies all migrations, runs ~80 tests
+cd web && npx tsc --noEmit && npx vite build
+```
+
+## Documentation
+
+- `docs/ARCHITECTURE.md` — components, workflow, security framework, tamper-evidence (SHA-256/HMAC), deployment method
+- `docs/API_CONTRACTS.md` — every endpoint, roles, request/response notes
+- `docs/DB_SCHEMA.md`, `docs/DECISIONS.md`
+- `docs/context.md` — project analysis, PS 26036 audit and implementation record
+- `docs/feature-roadmap.md` — progress and next steps
+- `CLAUDE.md` — working rules for AI-assisted development
