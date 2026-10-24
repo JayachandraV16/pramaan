@@ -79,7 +79,7 @@ export const DueListPage: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-gov overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500">
-              <tr><th className="px-4 py-2.5">Instrument</th><th className="px-4 py-2.5">Owner</th><th className="px-4 py-2.5">Certificate</th><th className="px-4 py-2.5">Due date</th><th className="px-4 py-2.5">State</th></tr>
+              <tr><th className="px-4 py-2.5">Instrument</th><th className="px-4 py-2.5">Owner</th><th className="px-4 py-2.5">Certificate</th><th className="px-4 py-2.5">Due date</th><th className="px-4 py-2.5">State</th><th className="px-4 py-2.5"></th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {shown.map((r) => {
@@ -92,6 +92,13 @@ export const DueListPage: React.FC = () => {
                     <td className="px-4 py-2.5 font-mono text-xs">{r.certificate_number || '-'}</td>
                     <td className="px-4 py-2.5">{r.next_due_date || '-'}{days != null && <div className="text-xs text-slate-500">{days < 0 ? `${-days} days overdue` : `in ${days} days`}</div>}</td>
                     <td className="px-4 py-2.5"><span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.cls}`}>{s.text}</span></td>
+                    <td className="px-4 py-2.5 text-right">
+                      {user && (user.role_id === 'INSTRUMENT_OWNER' || user.role_id === 'ADMIN') && r.verification_state !== 'VALID' && (
+                        <Link className="text-xs font-semibold text-[#1a3a5c] hover:underline" to={`/applications/new?instrumentId=${r.instrument_id}`}>
+                          {r.verification_state === 'NEVER_VERIFIED' ? 'Apply →' : 'Renew →'}
+                        </Link>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

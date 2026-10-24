@@ -64,6 +64,13 @@ npx expo start
 
 **Field work (works offline)** - officer home screen -> *Field work*: the phone caches assigned jobs, the officer records GPS, readings and observations without a connection, and saves a PASS/FAIL result. Drafts upload automatically (on app start, on return to the foreground, every minute while something is waiting, or with *Sync now*) through `POST /api/sync/push`; `GET /api/sync/pull` refreshes the jobs. Every record has a client UUID so retries never duplicate. The accept step and photo upload still need a connection.
 
+## Troubleshooting
+
+- **"Invalid or inactive instrument type"** when adding an instrument: the form must use the instrument types of *your* database. The web app now loads them from `GET /api/instruments/types`; if you see it, make sure the web app is rebuilt/restarted and the migrations plus seed have been applied (`cd api && npm run migrate && npm run seed`).
+- Hindi text fails to save: the database must be UTF8.
+
+PPT material: `docs/PPT_DEMO.md` (pitch, demo script, security slide), `docs/TEST_REPORT.md` (what passed, what was not tested), `docs/DESIGN_ED25519_QR.md` (offline QR verification design).
+
 ## Optional services (all off by default)
 
 Set in `api/.env` (see `api/.env.example`):

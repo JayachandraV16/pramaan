@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { feesApi, FeeKind, FeeRule, InstrumentTypeRow } from '../../api/workflow.api';
 import { Button } from '../../components/common/Button';
+import { DocumentRequirementsAdmin } from '../../components/admin/DocumentRequirementsAdmin';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 
@@ -181,6 +182,8 @@ export const FeeRulesPage: React.FC = () => {
           </div>
         </>
       )}
+
+      <DocumentRequirementsAdmin />
     </div>
   );
 };

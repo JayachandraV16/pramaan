@@ -214,3 +214,26 @@ Conflict rules: the server wins. One inspection per assignment (a second `client
 - Files live in the configured storage (`STORAGE_DRIVER=local|s3`). The API still returns `/uploads/<key>` links, signed and expiring; the bucket stays private.
 - The certificate PDF has an English page and a Hindi page. When a signing identity is configured (`SIGNING_P12_PATH`) it is digitally signed (PKCS#7 detached) before its SHA-256 is stored; certificates carry `pdf_signed`, `signature_subject`, `signature_fingerprint`, `signed_at`.
 - Public verification (`GET /api/qr-auth/:identifier`) adds `integrity.pdfSigned`, `signerSubject`, `signedAt`. `POST /api/qr-auth/check-document` adds `signature` — the uploaded file's own embedded signature checked independently: `{ signed, valid, digestMatches, coversWholeFile, subject, issuer, selfSigned, signedAt, chainTrusted: null }` (`chainTrusted` is null: no CA trust store is evaluated).
+
+## Instrument lifecycle and renewal — `/api/instruments`
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `PATCH /:id` | owner of the instrument, ADMIN | Any of `instrumentName, manufacturer, model, capacity, capacityUnit, accuracyClass, locationAddress, locationLat, locationLng, serialNumber, instrumentTypeId`. While an application is open only the name and location can change; serial number and type are fixed once the instrument has had any application (also a database trigger). Audited with before/after values. |
+| `POST /:id/deactivate` | owner, ADMIN | `{ reason? }` REGISTERED/ACTIVE → INACTIVE. Refused while an application is open. Inactive instruments cannot be applied for and drop out of the due list and reports. |
+| `POST /:id/reactivate` | owner, ADMIN | INACTIVE → REGISTERED. |
+| `POST /:id/decommission` | owner, ADMIN | `{ reason }` (≥ 10 chars). Final: the record is frozen (trigger), no edits or applications. Refused while an application is open. If an admin does it the owner is notified. |
+| `GET /:id/renewal` | owner, ADMIN | What to apply for now: `{ canApply, suggestedType: VERIFICATION\|RE_VERIFICATION\|null, code, reason, opensOn, daysUntilExpiry, windowDays, latestCertificate }`. Codes: `FIRST_VERIFICATION, NOT_DUE, RENEWAL_WINDOW, LAPSED, OPEN_APPLICATION, INACTIVE, DECOMMISSIONED`. |
+
+Renewal rules (also enforced by `POST /api/applications`): no certificate yet → only `VERIFICATION`; valid certificate with more than `RENEWAL_WINDOW_DAYS` (default 60) left → refused (409) with the date renewal opens; inside the window or after expiry/revocation → only `RE_VERIFICATION`, whose `lastCertificateId` is filled in automatically.
+
+## Required documents — `/api/documents`
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `GET /requirements` | ADMIN | all requirements |
+| `POST /requirements` | ADMIN | `{ documentType (e.g. MODEL_APPROVAL), label, labelHi?, applicationType?, instrumentOrigin?, applicantType? }`; omitted scope fields mean "any". Duplicate scope → 409. |
+| `PATCH /requirements/:id` | ADMIN | `{ label?, labelHi?, isActive? }` (never deleted) |
+| `GET /checklist/:applicationId` | owner, assigned officer, ADMIN | `{ items: [{ documentType, label, labelHi, satisfied, attachmentId, fileName }], missing, complete }` |
+
+Uploads are tagged with `POST /api/attachments` field `documentType` (application documents only). `POST /api/assignments` returns 409 listing the missing documents until the checklist is complete. With no requirements defined (the default) nothing changes.

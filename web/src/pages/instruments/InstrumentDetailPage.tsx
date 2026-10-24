@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { InstrumentManage } from '../../components/instruments/InstrumentManage';
 import { instrumentsApi } from '../../api/instruments.api';
 import { applicationsApi } from '../../api/applications.api';
 import { Instrument } from '../../types';
@@ -264,6 +265,14 @@ export const InstrumentDetailPage: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {user && (
+        <InstrumentManage
+          instrument={instrument}
+          canManage={user.role_id === 'ADMIN' || (user.role_id === 'INSTRUMENT_OWNER' && instrument.owner_id === user.id)}
+          onChanged={() => id && loadInstrument(id)}
+        />
+      )}
     </div>
   );
 };

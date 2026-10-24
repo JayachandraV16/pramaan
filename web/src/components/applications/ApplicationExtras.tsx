@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '../common/Button';
+import { DocumentChecklist } from './DocumentChecklist';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import {
   applicationActionsApi,
@@ -129,6 +130,9 @@ export const ApplicationExtras: React.FC<Props> = (p) => {
           )}
         </div>
       )}
+
+      {/* ---------- required documents ---------- */}
+      <DocumentChecklist applicationId={p.applicationId} canUpload={isAdmin || p.role === 'INSTRUMENT_OWNER'} refreshKey={p.status} />
 
       {/* ---------- reject ---------- */}
       {canReject && (

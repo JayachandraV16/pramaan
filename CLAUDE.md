@@ -48,9 +48,9 @@ api/src/
   config/ middleware/ utils/          env, auth/RBAC/security/upload, shared helpers
   modules/<feature>/                  routes → controller → service → repository (+ validation)
      auth users instruments applications assignments schedules verifications
-     certificates qr-auth attachments notifications fees queries reports sync enforcement
+     certificates qr-auth attachments notifications fees queries reports sync enforcement documents
   jobs/                               expiry sweep, reminders, scheduler (advisory-lock guarded)
-  db/migrations (001–027), db/seeds
+  db/migrations (001–029), db/seeds
 api/test/                             run.js (temp Postgres), helpers.js, workflow.js, *.test.js
 mobile/services/offline/              syncCore.ts (pure model), syncEngine.ts (push/pull via injected Http), OfflineContext.tsx (storage + auto-sync)
 mobile/app/inspector/offline/         Field work list + inspection form (works without a connection)
@@ -65,7 +65,7 @@ Rules the code follows (keep following them):
 - SQL `DATE` columns are returned as `YYYY-MM-DD` strings (see `pool.js`); don't convert to `Date` objects for JSON.
 - File URLs returned by the API are signed automatically (`utils/ApiResponse`); never serve `/uploads` statically.
 - Add roles only in `config/roles.js` AND the `role_name` enum. New feature = new `modules/<name>/` folder, registered in `modules/index.js`.
-- Migrations: append-only, next number is **028**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
+- Migrations: append-only, next number is **030**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
 - Tests: add a case in `api/test/*.test.js` for every behaviour change; tests must use unique emails/serials (`h.unique`) because all files share one database.
 
 ## Domain flow (as implemented)
@@ -79,6 +79,8 @@ Rules the code follows (keep following them):
 - Do not delete or untrack committed files (e.g. `git rm --cached -r api/node_modules`, history rewrites, secret rotation) without explicit approval — explain the risk first.
 - `web/src/emaap_extracted_resources/` is no longer imported by anything (landing page and footer were rewritten with original content). Deleting the folder (15 MB of scraped government assets) still needs the owner's approval.
 - Do not weaken the integrity rules: no un-revoking, no editing issued certificates, no client-supplied PASS/FAIL for computable readings.
+
+## Rules added in stage 1–4 (keep following them): no database IDs in client code (fetch types from the API); instrument edit/status changes go through `modules/instruments/instruments.lifecycle.js`; verification-vs-renewal is decided only by `utils/renewal.js`; required documents live in `modules/documents`.
 
 ## Known gaps (details in `docs/context.md` §13 and the roadmap)
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { instrumentManageApi, RenewalInfo } from '../../api/workflow.api';
 import { applicationsApi } from '../../api/applications.api';
 import { instrumentsApi } from '../../api/instruments.api';
 import { Instrument, ApplicationType } from '../../types';
@@ -24,6 +25,25 @@ export const NewApplicationPage: React.FC = () => {
   const [remarks, setRemarks] = useState('Standard test weights staged on site. Request morning slot for field inspection.');
   const [isLoadingInstruments, setIsLoadingInstruments] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [renewal, setRenewal] = useState<RenewalInfo | null>(null);
+
+  // Ask the server whether this instrument needs a first verification or a renewal (or neither yet).
+  useEffect(() => {
+    setRenewal(null);
+    if (!selectedInstrumentId) return;
+    let alive = true;
+    instrumentManageApi
+      .renewal(selectedInstrumentId)
+      .then((info) => {
+        if (!alive) return;
+        setRenewal(info);
+        if (info.suggestedType) setAppType(info.suggestedType);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [selectedInstrumentId]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -173,6 +193,16 @@ export const NewApplicationPage: React.FC = () => {
             })()}
           </div>
 
+          {renewal && (
+            <div
+              role="status"
+              className={`rounded-xl border p-3 text-xs ${renewal.canApply ? 'bg-sky-50 border-sky-200 text-sky-900' : 'bg-amber-50 border-amber-300 text-amber-900'}`}
+            >
+              <p className="font-semibold">{renewal.canApply ? (renewal.suggestedType === 'RE_VERIFICATION' ? 'Renewal (re-verification)' : 'First verification') : 'Cannot apply yet'}</p>
+              <p className="mt-0.5">{renewal.reason}</p>
+            </div>
+          )}
+
           {/* Verification Type */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -263,7 +293,7 @@ export const NewApplicationPage: React.FC = () => {
               variant="accent"
               size="md"
               isLoading={isSubmitting}
-              disabled={instruments.length === 0}
+              disabled={instruments.length === 0 || (renewal ? !renewal.canApply : false)}
             >
               Submit Application & Generate ID
             </Button>

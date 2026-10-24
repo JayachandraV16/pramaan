@@ -1,4 +1,4 @@
-import { apiClient, API_BASE_URL, ApiError, getAuthToken } from './client';
+import { apiClient, apiFetch, API_BASE_URL, ApiError, getAuthToken } from './client';
 
 /* ---------- application history / admin actions ---------- */
 
@@ -242,4 +242,62 @@ export const enforcementApi = {
     apiClient.patch<EnforcementCase>(`/enforcement/${id}/status`, body),
   offenders: (all = false) => apiClient.get<RepeatOffender[]>(`/enforcement/offenders${all ? '?all=true' : ''}`),
   summary: () => apiClient.get<EnforcementSummary>('/enforcement/summary'),
+};
+
+/* ---------- instrument lifecycle and renewal ---------- */
+
+export interface RenewalInfo {
+  canApply: boolean;
+  suggestedType: 'VERIFICATION' | 'RE_VERIFICATION' | null;
+  code: string;
+  reason: string;
+  opensOn: string | null;
+  daysUntilExpiry: number | null;
+  windowDays: number;
+  latestCertificate: { id: string; number: string; status: string; validUntil: string; valid: boolean } | null;
+}
+
+export const instrumentManageApi = {
+  renewal: (id: string) => apiClient.get<RenewalInfo>(`/instruments/${id}/renewal`),
+  update: (id: string, body: Record<string, unknown>) => apiClient.patch<unknown>(`/instruments/${id}`, body),
+  deactivate: (id: string, reason?: string) => apiClient.post<unknown>(`/instruments/${id}/deactivate`, { reason }),
+  reactivate: (id: string) => apiClient.post<unknown>(`/instruments/${id}/reactivate`, {}),
+  decommission: (id: string, reason: string) => apiClient.post<unknown>(`/instruments/${id}/decommission`, { reason }),
+};
+
+/* ---------- required documents ---------- */
+
+export interface DocumentChecklistItem {
+  documentType: string;
+  label: string;
+  labelHi: string | null;
+  satisfied: boolean;
+  attachmentId: string | null;
+  fileName: string | null;
+}
+export interface DocumentChecklist { applicationId: string; items: DocumentChecklistItem[]; missing: string[]; complete: boolean }
+export interface DocumentRequirement {
+  id: string;
+  document_type: string;
+  label: string;
+  label_hi: string | null;
+  application_type: string | null;
+  instrument_origin: string | null;
+  applicant_type: string | null;
+  is_active: boolean;
+}
+
+export const documentsApi = {
+  checklist: (applicationId: string) => apiClient.get<DocumentChecklist>(`/documents/checklist/${applicationId}`),
+  upload(applicationId: string, documentType: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('category', 'DOCUMENT');
+    form.append('applicationId', applicationId);
+    form.append('documentType', documentType);
+    return apiFetch<unknown>('/attachments', { method: 'POST', body: form });
+  },
+  requirements: () => apiClient.get<DocumentRequirement[]>('/documents/requirements'),
+  createRequirement: (body: Record<string, unknown>) => apiClient.post<DocumentRequirement>('/documents/requirements', body),
+  updateRequirement: (id: string, body: Record<string, unknown>) => apiClient.patch<DocumentRequirement>(`/documents/requirements/${id}`, body),
 };

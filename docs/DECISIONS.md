@@ -61,3 +61,15 @@ The PDF is signed with a PKCS#12 identity and the stored `pdf_sha256` is of the 
 
 ## D20 — Production refuses to start with development accounts
 The seed and `npm run demo:users` create `*@pramaan.local` accounts whose passwords are in the repository (including an ADMIN). With `NODE_ENV=production` the API checks at start-up and exits if any is active.
+
+## D21 — Instrument types are data, never constants in the client
+The web form once carried a list of instrument types with IDs copied from another developer's database, so every instrument creation failed with "Invalid or inactive instrument type" on any other database. IDs are generated per database; the client now reads `GET /api/instruments/types`. The backend validation (type must exist and be active) is unchanged. Rule: no database IDs in client code.
+
+## D22 — One decision function for "verification or renewal?"
+`utils/renewal.js` decides whether an instrument can be (re-)verified and as what; it is used both when an application is filed and by the `/renewal` endpoint the form calls, so the form and the server cannot disagree. A renewal always records the certificate it renews. The window (default 60 days) is configuration. Known limit: the old certificate stays ACTIVE until it expires; there is no "superseded" state.
+
+## D23 — Required documents are defined by the department, not shipped
+Which documents an application needs depends on State rules, so none are seeded. Requirements are scoped (application type, origin, applicant category) and enforced at the point an officer is assigned, which keeps the owner's flow unblocked while paperwork is gathered. Uploads are matched to a requirement by `document_type`.
+
+## D24 — Instrument lifecycle
+Edit, deactivate (reversible) and decommission (final) are separate, audited actions. Decommissioning is blocked while an application is open and freezes the row in the database. Out-of-service instruments leave the due list and reports. Their existing certificates are not revoked automatically; revocation stays a deliberate admin action.

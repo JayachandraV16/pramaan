@@ -110,6 +110,8 @@ export interface BackendCreateInstrumentRequest {
 
 export interface BackendInstrumentResponse {
   id: string;
+  status_reason?: string | null;
+  statusReason?: string | null;
   owner_id?: string;
   ownerId?: string;
   owner_name?: string;
@@ -177,6 +179,7 @@ export interface Instrument {
   location_lng?: number;
   registration_date: string;
   status: InstrumentStatus;
+  status_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
