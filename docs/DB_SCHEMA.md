@@ -19,6 +19,10 @@ PostgreSQL. All primary keys are UUIDs (`gen_random_uuid()`), statuses are nativ
 | 019 | security & integrity | `PENDING_APPROVAL` user status; certificate `pdf_sha256`, `record_sha256`, revocation fields and the immutability trigger; `attachments.file_sha256`; `audit_log` (append-only, hash-chained) |
 | 020 | numbering, validity, due dates | `certificate_number_counters`; `instrument_types.default_validity_months`; `CERTIFICATE_REVOKED` notification type; view `instrument_verification_status` |
 | 021 | workflow integrity & evidence | `application_status_history`; `verification_results.result_sha256`; triggers locking readings/observations/results; GPS + capture time on attachments, start GPS on verifications |
+| 027 | certificate signature | `pdf_signed`, `signature_subject`, `signature_fingerprint`, `signed_at` on certificates (write-once, trigger extended) |
+| 026 | notification delivery | `users.notify_email/notify_sms`; `notification_deliveries` outbox (`delivery_channel`, `delivery_status`) |
+| 025 | user language | `users.preferred_language` (`en`/`hi`, CHECK) |
+| 024 | enforcement | `enforcement_cases` (+ immutability trigger), `enforcement_case_events`, `enforcement_case_counters`, view `repeat_offenders`, enums `enforcement_source`, `offence_type`, `enforcement_status`; notification type `ENFORCEMENT_ACTION` |
 | 023 | offline sync | `client_id` (unique, nullable) on `verifications`, `inspection_observations`, `verification_readings`; `verifications.client_started_at`; index for delta pull |
 | 022 | reminders, fees, queries | `reminder_log`; `fee_rules` + `fee_kind`; computed fee and payment-verification columns on applications; `application_queries`, `application_query_messages`; `QUERY_MESSAGE` notification type |
 

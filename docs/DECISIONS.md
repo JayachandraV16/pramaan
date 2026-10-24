@@ -43,3 +43,21 @@ Triggers, enums and views cannot be exercised by mocks. `embedded-postgres` give
 
 ## D14 — Open items
 Email/SMS delivery, object storage for uploads, offline field sync, multilingual UI/PDF, enforcement/repeat-offender tracking and a PAdES-signed PDF are not implemented; see `docs/feature-roadmap.md`.
+
+## D15 — Enforcement facts are immutable; handling is a separate, audited status
+A case records what an officer found (offender, offence, date, officer). Those facts cannot be edited or deleted (trigger); only the handling status moves, through a fixed set of transitions, each stored in `enforcement_case_events` and the audit log. Repeat-offender flags are computed by a view over cases (not stored), so dismissing a case immediately lowers the count. Unregistered traders are matched by normalised name (+ phone); this can miss a trader who gives different details each time — officers should link the instrument or owner when they can.
+
+## D16 — Hindi: server message catalogue, per-user language, bilingual PDF
+Text the server writes for people goes through `utils/i18n.js` (functions per key, English fallback) in the recipient's `preferred_language`, so in-app, e-mail and SMS agree. The certificate PDF carries an English page and a Hindi page (Noto Sans Devanagari, SIL OFL, bundled) instead of one crowded bilingual page. The web app keeps English text inline and looks Hindi up by key, so untranslated screens still work. The database must be UTF8 (the test runner now creates its cluster as UTF8).
+
+## D17 — E-mail and SMS through an outbox
+Deliveries are queued in the same transaction as the notification and sent by a worker with retries, so a provider outage never loses or duplicates a message and never blocks a request. SMTP via nodemailer; SMS through a generic JSON gateway (adapt the body for the chosen provider). SMS is limited to important event types, and users can opt out per channel. Indian SMS needs DLT sender/template registration, which is outside the code.
+
+## D18 — Object storage behind a small driver interface
+`local` and `s3` (any S3-compatible service) implement put/open/remove over relative keys. The database keeps `/uploads/<key>` and the API serves those paths with signed links, so switching drivers needs no data migration and the bucket stays private. Uploads are staged in the OS temp directory, verified (extension, magic bytes, SHA-256) and then stored. Existing files are not moved automatically when switching drivers.
+
+## D19 — PDF signature: PKCS#7 detached now, PAdES and a CA-issued key later
+The PDF is signed with a PKCS#12 identity and the stored `pdf_sha256` is of the signed file. An independent verifier checks the embedded signature (document digest and RSA signature) so a copy can be validated without trusting the database. Not done: PAdES profiles, RFC 3161 timestamps, long-term validation, and any CA trust evaluation. A self-signed key (`npm run signing:dev-cert`) proves nothing to a third party; production needs a Digital Signature Certificate from a licensed Certifying Authority, ideally in an HSM.
+
+## D20 — Production refuses to start with development accounts
+The seed and `npm run demo:users` create `*@pramaan.local` accounts whose passwords are in the repository (including an ADMIN). With `NODE_ENV=production` the API checks at start-up and exits if any is active.

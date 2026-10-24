@@ -191,3 +191,26 @@ Conflict rules: the server wins. One inspection per assignment (a second `client
 ## Other
 
 `GET /health` → `{ status: "ok" }` · `GET /uploads/<path>?exp&sig` signed file access.
+
+## Enforcement — `/api/enforcement`
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `POST /` | ADMIN, LMO, GATC | Register a case: `{ source: SPOT_CHECK\|COMPLAINT\|ROUTINE_INSPECTION, offenceType: NONE\|UNVERIFIED_INSTRUMENT\|EXPIRED_CERTIFICATE\|UNSTAMPED_INSTRUMENT\|SEAL_TAMPERING\|FALSE_WEIGHT_OR_MEASURE\|OTHER, description, subjectUserId? \| instrumentId? \| subjectName (+ subjectPhone, subjectOrganization), location?, latitude?, longitude?, detectedOn?, certificateId? }`. A registered owner is found from `instrumentId`/`subjectUserId`; otherwise the trader is identified by normalised name (+ phone). `NONE` (compliant spot check) is closed at once and never counted. Returns the case with `offence_number`, `offender_flag` and `offender_offences_12m`. The owner is notified; admins are notified for REPEAT/HABITUAL. |
+| `GET /` | all roles | Cases you may see: ADMIN all, officers the ones they registered, owners their own (excluding `NONE`). Supports `?status=&offence_type=&source=&flag=&search=&sort=&page=&limit=`. |
+| `GET /offenders` | ADMIN, LMO, GATC | Repeat-offender view. Default REPEAT + HABITUAL; `?flag=FIRST\|REPEAT\|HABITUAL` or `?all=true`. Flag = offences in the last 12 months (2 → REPEAT, 3+ → HABITUAL; dismissed cases and `NONE` do not count). |
+| `GET /summary` | ADMIN | `byStatus`, `byType`, `bySource`, `monthly`, `totals` (open cases, compliant spot checks, penalties), `offenderFlags`. |
+| `GET /:id` | all roles (scoped) | Case with its status timeline. |
+| `PATCH /:id/status` | ADMIN | `{ status, note?, penaltyAmount?, penaltyReference? }`. Allowed: OPEN → NOTICE_ISSUED \| PENALTY_IMPOSED \| RESOLVED \| DISMISSED; NOTICE_ISSUED → PENALTY_IMPOSED \| RESOLVED \| DISMISSED; PENALTY_IMPOSED → RESOLVED. DISMISSED needs a reason (≥ 5 chars), PENALTY_IMPOSED an amount > 0. The recorded facts of a case are immutable (database trigger); cases are never deleted. |
+
+## Language, e-mail and SMS
+
+- `PATCH /api/users/me` also accepts `preferredLanguage` (`en`\|`hi`), `notifyEmail`, `notifySms` (booleans); `GET /api/auth/me` returns them.
+- Notifications the server generates (certificate issued/expiring/expired/revoked, assignment, payment, verification result, enforcement) are written in the recipient's language (`api/src/utils/i18n.js`). Text typed by users is not translated.
+- With `DELIVERY_MODE=log|live` every notification also queues an e-mail and, for important types (certificate events, schedules, enforcement), an SMS in `notification_deliveries`; a background worker sends them with retries (5 attempts, exponential backoff). `off` (default) queues nothing.
+
+## Files, certificates and signatures
+
+- Files live in the configured storage (`STORAGE_DRIVER=local|s3`). The API still returns `/uploads/<key>` links, signed and expiring; the bucket stays private.
+- The certificate PDF has an English page and a Hindi page. When a signing identity is configured (`SIGNING_P12_PATH`) it is digitally signed (PKCS#7 detached) before its SHA-256 is stored; certificates carry `pdf_signed`, `signature_subject`, `signature_fingerprint`, `signed_at`.
+- Public verification (`GET /api/qr-auth/:identifier`) adds `integrity.pdfSigned`, `signerSubject`, `signedAt`. `POST /api/qr-auth/check-document` adds `signature` — the uploaded file's own embedded signature checked independently: `{ signed, valid, digestMatches, coversWholeFile, subject, issuer, selfSigned, signedAt, chainTrusted: null }` (`chainTrusted` is null: no CA trust store is evaluated).

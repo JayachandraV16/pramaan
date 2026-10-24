@@ -4,7 +4,7 @@ _Originally written against `develop` @ `4f21754`. Effort: S ≈ hours, M ≈ 1�
 
 ## Progress (updated after implementing phases 0–3 in the working tree)
 
-Status key: ✅ done and covered by tests (`cd api && npm test` → 91 passing) · 🟡 backend done, UI missing · ⏳ not started · ⚠️ needs an owner decision.
+Status key: ✅ done and covered by tests (`cd api && npm test` → 124 passing) · 🟡 backend done, UI missing · ⏳ not started · ⚠️ needs an owner decision.
 
 | Phase | Item | Status | Notes |
 |---|---|---|---|
@@ -35,14 +35,19 @@ Status key: ✅ done and covered by tests (`cd api && npm test` → 91 passing) 
 | 3 | Officer–owner query threads | ✅ | 🟡 no UI |
 | 3 | Technical documentation (architecture, security, deployment, API, schema, decisions) | ✅ | team review needed |
 | 4 | Offline field inspection + sync, mobile app integration | ⏳ | next major item |
-| 5 | Enforcement + repeat-offender tracking; multilingual; e-mail/SMS; object storage; PAdES signature | ⏳ | |
+| 5 | Enforcement: offence cases, spot checks, status workflow, repeat/habitual flags, admin dashboard, web page | ✅ | `modules/enforcement`, migration 024, `web/src/pages/enforcement`, `api/test/enforcement.test.js` |
+| 5 | Hindi: per-user language, server message catalogue, bilingual certificate PDF (Noto Devanagari), web language switcher for key screens | ✅ (screens beyond the public flow are English) | `utils/i18n.js`, `web/src/i18n`, migration 025, `api/test/i18n.test.js` |
+| 5 | E-mail / SMS: outbox + worker with retries, opt-outs, DELIVERY_MODE off/log/live | ✅ (fakes + local stub; no real SMTP/SMS gateway tried) | `utils/delivery.js`, migration 026, `api/test/delivery.test.js` |
+| 5 | Object storage: local and S3-compatible drivers behind signed links | ✅ (fake S3 client only) | `utils/storage.js`, `api/test/storage.test.js` |
+| 5 | Signed certificate PDF + independent signature verification + public display | ✅ PKCS#7 with a dev key; ⚠️ PAdES / CA-issued DSC / timestamps not done | `utils/pdfSigner.js`, migration 027, `api/test/signing.test.js` |
+| 5 | Production start-up guard against dev/demo accounts (seeded dev users share a known password) | ✅ | `utils/startupChecks.js`, `api/test/startup.test.js` |
 
 ### Suggested next steps (in order)
 1. **Decide the ⚠️ items** above (rotate secrets, untrack `node_modules`, landing-page assets) – small effort, high value.
 2. **Review and commit** the working tree in logical commits (security → certificates → workflow → reports/fees/queries → docs → web); then merge/rebase `pushkar-mobile-auth` and `deploy` onto it.
 3. **UI for the finished endpoints:** done for reject, payment verification, status history, queries, fee rules + default validity, reports + CSV export, due list and profile (see the table). Still missing: frontend tests and a recorded browser walk-through of the demo flow (steps are in the README).
 4. **Phase 4 offline sync:** server API and the Expo offline inspection flow are done. Remaining: run it on a device/emulator, offline photo queue (needs `clientId` on attachments server-side), offline assignment-accept, and checking the older online screens in `mobile/app` against `api/`.
-5. **Phase 5**: enforcement module, Hindi/regional-language support, e-mail/SMS provider, object storage, PAdES.
+5. **Phase 5 is built** (see the table). Remaining before a real deployment: a Digital Signature Certificate from a licensed CA (plus PAdES/timestamp if required), real SMTP and an SMS gateway with DLT registration, a real S3/MinIO bucket, translating the remaining screens (and a second regional language if wanted), moving existing local files when switching storage, deleting the seeded `dev.*` and `demo.*` accounts, and a browser walk-through of everything.
 
 ## Already built before this work (for reference)
 

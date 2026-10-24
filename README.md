@@ -64,6 +64,18 @@ npx expo start
 
 **Field work (works offline)** - officer home screen -> *Field work*: the phone caches assigned jobs, the officer records GPS, readings and observations without a connection, and saves a PASS/FAIL result. Drafts upload automatically (on app start, on return to the foreground, every minute while something is waiting, or with *Sync now*) through `POST /api/sync/push`; `GET /api/sync/pull` refreshes the jobs. Every record has a client UUID so retries never duplicate. The accept step and photo upload still need a connection.
 
+## Optional services (all off by default)
+
+Set in `api/.env` (see `api/.env.example`):
+
+| Feature | Settings |
+|---|---|
+| E-mail / SMS notifications | `DELIVERY_MODE=log` (writes to the log) or `live` with `SMTP_URL`, `EMAIL_FROM`, `SMS_GATEWAY_URL`, `SMS_GATEWAY_TOKEN`, `SMS_SENDER_ID` |
+| S3-compatible file storage | `STORAGE_DRIVER=s3`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT` (MinIO/R2), `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PREFIX` |
+| Signed certificate PDFs | `cd api && npm run signing:dev-cert`, then add the printed `SIGNING_P12_PATH` / `SIGNING_P12_PASSPHRASE` lines. A self-signed key is for development only; production needs a CA-issued Digital Signature Certificate |
+
+The database must be **UTF8** (Hindi text). With `NODE_ENV=production` the API refuses to start while any `*@pramaan.local` account (the seeded `dev.*` and the `demo.*` ones) is active.
+
 ## Tests
 
 ```bash

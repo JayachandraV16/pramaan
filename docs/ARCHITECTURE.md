@@ -121,3 +121,12 @@ SHA-256 detects change; HMAC proves a value was produced by the server; neither 
 7. Backups: nightly `pg_dump`; test restores. Monitor `/health`, 5xx rate, and the `TAMPER_DETECTED` audit entries.
 
 Migrations are append-only and applied in filename order inside a transaction each (`schema_migrations` records them). Never edit an applied migration; add the next number.
+
+## Phase 5 components
+
+- **Enforcement** (`modules/enforcement`): cases, timeline, `repeat_offenders` view, admin dashboard figures.
+- **Localisation** (`utils/i18n.js`, `web/src/i18n`): per-user language; server-written notifications and the certificate PDF in English and Hindi.
+- **Delivery** (`utils/delivery.js`, `notification_deliveries`): outbox → SMTP / SMS gateway worker with retries; started by the scheduler when `DELIVERY_MODE` is not off.
+- **Storage** (`utils/storage.js`): local or S3-compatible; every file read/write goes through it.
+- **Signing** (`utils/pdfSigner.js`): signs the certificate PDF and verifies embedded signatures.
+- **Start-up guard** (`utils/startupChecks.js`): production refuses to run with dev/demo accounts.

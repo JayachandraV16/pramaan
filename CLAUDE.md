@@ -28,6 +28,7 @@ npm run reset                  # DEV ONLY – drops everything in the public sch
 npm run db:setup               # reset + migrate + seed
 npm run jobs:run               # expire lapsed certificates + send expiry reminders once
 npm run demo:users             # DEV ONLY: create demo.admin/owner/lmo@pramaan.local, prints a password once
+npm run signing:dev-cert       # DEV ONLY: self-signed PDF signing key in api/signing/ (git-ignored)
 npm test                       # throw-away embedded PostgreSQL, applies all migrations, runs api/test/*.test.js
 npm test -- test/workflow.test.js   # one file
 
@@ -47,9 +48,9 @@ api/src/
   config/ middleware/ utils/          env, auth/RBAC/security/upload, shared helpers
   modules/<feature>/                  routes → controller → service → repository (+ validation)
      auth users instruments applications assignments schedules verifications
-     certificates qr-auth attachments notifications fees queries reports sync
+     certificates qr-auth attachments notifications fees queries reports sync enforcement
   jobs/                               expiry sweep, reminders, scheduler (advisory-lock guarded)
-  db/migrations (001–023), db/seeds
+  db/migrations (001–027), db/seeds
 api/test/                             run.js (temp Postgres), helpers.js, workflow.js, *.test.js
 mobile/services/offline/              syncCore.ts (pure model), syncEngine.ts (push/pull via injected Http), OfflineContext.tsx (storage + auto-sync)
 mobile/app/inspector/offline/         Field work list + inspection form (works without a connection)
@@ -64,7 +65,7 @@ Rules the code follows (keep following them):
 - SQL `DATE` columns are returned as `YYYY-MM-DD` strings (see `pool.js`); don't convert to `Date` objects for JSON.
 - File URLs returned by the API are signed automatically (`utils/ApiResponse`); never serve `/uploads` statically.
 - Add roles only in `config/roles.js` AND the `role_name` enum. New feature = new `modules/<name>/` folder, registered in `modules/index.js`.
-- Migrations: append-only, next number is **024**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
+- Migrations: append-only, next number is **028**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
 - Tests: add a case in `api/test/*.test.js` for every behaviour change; tests must use unique emails/serials (`h.unique`) because all files share one database.
 
 ## Domain flow (as implemented)
@@ -81,4 +82,4 @@ Rules the code follows (keep following them):
 
 ## Known gaps (details in `docs/context.md` §13 and the roadmap)
 
-offline photo queue and offline assignment-accept in the mobile app (structured inspection data syncs); the older online screens in `mobile/app` (written for the separate `api1` backend) are unverified against `api/`; multilingual UI/PDF; enforcement and repeat-offender tracking; email/SMS delivery (notifications are in-app only); object storage for uploads; PAdES-signed PDFs; e-mail/SMS for notifications; frontend tests; untracking `api/node_modules` and rotating the leaked credentials.
+offline photo queue and offline assignment-accept in the mobile app (structured inspection data syncs); the older online screens in `mobile/app` (written for the separate `api1` backend) are unverified against `api/`; Hindi covers navigation, landing, sign-in, public verification, notifications and server-written messages/PDF (other screens are English; no other Indian languages); e-mail/SMS are built and tested with fakes but untried against a real SMTP server or SMS gateway (DLT registration needed in India); S3 storage is tested with a fake client only, and existing files are not migrated between drivers; the PDF signature is PKCS#7 with a self-signed dev key (no PAdES profile, no timestamp, no CA trust evaluation, needs a CA-issued DSC); frontend tests; PDFs/UI not yet looked at in a browser.
