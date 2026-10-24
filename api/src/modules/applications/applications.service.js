@@ -1,4 +1,6 @@
 const ApiError = require('../../utils/ApiError');
+const config = require('../../config');
+const { evaluate, checkRequestedType } = require('../../utils/renewal');
 const repo = require('./applications.repository');
 const {
   isValidApplicationType,
@@ -14,6 +16,20 @@ const { notify } = require('../../utils/notify');
 const feesService = require('../fees/fees.service');
 
 const MIN_REASON_LENGTH = 10;
+
+async function getRenewalInfo(instrument) {
+  const [latest, open] = await Promise.all([
+    repo.findLatestCertificateForInstrument(instrument.id),
+    repo.findOpenApplicationForInstrument(instrument.id),
+  ]);
+  return evaluate({
+    instrument,
+    latest,
+    open,
+    today: new Date().toISOString().slice(0, 10),
+    windowDays: config.renewalWindowDays,
+  });
+}
 
 async function createApplication(user, data) {
   if (!isValidApplicationType(data.applicationType)) {
@@ -44,6 +60,15 @@ async function createApplication(user, data) {
     throw ApiError.forbidden(
       'You can only create an application for your own instrument'
     );
+  }
+
+  // Initial verification vs renewal, renewal window, out-of-service instruments, open application.
+  const eligibility = await getRenewalInfo(instrument);
+  const problem = checkRequestedType(eligibility, data.applicationType);
+  if (problem) throw new ApiError(problem.status, problem.message);
+  // A renewal always records the certificate it renews.
+  if (data.applicationType === 'RE_VERIFICATION' && !data.lastCertificateId && eligibility.latestCertificate) {
+    data = { ...data, lastCertificateId: eligibility.latestCertificate.id };
   }
 
   // If lastCertificateId is provided, confirm the referenced certificate exists
@@ -277,7 +302,21 @@ async function rejectApplication(user, applicationId, reason) {
   });
 }
 
+// For the application form: can this instrument be verified now, and as what?
+async function getRenewalForInstrument(user, instrumentId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(instrumentId)) {
+    throw ApiError.notFound('Instrument not found');
+  }
+  const instrument = await repo.findInstrumentById(instrumentId);
+  if (!instrument) throw ApiError.notFound('Instrument not found');
+  if (user.role === ROLES.INSTRUMENT_OWNER && instrument.owner_id !== user.id) {
+    throw ApiError.forbidden('You can only check your own instruments');
+  }
+  return getRenewalInfo(instrument);
+}
+
 module.exports = {
+  getRenewalForInstrument,
   verifyPayment,
   getApplicationHistory,
   cancelApplication,

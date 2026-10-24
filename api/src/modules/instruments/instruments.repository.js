@@ -184,6 +184,41 @@ async function isInstrumentAssignedToOfficer(instrumentId, officerId) {
   return rows.length > 0;
 }
 
+// Updates only the given columns (names come from a fixed whitelist in the service).
+async function updateInstrumentColumns(id, columns) {
+  const keys = Object.keys(columns);
+  const sets = keys.map((k, i) => `${k} = $${i + 2}`);
+  const { rows } = await pool.query(
+    `UPDATE instruments SET ${sets.join(', ')} WHERE id = $1 RETURNING id`,
+    [id, ...keys.map((k) => columns[k])]
+  );
+  return rows[0] || null;
+}
+
+async function setInstrumentStatus(client, id, { status, reason, actorId }) {
+  const { rows } = await client.query(
+    `UPDATE instruments
+        SET status = $2, status_reason = $3, status_changed_at = now(), status_changed_by_id = $4
+      WHERE id = $1 RETURNING id`,
+    [id, status, reason || null, actorId]
+  );
+  return rows[0] || null;
+}
+
+async function findOpenApplication(instrumentId) {
+  const { rows } = await pool.query(
+    `SELECT id, application_number, status FROM verification_applications
+      WHERE instrument_id = $1 AND status IN ('SUBMITTED', 'UNDER_REVIEW', 'SCHEDULED') LIMIT 1`,
+    [instrumentId]
+  );
+  return rows[0] || null;
+}
+
+async function countApplications(instrumentId) {
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM verification_applications WHERE instrument_id = $1', [instrumentId]);
+  return rows[0].n;
+}
+
 async function findInstrumentBySerialNumber(serialNumber) {
   const { rows } = await pool.query(
     `SELECT id FROM instruments WHERE serial_number = $1`,
@@ -219,6 +254,8 @@ async function findVerificationStatus({ ownerId, officerId, state, withinDays })
     params.push(withinDays);
     where.push(`(s.verification_state = 'OVERDUE' OR s.days_until_due <= $${params.length})`);
   }
+  // Instruments taken out of service are not "due" for anything.
+  where.push("s.instrument_status NOT IN ('INACTIVE', 'DECOMMISSIONED')");
   const { rows } = await pool.query(
     `SELECT s.*, u.full_name AS owner_name, u.organization_name AS owner_organization
      FROM instrument_verification_status s
@@ -260,6 +297,10 @@ module.exports = {
   findVerificationStatus,
   findInstrumentTypeById,
   findInstrumentBySerialNumber,
+  updateInstrumentColumns,
+  setInstrumentStatus,
+  findOpenApplication,
+  countApplications,
   createInstrument,
   findInstrumentById,
   findInstrumentsByOwnerId,

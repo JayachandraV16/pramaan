@@ -31,6 +31,11 @@ const CASE_STATUS_LABEL = {
   hi: { OPEN: 'खुला', NOTICE_ISSUED: 'नोटिस जारी', PENALTY_IMPOSED: 'दंड लगाया गया', RESOLVED: 'निस्तारित', DISMISSED: 'खारिज' },
 };
 
+const INSTRUMENT_ACTION = {
+  en: { deactivated: 'deactivated', reactivated: 'reactivated', decommissioned: 'decommissioned' },
+  hi: { deactivated: 'निष्क्रिय किया गया', reactivated: 'पुनः सक्रिय किया गया', decommissioned: 'सेवा से हटाया गया' },
+};
+
 const enWhen = (d) => (d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`);
 const hiWhen = (d) => (d === 0 ? 'आज' : d === 1 ? 'कल' : `${d} दिन में`);
 
@@ -69,6 +74,10 @@ const MESSAGES = {
     'verification.failed': (p) => ({
       title: 'Verification failed',
       message: `Your instrument did not pass verification for application ${p.applicationNumber}. You may apply again after correcting the issues.`,
+    }),
+    'instrument.status': (p) => ({
+      title: `Instrument ${INSTRUMENT_ACTION.en[p.action] || p.action}`,
+      message: `Your instrument ${p.name} (${p.serial}) was ${INSTRUMENT_ACTION.en[p.action] || p.action} by the department.${p.reason ? ` Reason: ${p.reason}` : ''}`,
     }),
     'enforcement.registered': (p) => ({
       title: `Enforcement case ${p.caseNumber} registered`,
@@ -118,6 +127,10 @@ const MESSAGES = {
     'verification.failed': (p) => ({
       title: 'सत्यापन असफल',
       message: `आवेदन ${p.applicationNumber} के लिए आपका उपकरण सत्यापन में उत्तीर्ण नहीं हुआ। कमियाँ दूर करने के बाद आप पुनः आवेदन कर सकते हैं।`,
+    }),
+    'instrument.status': (p) => ({
+      title: `उपकरण ${INSTRUMENT_ACTION.hi[p.action] || p.action}`,
+      message: `आपका उपकरण ${p.name} (${p.serial}) विभाग द्वारा ${INSTRUMENT_ACTION.hi[p.action] || p.action}।${p.reason ? ` कारण: ${p.reason}` : ''}`,
     }),
     'enforcement.registered': (p) => ({
       title: `प्रवर्तन प्रकरण ${p.caseNumber} दर्ज`,

@@ -1,5 +1,6 @@
 const ApiError = require('../../utils/ApiError');
 const repo = require('./assignments.repository');
+const documentsService = require('../documents/documents.service');
 const {
   ASSIGNMENT_STATUSES,
   isValidAssignmentStatus,
@@ -42,6 +43,8 @@ async function createAssignment(user, data) {
       'The fee payment for this application has not been verified yet'
     );
   }
+
+  await documentsService.assertRequirementsMet(application.id);
 
   const assignee = await repo.findUserById(
     data.assignedToId

@@ -6,6 +6,10 @@ const validateBody = require('../../middleware/validate');
 const { ROLES } = require('../../config/roles');
 
 const controller = require('./instruments.controller');
+const lifecycle = require('./instruments.lifecycle');
+const applicationsService = require('../applications/applications.service');
+const asyncHandler = require('../../utils/asyncHandler');
+const ApiResponse = require('../../utils/ApiResponse');
 const { createInstrumentRules } = require('./instruments.validation');
 
 const router = express.Router();
@@ -57,5 +61,35 @@ router.get(
   authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN, ROLES.LMO, ROLES.GATC),
   controller.getInstrumentById
 );
+
+// Can this instrument be verified now, and as what (initial verification or renewal)?
+router.get(
+  '/:id/renewal',
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN),
+  asyncHandler(async (req, res) => {
+    new ApiResponse(200, await applicationsService.getRenewalForInstrument(req.user, req.params.id)).send(res);
+  })
+);
+
+// Edit and take out of service (owner of the instrument, or ADMIN; see instruments.lifecycle.js)
+const manage = authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN);
+
+router.patch(
+  '/:id',
+  manage,
+  asyncHandler(async (req, res) => {
+    new ApiResponse(200, await lifecycle.updateInstrument(req.user, req.params.id, req.body || {}), 'Instrument updated').send(res);
+  })
+);
+
+for (const action of ['deactivate', 'reactivate', 'decommission']) {
+  router.post(
+    `/:id/${action}`,
+    manage,
+    asyncHandler(async (req, res) => {
+      new ApiResponse(200, await lifecycle.changeStatus(req.user, req.params.id, action, req.body || {}), `Instrument ${action}d`).send(res);
+    })
+  );
+}
 
 module.exports = router;

@@ -11,6 +11,18 @@ async function findInstrumentById(id) {
   return rows[0] || null;
 }
 
+async function findLatestCertificateForInstrument(instrumentId) {
+  const { rows } = await pool.query(
+    `SELECT id, certificate_number, status, valid_from, valid_until
+       FROM verification_certificates
+      WHERE instrument_id = $1
+      ORDER BY issue_date DESC, created_at DESC
+      LIMIT 1`,
+    [instrumentId]
+  );
+  return rows[0] || null;
+}
+
 async function findCertificateById(id) {
   const { rows } = await pool.query(
     `SELECT id, instrument_id, status
@@ -342,6 +354,7 @@ module.exports = {
   closeOpenWork,
   findInstrumentById,
   findCertificateById,
+  findLatestCertificateForInstrument,
   createApplication,
   findApplicationsByApplicantId,
   findApplicationsAssignedToOfficerId,

@@ -127,6 +127,9 @@ const config = {
     intervalSeconds: parseInt(process.env.DELIVERY_INTERVAL_SECONDS, 10) || 60,
   },
 
+  // Renewal opens this many days before a valid certificate expires (see utils/renewal.js).
+  renewalWindowDays: Math.max(parseInt(process.env.RENEWAL_WINDOW_DAYS, 10) || 60, 0),
+
   // Lifetime of signed /uploads links handed out in API responses.
   fileUrlTtlSeconds: parseInt(process.env.FILE_URL_TTL_SECONDS, 10) || 1800,
 };

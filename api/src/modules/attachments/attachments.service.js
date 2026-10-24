@@ -1,5 +1,6 @@
 const ApiError = require('../../utils/ApiError');
 const repo = require('./attachments.repository');
+const documentsService = require('../documents/documents.service');
 
 const {
   isValidAttachmentCategory,
@@ -87,6 +88,13 @@ async function createAttachment(user, data) {
   } = data;
 
   const evidence = parseEvidenceMetadata(data);
+
+  // Which required document this file is (see modules/documents); applications only.
+  let documentType = null;
+  if (data.documentType !== undefined && data.documentType !== null && data.documentType !== '') {
+    if (!applicationId) throw ApiError.badRequest('documentType can only be set on application documents');
+    documentType = documentsService.normaliseType(data.documentType);
+  }
 
   // Exactly one owner must be provided
   const ownerCount =
@@ -192,6 +200,7 @@ async function createAttachment(user, data) {
     fileSizeBytes,
     description,
     fileSha256,
+    documentType,
     capturedAt: evidence.capturedAt,
     latitude: evidence.latitude,
     longitude: evidence.longitude,

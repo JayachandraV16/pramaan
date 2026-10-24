@@ -87,7 +87,8 @@ async function dashboardCounts(user) {
              AND ${s.instrument}`, p),
       one(`SELECT COUNT(*)::int AS n
            FROM instrument_verification_status st JOIN instruments i ON i.id = st.instrument_id
-           WHERE st.verification_state = 'OVERDUE' AND ${s.instrument}`, p),
+           WHERE st.verification_state = 'OVERDUE' AND ${s.instrument}
+             AND i.status NOT IN ('INACTIVE', 'DECOMMISSIONED')`, p),
       one(`SELECT COUNT(*)::int AS n FROM verification_applications a
            WHERE a.status = 'SUBMITTED' AND ${s.application}
              AND NOT EXISTS (SELECT 1 FROM verification_assignments x
@@ -258,7 +259,7 @@ async function verificationStateCounts(user) {
   return all(
     `SELECT st.verification_state AS state, COUNT(*)::int AS count
      FROM instrument_verification_status st JOIN instruments i ON i.id = st.instrument_id
-     WHERE ${s.instrument}
+     WHERE ${s.instrument} AND i.status NOT IN ('INACTIVE', 'DECOMMISSIONED')
      GROUP BY 1 ORDER BY 1`,
     [s.param]
   );
@@ -353,7 +354,7 @@ const EXPORTS = {
       FROM instrument_verification_status st
       JOIN instruments i ON i.id = st.instrument_id
       LEFT JOIN users o ON o.id = st.owner_id
-      WHERE ${s.instrument} AND ($2::date IS NULL OR TRUE) AND ($3::date IS NULL OR TRUE)
+      WHERE ${s.instrument} AND i.status NOT IN ('INACTIVE', 'DECOMMISSIONED') AND ($2::date IS NULL OR TRUE) AND ($3::date IS NULL OR TRUE)
       ORDER BY st.next_due_date ASC NULLS FIRST, st.instrument_name`,
   },
 };
