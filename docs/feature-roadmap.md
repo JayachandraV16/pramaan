@@ -4,13 +4,14 @@ _Originally written against `develop` @ `4f21754`. Effort: S ≈ hours, M ≈ 1�
 
 ## Progress (updated after implementing phases 0–3 in the working tree)
 
-Status key: ✅ done and covered by tests (`cd api && npm test` → 88 passing) · 🟡 backend done, UI missing · ⏳ not started · ⚠️ needs an owner decision.
+Status key: ✅ done and covered by tests (`cd api && npm test` → 91 passing) · 🟡 backend done, UI missing · ⏳ not started · ⚠️ needs an owner decision.
 
 | Phase | Item | Status | Notes |
 |---|---|---|---|
 | UI | Landing page (original content, verify box, no scraped assets), footer, notifications centre with unread bell | ✅ (type-check + build) | `pages/LandingPage.tsx`, `components/common/Footer.tsx`, `pages/NotificationsPage.tsx`, `NotificationBell.tsx` |
 | Ops | `npm run demo:users` safe demo accounts; env quoting note; Vite port 5173 | ✅ | `api/src/demoUsers.js`, `api/.env.example` |
 | UI | Application page: status history, reject (reason), payment verification, query threads; `/fees`, `/reports` (+CSV), `/due`, `/profile` | ✅ (type-check + build; not yet clicked through in a browser) | `web/src/components/applications/ApplicationExtras.tsx`, `pages/admin/FeeRulesPage.tsx`, `pages/reports`, `pages/instruments/DueListPage.tsx`, `pages/ProfilePage.tsx`, `api/workflow.api.ts` |
+| 4 | Mobile offline inspection (Expo): cached jobs, GPS, readings/observations, PASS/FAIL, auto-sync with retries; engine contract-tested against the API | ✅ (engine + type-check; not run on a device/emulator) | `mobile/services/offline/*`, `mobile/app/inspector/offline/*`, `api/test/mobile_sync.test.js` |
 | 4 | Offline sync API: client UUIDs, idempotent batch push, delta pull, server-wins conflict rules | ✅ | `modules/sync`, migration 023, `api/test/sync.test.js` |
 | 0 | Close open registration (ADMIN never self-registers; LMO/GATC need approval) + admin approval screen | ✅ | `modules/users`, `web/src/pages/admin/UsersPage.tsx` |
 | 0 | Uploads private (signed expiring links), content check, one upload dir | ✅ | `app.js`, `middleware/upload.js` |
@@ -40,7 +41,7 @@ Status key: ✅ done and covered by tests (`cd api && npm test` → 88 passing) 
 1. **Decide the ⚠️ items** above (rotate secrets, untrack `node_modules`, landing-page assets) – small effort, high value.
 2. **Review and commit** the working tree in logical commits (security → certificates → workflow → reports/fees/queries → docs → web); then merge/rebase `pushkar-mobile-auth` and `deploy` onto it.
 3. **UI for the finished endpoints:** done for reject, payment verification, status history, queries, fee rules + default validity, reports + CSV export, due list and profile (see the table). Still missing: frontend tests and a recorded browser walk-through of the demo flow (steps are in the README).
-4. **Phase 4 offline sync:** server side is done (client UUIDs, idempotent `POST /api/sync/push`, delta `GET /api/sync/pull`). Remaining: reconcile `pushkar-mobile-auth`, then the Expo client (local queue, camera + GPS, offline photo upload with `clientId`).
+4. **Phase 4 offline sync:** server API and the Expo offline inspection flow are done. Remaining: run it on a device/emulator, offline photo queue (needs `clientId` on attachments server-side), offline assignment-accept, and checking the older online screens in `mobile/app` against `api/`.
 5. **Phase 5**: enforcement module, Hindi/regional-language support, e-mail/SMS provider, object storage, PAdES.
 
 ## Already built before this work (for reference)

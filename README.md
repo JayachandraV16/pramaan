@@ -51,10 +51,23 @@ Owner-to-certificate demo (three browser windows or profiles, or log out and in)
 4. **Admin:** open the completed application → *Issue certificate* (PDF + QR are generated).
 5. **Anyone (no login):** *Verify documents* → enter the certificate number or upload the PDF. Then, as admin, revoke the certificate and verify again to see the revoked verdict.
 
+## Mobile app (Expo, officers)
+
+`mobile/` is the Expo Router app imported from the `pushkar-mobile-auth` branch (its `pramaan1` folder; that branch's separate `api1` backend is not used - the app talks to `api/`).
+
+```bash
+cd mobile
+cp .env.example .env     # EXPO_PUBLIC_API_URL; for a physical phone use your PC's LAN address, e.g. http://192.168.1.20:5000/api
+npm install
+npx expo start
+```
+
+**Field work (works offline)** - officer home screen -> *Field work*: the phone caches assigned jobs, the officer records GPS, readings and observations without a connection, and saves a PASS/FAIL result. Drafts upload automatically (on app start, on return to the foreground, every minute while something is waiting, or with *Sync now*) through `POST /api/sync/push`; `GET /api/sync/pull` refreshes the jobs. Every record has a client UUID so retries never duplicate. The accept step and photo upload still need a connection.
+
 ## Tests
 
 ```bash
-cd api && npm test              # starts a throw-away PostgreSQL, applies all migrations, runs ~80 tests
+cd api && npm test              # starts a throw-away PostgreSQL, applies all migrations, runs ~90 tests (includes the mobile offline engine against the real API)
 cd web && npx tsc --noEmit && npx vite build
 ```
 

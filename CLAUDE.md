@@ -15,7 +15,7 @@ Guidance for Claude Code in this repository. Background and audit: `docs/context
 
 ## Stack
 
-Node.js (CommonJS) · Express 5 · PostgreSQL via `pg` (raw SQL) · JWT + bcrypt · multer · pdfkit + qrcode · embedded-postgres (tests only). Web: React 18 + Vite 6 + TypeScript + Tailwind + react-router 6 + recharts. Mobile (Expo): not on this branch.
+Node.js (CommonJS) · Express 5 · PostgreSQL via `pg` (raw SQL) · JWT + bcrypt · multer · pdfkit + qrcode · embedded-postgres (tests only). Web: React 18 + Vite 6 + TypeScript + Tailwind + react-router 6 + recharts. Mobile: Expo SDK 54 + Expo Router in `mobile/` (imported from `pushkar-mobile-auth`/`pramaan1`).
 
 ## Commands
 
@@ -51,6 +51,8 @@ api/src/
   jobs/                               expiry sweep, reminders, scheduler (advisory-lock guarded)
   db/migrations (001–023), db/seeds
 api/test/                             run.js (temp Postgres), helpers.js, workflow.js, *.test.js
+mobile/services/offline/              syncCore.ts (pure model), syncEngine.ts (push/pull via injected Http), OfflineContext.tsx (storage + auto-sync)
+mobile/app/inspector/offline/         Field work list + inspection form (works without a connection)
 web/src/{api,pages,components,context,types}
 ```
 
@@ -79,4 +81,4 @@ Rules the code follows (keep following them):
 
 ## Known gaps (details in `docs/context.md` §13 and the roadmap)
 
-Mobile (Expo) client for the offline sync API (`/api/sync` push/pull is built; offline photo queue is not); multilingual UI/PDF; enforcement and repeat-offender tracking; email/SMS delivery (notifications are in-app only); object storage for uploads; PAdES-signed PDFs; e-mail/SMS for notifications; frontend tests; untracking `api/node_modules` and rotating the leaked credentials.
+offline photo queue and offline assignment-accept in the mobile app (structured inspection data syncs); the older online screens in `mobile/app` (written for the separate `api1` backend) are unverified against `api/`; multilingual UI/PDF; enforcement and repeat-offender tracking; email/SMS delivery (notifications are in-app only); object storage for uploads; PAdES-signed PDFs; e-mail/SMS for notifications; frontend tests; untracking `api/node_modules` and rotating the leaked credentials.
