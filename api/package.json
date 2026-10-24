@@ -9,7 +9,10 @@
     "reset": "node src/reset.js",
     "migrate": "node src/migrate.js",
     "seed": "node src/seed.js",
-    "db:setup": "npm run reset && npm run migrate && npm run seed"
+    "db:setup": "npm run reset && npm run migrate && npm run seed",
+    "test": "node test/run.js",
+    "demo:users": "node src/demoUsers.js",
+    "jobs:run": "node src/jobs/run.js"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +30,7 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "embedded-postgres": "^18.4.0-beta.17",
     "nodemon": "^3.1.14"
   }
 }

@@ -3,7 +3,7 @@ const pool = require('../../pool');
 // Check whether the application exists
 async function findApplicationById(id) {
   const { rows } = await pool.query(
-    `SELECT id, status
+    `SELECT id, status, application_number, payment_verified_at
      FROM verification_applications
      WHERE id = $1`,
     [id]
@@ -32,8 +32,8 @@ async function createAssignment({
   assignedToId,
   assignedById,
   remarks,
-}) {
-  const { rows } = await pool.query(
+}, client = pool) {
+  const { rows } = await client.query(
     `INSERT INTO verification_assignments (
       application_id,
       assigned_to_id,

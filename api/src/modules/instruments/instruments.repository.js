@@ -193,7 +193,71 @@ async function findInstrumentBySerialNumber(serialNumber) {
   return rows[0] || null;
 }
 
+// Re-verification tracking (view instrument_verification_status, migration 020).
+// scope: { ownerId } | { officerId } | {} (all). state: optional filter,
+// withinDays: only instruments due within N days (overdue ones included).
+async function findVerificationStatus({ ownerId, officerId, state, withinDays }) {
+  const where = [];
+  const params = [];
+  if (ownerId) {
+    params.push(ownerId);
+    where.push(`s.owner_id = $${params.length}`);
+  }
+  if (officerId) {
+    params.push(officerId);
+    where.push(`EXISTS (
+      SELECT 1 FROM verification_applications va
+      JOIN verification_assignments vas ON vas.application_id = va.id
+      WHERE va.instrument_id = s.instrument_id AND vas.assigned_to_id = $${params.length}
+    )`);
+  }
+  if (state) {
+    params.push(state);
+    where.push(`s.verification_state = $${params.length}`);
+  }
+  if (withinDays !== undefined) {
+    params.push(withinDays);
+    where.push(`(s.verification_state = 'OVERDUE' OR s.days_until_due <= $${params.length})`);
+  }
+  const { rows } = await pool.query(
+    `SELECT s.*, u.full_name AS owner_name, u.organization_name AS owner_organization
+     FROM instrument_verification_status s
+     LEFT JOIN users u ON u.id = s.owner_id
+     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+     ORDER BY s.next_due_date ASC NULLS FIRST, s.instrument_name`,
+    params
+  );
+  return rows;
+}
+
+async function listInstrumentTypes({ activeOnly }) {
+  const { rows } = await pool.query(
+    `SELECT id, name, description, default_unit, default_validity_months, is_active
+     FROM instrument_types
+     ${activeOnly ? 'WHERE is_active = TRUE' : ''}
+     ORDER BY name`
+  );
+  return rows;
+}
+
+async function updateInstrumentType(id, { defaultValidityMonths, isActive, description, defaultUnit }) {
+  const { rows } = await pool.query(
+    `UPDATE instrument_types SET
+       default_validity_months = COALESCE($2, default_validity_months),
+       is_active = COALESCE($3, is_active),
+       description = COALESCE($4, description),
+       default_unit = COALESCE($5, default_unit)
+     WHERE id = $1
+     RETURNING id, name, description, default_unit, default_validity_months, is_active`,
+    [id, defaultValidityMonths ?? null, isActive ?? null, description ?? null, defaultUnit ?? null]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
+  listInstrumentTypes,
+  updateInstrumentType,
+  findVerificationStatus,
   findInstrumentTypeById,
   findInstrumentBySerialNumber,
   createInstrument,

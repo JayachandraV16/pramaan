@@ -6,7 +6,13 @@ const service = require('./auth.service');
 
 const register = asyncHandler(async (req, res) => {
   const result = await service.register(req.body);
-  new ApiResponse(201, result, 'User registered successfully').send(res);
+  new ApiResponse(
+    201,
+    result,
+    result.pendingApproval
+      ? 'Registration received. Your account will be activated after administrator approval.'
+      : 'User registered successfully'
+  ).send(res);
 });
 
 const login = asyncHandler(async (req, res) => {

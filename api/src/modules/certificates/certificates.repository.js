@@ -261,7 +261,112 @@ async function findCertificatesByOwnerId(ownerId) {
   return rows;
 }
 
+// ---------------------------------------------------------------------------
+// Transactional issuance / lifecycle helpers (all take the caller's client)
+// ---------------------------------------------------------------------------
+
+// Verification + its application + instrument, for issuance rules.
+async function findIssuanceContext(verificationId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT v.id AS verification_id, v.status AS verification_status,
+            vr.decision,
+            app.id AS application_id, app.applicant_id, app.instrument_id,
+            i.owner_id, i.serial_number, i.instrument_name, i.manufacturer, i.model,
+            it.default_validity_months
+     FROM verifications v
+     JOIN verification_applications app ON app.id = v.application_id
+     JOIN instruments i ON i.id = app.instrument_id
+     JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN verification_results vr ON vr.verification_id = v.id
+     WHERE v.id = $1`,
+    [verificationId]
+  );
+  return rows[0] || null;
+}
+
+// Race-free CERT-{year}-{000001}; call inside the issuing transaction.
+async function nextCertificateNumber(client, year) {
+  const { rows } = await client.query(
+    `INSERT INTO certificate_number_counters (year, last_sequence)
+     VALUES ($1, 1)
+     ON CONFLICT (year)
+     DO UPDATE SET last_sequence = certificate_number_counters.last_sequence + 1
+     RETURNING last_sequence`,
+    [year]
+  );
+  return `CERT-${year}-${String(rows[0].last_sequence).padStart(6, '0')}`;
+}
+
+async function insertCertificate(client, { verificationId, instrumentId, certificateNumber, validFrom, validUntil }) {
+  const { rows } = await client.query(
+    `INSERT INTO verification_certificates (
+       verification_id, instrument_id, certificate_number, valid_from, valid_until
+     )
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
+    [verificationId, instrumentId, certificateNumber, validFrom, validUntil]
+  );
+  return rows[0];
+}
+
+async function setIntegrityFields(client, { id, fileUrl, pdfSha256, recordSha256 }) {
+  const { rows } = await client.query(
+    `UPDATE verification_certificates
+     SET certificate_file_url = $2, pdf_sha256 = $3, record_sha256 = $4
+     WHERE id = $1
+     RETURNING *`,
+    [id, fileUrl, pdfSha256, recordSha256]
+  );
+  return rows[0];
+}
+
+async function markRevoked(client, { id, revokedById, reason }) {
+  const { rows } = await client.query(
+    `UPDATE verification_certificates
+     SET status = 'REVOKED', revoked_at = now(), revoked_by_id = $2, revocation_reason = $3
+     WHERE id = $1
+     RETURNING *`,
+    [id, revokedById, reason]
+  );
+  return rows[0];
+}
+
+// Is the certificate's instrument owned by (or its application filed by) this user?
+async function isCertificateOwnedBy(certificateId, userId) {
+  const { rows } = await pool.query(
+    `SELECT 1
+     FROM verification_certificates vc
+     JOIN instruments i ON i.id = vc.instrument_id
+     JOIN verifications v ON v.id = vc.verification_id
+     JOIN verification_applications app ON app.id = v.application_id
+     WHERE vc.id = $1 AND (i.owner_id = $2 OR app.applicant_id = $2)`,
+    [certificateId, userId]
+  );
+  return rows.length > 0;
+}
+
+// Recipient of certificate notifications (the applicant of the application).
+async function findCertificateRecipients(client, certificateId) {
+  const { rows } = await client.query(
+    `SELECT app.id AS application_id, app.applicant_id, i.owner_id
+     FROM verification_certificates vc
+     JOIN verifications v ON v.id = vc.verification_id
+     JOIN verification_applications app ON app.id = v.application_id
+     JOIN instruments i ON i.id = vc.instrument_id
+     WHERE vc.id = $1`,
+    [certificateId]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
+  findIssuanceContext,
+  nextCertificateNumber,
+  insertCertificate,
+  setIntegrityFields,
+  markRevoked,
+  isCertificateOwnedBy,
+  findCertificateRecipients,
   findVerificationById,
   findInstrumentById,
   findCertificateByVerificationId,

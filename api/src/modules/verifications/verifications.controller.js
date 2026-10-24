@@ -1,4 +1,5 @@
 const asyncHandler = require('../../utils/asyncHandler');
+const { applyListQuery } = require('../../utils/listQuery');
 const ApiResponse = require('../../utils/ApiResponse');
 const service = require('./verifications.service');
 
@@ -48,7 +49,11 @@ const addReading = asyncHandler(async (req, res) => {
 
 // Get all accessible verifications
 const getVerifications = asyncHandler(async (req, res) => {
-  const verifications = await service.getVerifications(req.user);
+  const verifications = applyListQuery(await service.getVerifications(req.user), req.query, {
+    searchFields: ['application_number', 'instrument_name', 'serial_number', 'officer_name', 'performed_by_name', 'location'],
+    filters: { status: 'status', decision: 'decision' },
+    sortFields: ['created_at', 'verification_date', 'status'],
+  });
 
   new ApiResponse(
     200,

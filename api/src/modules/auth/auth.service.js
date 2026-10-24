@@ -1,11 +1,13 @@
 // api/src/modules/auth/auth.service.js
 
 const ApiError = require('../../utils/ApiError');
-const { hashPassword, comparePassword } = require('../../utils/password');
+const { hashPassword, comparePassword, DUMMY_HASH } = require('../../utils/password');
 const { signToken } = require('../../utils/jwt');
 const repo = require('./auth.repository');
 const { isValidRole, isValidApplicantType } = require('./auth.validation');
 const { ROLES } = require('../../config/roles');
+const { validatePasswordStrength } = require('../../utils/passwordPolicy');
+const audit = require('../../utils/audit');
 
 async function register({
   fullName,
@@ -21,6 +23,18 @@ async function register({
   if (!isValidRole(role)) {
     throw ApiError.badRequest(`Invalid role: ${role}`);
   }
+
+  // Public sign-up rules:
+  //   INSTRUMENT_OWNER / PUBLIC_USER  -> active immediately
+  //   LMO / GATC                      -> allowed, but PENDING_APPROVAL until an
+  //                                      ADMIN approves (no token is issued)
+  //   ADMIN                           -> never self-registrable
+  if (role === ROLES.ADMIN) {
+    throw ApiError.forbidden('Administrator accounts can only be created by an existing administrator');
+  }
+  const needsApproval = role === ROLES.LMO || role === ROLES.GATC;
+
+  validatePasswordStrength(password);
 
   // Mirrors the DB's ck_users_email_or_phone constraint — fail fast with a
   // clear message instead of letting the INSERT bounce with a raw
@@ -65,7 +79,19 @@ async function register({
     address,
     lcrNumber: isOwner ? lcrNumber : null,
     applicantType: isOwner ? applicantType : null,
+    status: needsApproval ? 'PENDING_APPROVAL' : 'ACTIVE',
   });
+
+  if (needsApproval) {
+    await audit.recordStandalone({
+      actorId: user.id,
+      action: 'STAFF_REGISTRATION_SUBMITTED',
+      entityType: 'user',
+      entityId: user.id,
+      details: { role },
+    });
+    return { user: { ...user, role }, token: null, pendingApproval: true };
+  }
 
   const token = signToken({ id: user.id, role });
   return { user: { ...user, role }, token };
@@ -73,17 +99,21 @@ async function register({
 
 async function login({ email, password }) {
   const user = await repo.findUserByEmail(email);
-  if (!user) {
+
+  // Always run one bcrypt comparison (against a dummy hash if the account
+  // does not exist) so response time does not reveal which emails exist, and
+  // check the password BEFORE the account status so status is only disclosed
+  // to someone who knows the password.
+  const isMatch = await comparePassword(password, user ? user.password_hash : DUMMY_HASH);
+  if (!user || !isMatch) {
     throw ApiError.unauthorized('Invalid email or password');
   }
 
+  if (user.status === 'PENDING_APPROVAL') {
+    throw ApiError.forbidden('Your account is awaiting administrator approval');
+  }
   if (user.status !== 'ACTIVE') {
     throw ApiError.forbidden(`Account is ${user.status.toLowerCase()}`);
-  }
-
-  const isMatch = await comparePassword(password, user.password_hash);
-  if (!isMatch) {
-    throw ApiError.unauthorized('Invalid email or password');
   }
 
   const token = signToken({ id: user.id, role: user.role });

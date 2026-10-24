@@ -19,6 +19,8 @@ const createVerificationRules = {
   assignmentId: { required: true, type: 'string' },
   scheduleId: { required: false, type: 'string' },
   location: { required: false, type: 'string' },
+  latitude: { required: false, type: 'number' },
+  longitude: { required: false, type: 'number' },
   remarks: { required: false, type: 'string' },
 };
 
@@ -35,7 +37,8 @@ const createReadingRules = {
   observedValue: { required: true, type: 'number' },
   unit: { required: true, type: 'string' },
   tolerance: { required: false, type: 'number' },
-  result: { required: true, type: 'string' },
+  // optional: computed by the server when expectedValue and tolerance are given
+  result: { required: false, type: 'string' },
   remarks: { required: false, type: 'string' },
 };
 

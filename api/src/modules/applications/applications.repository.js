@@ -2,7 +2,7 @@ const pool = require('../../pool');
 
 async function findInstrumentById(id) {
   const { rows } = await pool.query(
-    `SELECT id, owner_id, status
+    `SELECT id, owner_id, status, instrument_type_id, capacity
      FROM instruments
      WHERE id = $1`,
     [id]
@@ -61,6 +61,8 @@ async function createApplication({
   conveyanceFee,
   quarterJumpFee,
   lastCertificateId,
+  verificationFee,
+  totalFee,
 }) {
   const client = await pool.connect();
 
@@ -88,9 +90,11 @@ async function createApplication({
         gras_challan_date,
         conveyance_fee,
         quarter_jump_fee,
-        last_certificate_id
+        last_certificate_id,
+        verification_fee,
+        total_fee
       )
-      VALUES ($1, $2, $3, $4, 'SUBMITTED', $5, $6, NOW(), $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, 'SUBMITTED', $5, $6, NOW(), $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         applicationNumber,
@@ -107,7 +111,15 @@ async function createApplication({
         conveyanceFee ?? null,
         quarterJumpFee ?? null,
         lastCertificateId || null,
+        verificationFee ?? null,
+        totalFee ?? null,
       ]
+    );
+
+    await client.query(
+      `INSERT INTO application_status_history (application_id, from_status, to_status, changed_by_id, reason)
+       VALUES ($1, NULL, 'SUBMITTED', $2, 'Application submitted')`,
+      [rows[0].id, applicantId]
     );
 
     await client.query('COMMIT');
@@ -118,6 +130,57 @@ async function createApplication({
   } finally {
     client.release();
   }
+}
+
+// Open = still in flight. Used to stop duplicate parallel applications.
+async function findOpenApplicationForInstrument(instrumentId) {
+  const { rows } = await pool.query(
+    `SELECT id, application_number, status
+     FROM verification_applications
+     WHERE instrument_id = $1 AND status IN ('SUBMITTED', 'UNDER_REVIEW', 'SCHEDULED')
+     LIMIT 1`,
+    [instrumentId]
+  );
+  return rows[0] || null;
+}
+
+async function findStatusHistory(applicationId) {
+  const { rows } = await pool.query(
+    `SELECT h.id, h.from_status, h.to_status, h.reason, h.changed_at,
+            h.changed_by_id, u.full_name AS changed_by_name
+     FROM application_status_history h
+     LEFT JOIN users u ON u.id = h.changed_by_id
+     WHERE h.application_id = $1
+     ORDER BY h.changed_at ASC, h.id ASC`,
+    [applicationId]
+  );
+  return rows;
+}
+
+// A verification that has started (or finished) blocks cancellation.
+async function hasStartedVerification(client, applicationId) {
+  const { rows } = await client.query(
+    'SELECT 1 FROM verifications WHERE application_id = $1 LIMIT 1',
+    [applicationId]
+  );
+  return rows.length > 0;
+}
+
+// Withdraws open work for an application that is being cancelled/rejected and
+// returns the officers who had been assigned (so they can be told).
+async function closeOpenWork(client, applicationId, remark) {
+  await client.query(
+    `UPDATE verification_schedules SET status = 'CANCELLED', remarks = COALESCE(remarks || ' | ', '') || $2
+     WHERE application_id = $1 AND status IN ('SCHEDULED', 'RESCHEDULED')`,
+    [applicationId, remark]
+  );
+  const { rows } = await client.query(
+    `UPDATE verification_assignments SET status = 'DECLINED', remarks = COALESCE(remarks || ' | ', '') || $2
+     WHERE application_id = $1 AND status IN ('ASSIGNED', 'ACCEPTED')
+     RETURNING assigned_to_id`,
+    [applicationId, remark]
+  );
+  return rows.map((r) => r.assigned_to_id);
 }
 
 async function findApplicationsByApplicantId(applicantId) {
@@ -273,6 +336,10 @@ async function isApplicationAssignedToOfficer(applicationId, officerId) {
 }
 
 module.exports = {
+  findOpenApplicationForInstrument,
+  findStatusHistory,
+  hasStartedVerification,
+  closeOpenWork,
   findInstrumentById,
   findCertificateById,
   createApplication,

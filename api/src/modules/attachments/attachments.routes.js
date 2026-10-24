@@ -1,7 +1,7 @@
 const express = require('express');
 
 const authenticate = require('../../middleware/authMiddleware');
-const upload = require('../../middleware/upload');
+const { uploadSingle } = require('../../middleware/upload');
 
 const controller = require('./attachments.controller');
 
@@ -11,7 +11,7 @@ const router = express.Router();
 router.post(
   '/',
   authenticate,
-  upload.single('file'),
+  uploadSingle('file'),
   controller.createAttachment
 );
 

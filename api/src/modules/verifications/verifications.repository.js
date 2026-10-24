@@ -32,6 +32,10 @@ async function createVerification({
   performedById,
   location,
   remarks,
+  latitude,
+  longitude,
+  clientId,
+  clientStartedAt,
 }) {
   const { rows } = await pool.query(
     `INSERT INTO verifications (
@@ -42,9 +46,13 @@ async function createVerification({
       verification_date,
       start_time,
       location,
-      remarks
+      remarks,
+      start_latitude,
+      start_longitude,
+      client_id,
+      client_started_at
     )
-    VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW(), $5, $6)
+    VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW(), $5, $6, $7, $8, $9, $10)
     RETURNING *`,
     [
       applicationId,
@@ -53,6 +61,10 @@ async function createVerification({
       performedById,
       location || null,
       remarks || null,
+      latitude ?? null,
+      longitude ?? null,
+      clientId || null,
+      clientStartedAt || null,
     ]
   );
 
@@ -66,6 +78,7 @@ async function createObservation({
   observationDescription,
   observedValue,
   remarks,
+  clientId,
 }) {
   const { rows } = await pool.query(
     `INSERT INTO inspection_observations (
@@ -73,9 +86,10 @@ async function createObservation({
       observation_type,
       observation_description,
       observed_value,
-      remarks
+      remarks,
+      client_id
     )
-    VALUES ($1, $2, $3, $4, $5)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *`,
     [
       verificationId,
@@ -83,6 +97,7 @@ async function createObservation({
       observationDescription || null,
       observedValue || null,
       remarks || null,
+      clientId || null,
     ]
   );
 
@@ -99,6 +114,7 @@ async function createReading({
   tolerance,
   result,
   remarks,
+  clientId,
 }) {
   const { rows } = await pool.query(
     `INSERT INTO verification_readings (
@@ -109,9 +125,10 @@ async function createReading({
       unit,
       tolerance,
       result,
-      remarks
+      remarks,
+      client_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *`,
     [
       verificationId,
@@ -122,6 +139,7 @@ async function createReading({
       tolerance ?? null,
       result,
       remarks || null,
+      clientId || null,
     ]
   );
 
@@ -213,21 +231,24 @@ async function createResult({
   decision,
   decidedById,
   remarks,
-}) {
-  const { rows } = await pool.query(
+  resultSha256,
+}, client = pool) {
+  const { rows } = await client.query(
     `INSERT INTO verification_results (
       verification_id,
       decision,
       decided_by_id,
-      remarks
+      remarks,
+      result_sha256
     )
-    VALUES ($1, $2, $3, $4)
+    VALUES ($1, $2, $3, $4, $5)
     RETURNING *`,
     [
       verificationId,
       decision,
       decidedById,
       remarks || null,
+      resultSha256 || null,
     ]
   );
 

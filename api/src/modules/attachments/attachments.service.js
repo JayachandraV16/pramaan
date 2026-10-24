@@ -37,6 +37,41 @@ async function ensureApplicationAccess(user, applicationId) {
   );
 }
 // Create attachment
+// Optional evidence metadata sent by the mobile app / web form. Multipart
+// fields arrive as strings, so they are parsed and validated here.
+function parseEvidenceMetadata(data) {
+  let capturedAt = null;
+  if (data.capturedAt !== undefined && data.capturedAt !== null && data.capturedAt !== '') {
+    const date = new Date(data.capturedAt);
+    if (Number.isNaN(date.getTime())) {
+      throw ApiError.badRequest('capturedAt must be a valid date-time');
+    }
+    if (date.getTime() > Date.now() + 5 * 60 * 1000) {
+      throw ApiError.badRequest('capturedAt cannot be in the future');
+    }
+    capturedAt = date.toISOString();
+  }
+
+  const hasLat = data.latitude !== undefined && data.latitude !== null && data.latitude !== '';
+  const hasLng = data.longitude !== undefined && data.longitude !== null && data.longitude !== '';
+  if (hasLat !== hasLng) {
+    throw ApiError.badRequest('latitude and longitude must be provided together');
+  }
+  let latitude = null;
+  let longitude = null;
+  if (hasLat) {
+    latitude = Number(data.latitude);
+    longitude = Number(data.longitude);
+    if (
+      !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+      latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180
+    ) {
+      throw ApiError.badRequest('latitude/longitude out of range');
+    }
+  }
+  return { capturedAt, latitude, longitude };
+}
+
 async function createAttachment(user, data) {
   const {
     applicationId,
@@ -48,7 +83,10 @@ async function createAttachment(user, data) {
     mimeType,
     fileSizeBytes,
     description,
+    fileSha256,
   } = data;
+
+  const evidence = parseEvidenceMetadata(data);
 
   // Exactly one owner must be provided
   const ownerCount =
@@ -153,6 +191,10 @@ async function createAttachment(user, data) {
     mimeType,
     fileSizeBytes,
     description,
+    fileSha256,
+    capturedAt: evidence.capturedAt,
+    latitude: evidence.latitude,
+    longitude: evidence.longitude,
   });
 }
 

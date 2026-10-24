@@ -32,6 +32,26 @@ router.get(
 );
 
 // Get one instrument
+// Instrument types (reference data). ADMIN can change validity/active flag.
+router.get(
+  '/types',
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN, ROLES.LMO, ROLES.GATC),
+  controller.listInstrumentTypes
+);
+
+router.patch(
+  '/types/:id',
+  authorize(ROLES.ADMIN),
+  controller.updateInstrumentType
+);
+
+// Re-verification due dates. Declared before '/:id' so 'due' is not read as an id.
+router.get(
+  '/due',
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN, ROLES.LMO, ROLES.GATC),
+  controller.getVerificationStatus
+);
+
 router.get(
   '/:id',
   authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN, ROLES.LMO, ROLES.GATC),

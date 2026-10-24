@@ -20,8 +20,8 @@ async function createSchedule({
   scheduledTime,
   verificationLocation,
   remarks,
-}) {
-  const { rows } = await pool.query(
+}, client = pool) {
+  const { rows } = await client.query(
     `INSERT INTO verification_schedules (
       application_id,
       assignment_id,

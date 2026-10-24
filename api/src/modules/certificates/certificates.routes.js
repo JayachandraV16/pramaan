@@ -3,6 +3,7 @@ const express = require('express');
 const authenticate = require('../../middleware/authMiddleware');
 const authorize = require('../../middleware/rbacMiddleware');
 const validateBody = require('../../middleware/validate');
+const { rateLimit } = require('../../middleware/security');
 
 const { ROLES } = require('../../config/roles');
 
@@ -21,6 +22,7 @@ const router = express.Router();
 // ============================================
 router.get(
   '/verify/:qrToken',
+  rateLimit({ name: 'public-verify', windowMs: 60 * 1000, max: 60 }),
   controller.verifyCertificate
 );
 

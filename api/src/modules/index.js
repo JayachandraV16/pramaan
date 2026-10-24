@@ -18,6 +18,11 @@ const notificationsRoutes = require('./notifications/notifications.routes');
 const schedulesRoutes = require('./schedules/schedules.routes');
 const attachmentsRoutes = require('./attachments/attachments.routes');
 const qrAuthRoutes = require('./qr-auth/qr-auth.routes');
+const usersRoutes = require('./users/users.routes');
+const feesRoutes = require('./fees/fees.routes');
+const queriesRoutes = require('./queries/queries.routes');
+const syncRoutes = require('./sync/sync.routes');
+const { dashboardRouter, reportsRouter } = require('./reports/reports.routes');
 
 const router = express.Router();
 
@@ -31,5 +36,11 @@ router.use('/notifications', notificationsRoutes);
 router.use('/schedules', schedulesRoutes);
 router.use('/attachments', attachmentsRoutes);
 router.use('/qr-auth', qrAuthRoutes);
+router.use('/users', usersRoutes);
+router.use('/fees', feesRoutes);
+router.use('/queries', queriesRoutes);
+router.use('/sync', syncRoutes);
+router.use('/dashboard', dashboardRouter);
+router.use('/reports', reportsRouter);
 
 module.exports = router;

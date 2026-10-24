@@ -16,6 +16,8 @@ const createScheduleRules = {
 
 const updateScheduleStatusRules = {
   status: { required: true, type: 'string' },
+  scheduledDate: { required: false, type: 'string' },
+  scheduledTime: { required: false, type: 'string' },
   remarks: { required: false, type: 'string' },
 };
 

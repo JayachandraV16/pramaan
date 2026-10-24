@@ -48,6 +48,10 @@ async function createAttachment({
   mimeType,
   fileSizeBytes,
   description,
+  fileSha256,
+  capturedAt,
+  latitude,
+  longitude,
 }) {
   const { rows } = await pool.query(
     `INSERT INTO attachments (
@@ -60,9 +64,13 @@ async function createAttachment({
       file_url,
       mime_type,
       file_size_bytes,
-      description
+      description,
+      file_sha256,
+      captured_at,
+      latitude,
+      longitude
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     RETURNING *`,
     [
       applicationId || null,
@@ -75,6 +83,10 @@ async function createAttachment({
       mimeType || null,
       fileSizeBytes ?? null,
       description || null,
+      fileSha256 || null,
+      capturedAt || null,
+      latitude ?? null,
+      longitude ?? null,
     ]
   );
 

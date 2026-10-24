@@ -47,4 +47,37 @@ router.get(
   controller.getApplicationById
 );
 
+// Status timeline of one application (who changed it, when, why)
+router.get(
+  '/:id/history',
+  authorize(
+    ROLES.INSTRUMENT_OWNER,
+    ROLES.ADMIN,
+    ROLES.GATC,
+    ROLES.LMO
+  ),
+  controller.getApplicationHistory
+);
+
+// Withdraw an application that has not started (applicant or ADMIN); body: { reason? }
+router.post(
+  '/:id/cancel',
+  authorize(ROLES.INSTRUMENT_OWNER, ROLES.ADMIN),
+  controller.cancelApplication
+);
+
+// Confirm the GRAS challan payment (ADMIN)
+router.post(
+  '/:id/payment-verified',
+  authorize(ROLES.ADMIN),
+  controller.verifyPayment
+);
+
+// Refuse an application (ADMIN); body: { reason } (min 10 characters)
+router.post(
+  '/:id/reject',
+  authorize(ROLES.ADMIN),
+  controller.rejectApplication
+);
+
 module.exports = router;

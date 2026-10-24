@@ -14,12 +14,16 @@ const COLORS = {
 
 function formatDate(d) {
   if (!d) return 'N/A';
+  // Date-only strings (YYYY-MM-DD) are calendar dates, not instants: format
+  // them in UTC so the server's timezone can never shift the printed day.
+  const dateOnly = typeof d === 'string' && /^d{4}-d{2}-d{2}$/.test(d);
   const date = new Date(d);
   if (isNaN(date)) return String(d);
   return date.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+    ...(dateOnly ? { timeZone: 'UTC' } : {}),
   });
 }
 
@@ -139,6 +143,7 @@ function generateCertificatePDF(certificate, qrCodeBuffer) {
         ['Instrument', certificate.instrument_name || 'N/A'],
         ['Manufacturer', certificate.manufacturer || 'N/A'],
         ['Model', certificate.model || 'N/A'],
+        ['Serial No.', certificate.serial_number || certificate.instrument_serial || 'N/A'],
         ['Valid From', formatDate(certificate.valid_from)],
         ['Valid Until', formatDate(certificate.valid_until)],
       ];
@@ -211,6 +216,19 @@ function generateCertificatePDF(certificate, qrCodeBuffer) {
         .fontSize(9)
         .fillColor(COLORS.muted)
         .text(issuedText, contentLeft, footerY + 30);
+
+      if (certificate.record_sha256) {
+        doc
+          .font('Courier')
+          .fontSize(7.5)
+          .fillColor(COLORS.muted)
+          .text(
+            `Record fingerprint (SHA-256): ${certificate.record_sha256.slice(0, 32)}...`,
+            contentLeft,
+            footerY + 44,
+            { width: contentWidth, align: 'left' }
+          );
+      }
 
       doc
         .font('Helvetica')

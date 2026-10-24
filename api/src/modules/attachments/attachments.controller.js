@@ -22,6 +22,8 @@ async function createAttachment(req, res, next) {
         mimeType: req.file.mimetype,
 
         fileSizeBytes: req.file.size,
+
+        fileSha256: req.file.sha256,
       }
     );
 

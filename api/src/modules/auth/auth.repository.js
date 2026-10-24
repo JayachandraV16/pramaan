@@ -57,13 +57,14 @@ async function createUser({
   address,
   lcrNumber,
   applicantType,
-}) {
-  const { rows } = await pool.query(
+  status,
+}, client = pool) {
+  const { rows } = await client.query(
     `INSERT INTO users (
       role_id, full_name, email, phone, password_hash,
-      organization_name, address, lcr_number, applicant_type
+      organization_name, address, lcr_number, applicant_type, status
     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10::user_status, 'ACTIVE'))
      RETURNING id, full_name, email, phone, status, organization_name,
                address, lcr_number, applicant_type, created_at`,
     [
@@ -76,6 +77,7 @@ async function createUser({
       address || null,
       lcrNumber || null,
       applicantType || null,
+      status || null,
     ]
   );
   return rows[0];

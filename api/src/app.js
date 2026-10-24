@@ -1,21 +1,49 @@
 const express = require("express");
-const cors = require("cors");
 const path = require("path");
 
+const config = require("./config");
 const modulesRouter = require("./modules");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
+const { securityHeaders, corsAllowList } = require("./middleware/security");
+const { verifyUploadSignature } = require("./utils/integrity");
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-app.use(
-  '/uploads',
-  express.static(
-    path.join(process.cwd(), 'uploads')
-  )
-);
+if (config.trustProxy) {
+    app.set("trust proxy", 1);
+}
+app.disable("x-powered-by");
+
+app.use(securityHeaders);
+app.use(corsAllowList);
+app.use(express.json({ limit: "1mb" }));
+
+// Uploaded files (attachments, certificate PDFs) are NOT public: a link only
+// works with a valid, unexpired HMAC signature. The API adds the signature to
+// every `file_url` / `certificate_file_url` it returns (see utils/ApiResponse).
+app.get("/uploads/*splat", (req, res, next) => {
+    const requested = decodeURIComponent(req.path.replace(/^\/uploads/, ""));
+    const uploadPath = `/uploads${requested}`;
+
+    if (!verifyUploadSignature(uploadPath, req.query.exp, req.query.sig)) {
+        return res.status(403).json({
+            success: false,
+            message: "Invalid or expired file link",
+        });
+    }
+
+    const absolute = path.resolve(config.uploadDir, "." + requested);
+    if (!absolute.startsWith(config.uploadDir + path.sep)) {
+        return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    res.setHeader("Cache-Control", "private, max-age=300");
+    res.setHeader("Content-Disposition", "inline");
+    res.sendFile(absolute, { dotfiles: "deny" }, (err) => {
+        if (err) next(err.code === "ENOENT" ? undefined : err);
+    });
+});
 
 app.get("/health", (req, res) => {
     res.status(200).json({

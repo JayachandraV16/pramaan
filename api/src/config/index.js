@@ -7,6 +7,9 @@
 // This file does NOT own the DB connection — that's api/src/pool.js
 // (Omraj). Keep it that way; don't duplicate pool/connection logic here.
 
+const path = require('path');
+const crypto = require('crypto');
+
 require('dotenv').config();
 
 const REQUIRED_ENV_VARS = ['JWT_SECRET'];
@@ -19,16 +22,69 @@ if (missing.length > 0) {
   );
 }
 
+const env = process.env.NODE_ENV || 'development';
+const isProduction = env === 'production';
+
+// In production, refuse weak or missing secrets. In development/test a
+// derived INTEGRITY_SECRET is allowed so a fresh checkout still boots.
+if (isProduction) {
+  if (process.env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters in production.');
+  }
+  if (!process.env.INTEGRITY_SECRET || process.env.INTEGRITY_SECRET.length < 32) {
+    throw new Error('INTEGRITY_SECRET (>= 32 chars) is required in production.');
+  }
+}
+
+const integritySecret =
+  process.env.INTEGRITY_SECRET ||
+  crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update('pramaan-integrity-key-v1')
+    .digest('hex');
+
+const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+
 const config = {
-  env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT, 10) || 4000,
+  env,
+  isProduction,
+  port: parseInt(process.env.PORT, 10) || 5000,
 
   jwt: {
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '8h',
   },
 
-  bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 10,
+  bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 12,
+
+  // Key for HMAC signatures on QR payloads and file URLs. Keep separate
+  // from JWT_SECRET so rotating one does not invalidate the other.
+  integritySecret,
+
+  frontendUrl,
+
+  // Browser origins allowed to call the API (comma separated). Defaults to
+  // the frontend URL only; set CORS_ORIGINS explicitly for other hosts.
+  corsOrigins: (process.env.CORS_ORIGINS || frontendUrl)
+    .split(',')
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    .filter(Boolean),
+
+  trustProxy: process.env.TRUST_PROXY === 'true',
+
+  // Single source of truth for uploaded files and generated certificates.
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads')),
+
+  // Minimum photographs / inspection-evidence files that must be attached to a
+  // verification before a PASS result can be recorded (0 = rule off).
+  minEvidenceForPass: Math.max(parseInt(process.env.MIN_EVIDENCE_FOR_PASS, 10) || 0, 0),
+
+  // When true an ADMIN must confirm the GRAS challan payment
+  // (POST /api/applications/:id/payment-verified) before an officer is assigned.
+  requirePaymentBeforeAssignment: process.env.REQUIRE_PAYMENT_BEFORE_ASSIGNMENT === 'true',
+
+  // Lifetime of signed /uploads links handed out in API responses.
+  fileUrlTtlSeconds: parseInt(process.env.FILE_URL_TTL_SECONDS, 10) || 1800,
 };
 
 module.exports = config;

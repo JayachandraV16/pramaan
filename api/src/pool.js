@@ -12,7 +12,13 @@
 // whichever your .env has. DATABASE_URL wins if both are set.
 
 require('dotenv').config();
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Return SQL DATE columns (issue_date, valid_until, scheduled_date, ...) as
+// plain 'YYYY-MM-DD' strings. By default node-pg turns them into local-time
+// Date objects, which JSON-serialise as a shifted UTC timestamp (a date in
+// India would appear as the previous day at 18:30Z).
+types.setTypeParser(1082, (value) => value);
 const logger = require('./utils/logger');
 
 const connectionString = process.env.DATABASE_URL;
