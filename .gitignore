@@ -9,6 +9,12 @@ api/.env.*
 web/.env
 web/.env.*
 api/uploads/
+api/src/uploads/
+
+# signing keys
+api/signing/
+*.p12
+*.pfx
 
 # logs, coverage, OS files
 *.log
