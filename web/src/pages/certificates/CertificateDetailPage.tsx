@@ -30,6 +30,26 @@ export const CertificateDetailPage: React.FC = () => {
   const [cert, setCert] = useState<VerificationCertificate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [revokeOpen, setRevokeOpen] = useState(false);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [isRevoking, setIsRevoking] = useState(false);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+
+  const handleRevoke = async () => {
+    if (!cert) return;
+    setIsRevoking(true);
+    setRevokeError(null);
+    try {
+      await certificatesApi.revokeCertificate(cert.id, revokeReason.trim());
+      setRevokeOpen(false);
+      setRevokeReason('');
+      await loadCertificate(cert.id);
+    } catch (err: any) {
+      setRevokeError(err?.message || 'Could not revoke the certificate.');
+    } finally {
+      setIsRevoking(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthLoading && id) {
@@ -110,7 +130,12 @@ export const CertificateDetailPage: React.FC = () => {
             ← Back to Verify documents
           </Link>
         )}
-        <div>
+        <div className="flex items-center gap-2">
+          {user?.role_id === 'ADMIN' && cert.status === 'ACTIVE' && (
+            <Button variant="danger" size="sm" onClick={() => setRevokeOpen(true)}>
+              Revoke
+            </Button>
+          )}
           <a
             href={getFileUrl(cert.certificate_file_url || `/uploads/certificates/${cert.certificate_number}.pdf`)}
             target="_blank"
@@ -129,6 +154,40 @@ export const CertificateDetailPage: React.FC = () => {
           </a>
         </div>
       </div>
+
+      {revokeOpen && (
+        <div className="no-print rounded-xl border border-rose-300 bg-rose-50 p-4 space-y-3" role="dialog" aria-label="Revoke certificate">
+          <p className="text-sm font-semibold text-rose-900">
+            Revoking {cert.certificate_number} is permanent: it cannot be reactivated, the public verification page
+            will show it as revoked, and the owner is notified.
+          </p>
+          <label htmlFor="revoke-reason" className="block text-xs font-semibold text-slate-700">
+            Reason (at least 10 characters, shown to the owner) *
+          </label>
+          <textarea
+            id="revoke-reason"
+            value={revokeReason}
+            onChange={(e) => setRevokeReason(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+          />
+          {revokeError && <p role="alert" className="text-sm text-rose-800">{revokeError}</p>}
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              size="sm"
+              isLoading={isRevoking}
+              disabled={revokeReason.trim().length < 10}
+              onClick={handleRevoke}
+            >
+              Confirm revocation
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setRevokeOpen(false); setRevokeError(null); }}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Official Certificate Paper Container — Exactly matching official PDF Layout */}
       <div className="certificate-container bg-white border border-[#1a3a5c] p-[10px] shadow-2xl relative">

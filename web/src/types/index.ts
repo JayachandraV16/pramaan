@@ -221,6 +221,9 @@ export interface VerificationApplication {
   assignment?: VerificationAssignment;
   schedule?: VerificationSchedule;
   verification_id?: string;
+  gras_challan_number?: string;
+  payment_verified_at?: string | null;
+  total_fee?: number | null;
   certificate_id?: string;
 }
 

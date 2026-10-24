@@ -28,6 +28,18 @@ export interface RegisterPayload {
   address?: string;
 }
 
+/**
+ * Thrown by register() when the backend accepted the sign-up but the account
+ * (LMO / GATC) must be approved by an administrator before it can log in.
+ * No token is issued in that case.
+ */
+export class PendingApprovalError extends Error {
+  constructor(message = 'Registration received. Your account will be activated after administrator approval.') {
+    super(message);
+    this.name = 'PendingApprovalError';
+  }
+}
+
 const AUTH_STORAGE_KEY = 'pramaan_current_user';
 const TOKEN_STORAGE_KEY = 'pramaan_auth_token';
 
@@ -122,7 +134,10 @@ export const authApi = {
       address: payload.address || undefined,
     };
 
-    const response = await apiClient.post<BackendAuthResponse>('/auth/register', registerPayload);
+    const response = await apiClient.post<BackendAuthResponse & { pendingApproval?: boolean }>('/auth/register', registerPayload);
+    if (response && response.pendingApproval) {
+      throw new PendingApprovalError();
+    }
     if (!response || !response.token || !response.user) {
       throw new Error('Invalid response received from registration server.');
     }

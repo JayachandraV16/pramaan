@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { RoleName } from '../types';
+import { PendingApprovalError } from '../api/auth.api';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 
@@ -19,6 +20,7 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +28,8 @@ export const RegisterPage: React.FC = () => {
       setError('Please fill in all mandatory identity fields.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/d/.test(password)) {
+      setError('Password must be at least 8 characters and contain a letter and a digit.');
       return;
     }
     if (password !== confirmPassword) {
@@ -49,6 +51,10 @@ export const RegisterPage: React.FC = () => {
       });
       navigate('/dashboard');
     } catch (err: any) {
+      if (err instanceof PendingApprovalError) {
+        setNotice(err.message + ' You can sign in once it has been approved.');
+        return;
+      }
       setError(err?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -65,6 +71,11 @@ export const RegisterPage: React.FC = () => {
 
         <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-gov">
           {error && <ErrorMessage message={error} className="mb-4" />}
+          {notice && (
+            <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs sm:text-sm text-emerald-800" role="status">
+              {notice}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Role Selection */}

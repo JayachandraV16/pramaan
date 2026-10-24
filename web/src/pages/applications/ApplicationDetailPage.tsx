@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { ApplicationExtras } from "../../components/applications/ApplicationExtras";
 import { applicationsApi } from "../../api/applications.api";
 import { instrumentsApi } from "../../api/instruments.api";
 import { assignmentsApi, AvailableOfficer } from "../../api/assignments.api";
@@ -30,6 +31,8 @@ export const ApplicationDetailPage: React.FC = () => {
   const [certificate, setCertificate] = useState<VerificationCertificate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   // --- Admin assignment form state ---
   const isAdmin = user?.role_id === "ADMIN";
@@ -306,6 +309,36 @@ export const ApplicationDetailPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {(user?.role_id === "INSTRUMENT_OWNER" || user?.role_id === "ADMIN") &&
+            !app.verification_id &&
+            ["SUBMITTED", "UNDER_REVIEW", "SCHEDULED"].includes(app.status) && (
+              <Button
+                variant="danger"
+                size="md"
+                isLoading={isCancelling}
+                onClick={async () => {
+                  const reason = window.prompt("Why are you cancelling this application? (optional)");
+                  if (reason === null) return;
+                  setIsCancelling(true);
+                  setCancelError(null);
+                  try {
+                    await applicationsApi.cancelApplication(app.id, reason.trim());
+                    await loadApp(app.id);
+                  } catch (err: any) {
+                    setCancelError(err?.message || "Could not cancel the application.");
+                  } finally {
+                    setIsCancelling(false);
+                  }
+                }}
+              >
+                Cancel application
+              </Button>
+            )}
+          {cancelError && (
+            <p role="alert" className="text-xs text-rose-700 max-w-xs">
+              {cancelError}
+            </p>
+          )}
           {app.verification_id && (
             <Link to={`/verifications/${app.verification_id}`}>
               <Button variant="primary" size="md">
@@ -728,6 +761,20 @@ export const ApplicationDetailPage: React.FC = () => {
             </form>
           ) : null}
         </Card>
+      )}
+
+      {user && (
+        <ApplicationExtras
+          applicationId={app.id}
+          status={app.status}
+          hasVerification={!!app.verification_id}
+          role={user.role_id}
+          userId={user.id}
+          grasChallanNumber={app.gras_challan_number}
+          paymentVerifiedAt={app.payment_verified_at}
+          totalFee={app.total_fee}
+          onChanged={() => loadApp(app.id)}
+        />
       )}
     </div>
   );

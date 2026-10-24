@@ -1,398 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Footer } from '../components/common/Footer';
 
-// Images & Media from extracted resources
-import banner1 from '@/emaap_extracted_resources/static/media/Banner1b.d80b8a0b4ce3d22c648e.jpg';
-import banner2 from '@/emaap_extracted_resources/static/media/Banner2b.bf77a947cab6007a419a.jpg';
-import banner3 from '@/emaap_extracted_resources/static/media/Banner3b.48c75ac3c59b300d3193.jpg';
-import overviewImg from '@/emaap_extracted_resources/static/media/overview.f6e5299ccd1944edec6d.png';
-import step1Img from '@/emaap_extracted_resources/static/media/1.aa361debdf6367c02e06.jpg';
-import step3Img from '@/emaap_extracted_resources/static/media/3.fe227c904904ad6539b6.jpg';
-import step4Img from '@/emaap_extracted_resources/static/media/4.3f5816f32dfe650e9789.jpg';
-// Genuine SVG icons
-import iconFastSecure from '@/emaap_extracted_resources/static/media/fastandsecure.daf59fbe4522382ddd49e9953f348297.svg';
-import iconFastProc from '@/emaap_extracted_resources/static/media/fastprocessing.ba9259b219b78ec4890728c740fca8a3.svg';
-import iconRealtime from '@/emaap_extracted_resources/static/media/realtime-status.0ed5d0c441f97b6071b5e5ea15835a4b.svg';
-import iconLegislation from '@/emaap_extracted_resources/static/media/legislation.6de5f5a587ce50c03cd0a59e7db07754.svg';
-import iconRules from '@/emaap_extracted_resources/static/media/rules-acts.cfcc63678be5ebb4b04a927c1ba8f7ad.svg';
-import iconFunctions from '@/emaap_extracted_resources/static/media/functions-lm.cfe7138e48843a5760683e1b3f4db5a6.svg';
-import iconSubOffices from '@/emaap_extracted_resources/static/media/subordinates-offices.0bdf395a4c50b209f50d3384f40faeac.svg';
-import iconId from '@/emaap_extracted_resources/static/media/clms-id.8fd284347fe4eb92973a17c4b5ead316.svg';
-import iconLogin from '@/emaap_extracted_resources/static/media/clms-login.00531b439dc7f6f73d514c799448fb4b.svg';
-import iconDesktop from '@/emaap_extracted_resources/static/media/clms-desktop.5423220759ed7cedd8a41d09cce4a8c2.svg';
-import iconDoc from '@/emaap_extracted_resources/static/media/clms-document.eb9ec0873229a7a0763ffa5590901764.svg';
-import iconArrow from '@/emaap_extracted_resources/static/media/clms-arrow.e47fae9e97b63d65d36d2174491fd7cc.svg';
+/* Small inline icons: no image files, so the page has no external assets. */
+const Icon: React.FC<{ d: string }> = ({ d }) => (
+  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+  </svg>
+);
+
+const STEPS = [
+  { title: 'Register the instrument', text: 'The owner records the weighing or measuring instrument once: type, capacity, serial number, location.' },
+  { title: 'Apply online', text: 'Apply for verification or re-verification. The fee is calculated from the department\'s fee rules.' },
+  { title: 'Officer assigned and scheduled', text: 'The department assigns a Legal Metrology Officer or test centre and books a date. Double bookings are blocked.' },
+  { title: 'Field inspection', text: 'The officer records readings on site. The system decides pass or fail for each reading against its tolerance, and evidence photos are fingerprinted.' },
+  { title: 'Certificate issued', text: 'A PASS result produces a PDF certificate with a QR code. Its fingerprint and signature are stored.' },
+  { title: 'Anyone can verify', text: 'Scan the QR or enter the certificate number. Altered or revoked certificates are flagged immediately.' },
+];
+
+const TRUST = [
+  { icon: 'M9 12l2 2 4-4m5.6-3.2A11.9 11.9 0 0112 2.9 11.9 11.9 0 013.4 5.8 12 12 0 003 9c0 5.6 3.8 10.3 9 11.6 5.2-1.3 9-6 9-11.6 0-1.1-.1-2.2-.4-3.2z', title: 'Tamper detection', text: 'Every certificate PDF has a SHA-256 fingerprint and a signed QR link. Upload a PDF on the verify page to check it was really issued here.' },
+  { icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', title: 'Never miss a due date', text: 'Owners get reminders 30, 15, 7 and 1 day before a certificate expires, and the department sees what is overdue.' },
+  { icon: 'M18.4 5.6l-12.8 12.8M12 21a9 9 0 100-18 9 9 0 000 18z', title: 'Revocation that sticks', text: 'A revoked certificate is flagged on every check and cannot be reinstated. The reason is recorded.' },
+  { icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', title: 'A trail you can audit', text: 'Status changes and sensitive actions go into a hash-chained log, so history cannot be quietly rewritten.' },
+];
+
+const ROLES = [
+  { who: 'Instrument owners', what: 'Register instruments, apply, track status, answer officer queries, download certificates.' },
+  { who: 'Legal Metrology Officers and test centres', what: 'See assigned work, record inspections with readings, GPS and photos.' },
+  { who: 'Department administrators', what: 'Review applications, assign and schedule officers, issue or revoke certificates, run reports.' },
+  { who: 'Consumers and traders', what: 'Check any certificate for free, without an account.' },
+];
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [certType, setCertType] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeBanner, setActiveBanner] = useState(0);
-  const banners = [banner1, banner2, banner3];
+  const { user } = useAuth();
+  const [query, setQuery] = useState('');
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveBanner((prev) => (prev + 1) % banners.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/verify-public?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    if (query.trim()) navigate(`/verify-public?q=${encodeURIComponent(query.trim())}`);
   };
 
   return (
-    <div className="w-full bg-white text-[#222429] min-h-screen scroll-smooth">
-      {/* 1. HERO SECTION & BANNER (Screenshots 1 & 2) */}
-      <section id="hero" className="relative w-full bg-[#1a1a2e] overflow-hidden">
-        {/* Background Image Carousel with overlay */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          {banners.map((b, idx) => (
-            <img
-              key={idx}
-              src={b}
-              alt={`Banner ${idx + 1}`}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                activeBanner === idx ? 'opacity-35' : 'opacity-0'
-              }`}
+    <div className="w-full bg-white text-slate-800">
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-[#12263d] via-[#1a3a5c] to-[#24527f] text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#FFAA17]">Legal Metrology · Online verification</p>
+            <h1 className="mt-3 text-3xl sm:text-5xl font-extrabold leading-tight">
+              Trust every scale and measure, with a certificate you can check in seconds.
+            </h1>
+            <p className="mt-4 text-white/85 max-w-xl">
+              Pramaan takes weighing and measuring instruments from application to a tamper-evident digital certificate, and lets anyone confirm it is genuine.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {user ? (
+                <Link to="/dashboard" className="px-5 py-2.5 rounded-lg bg-[#FFAA17] text-[#1a1a2e] font-bold text-sm hover:bg-[#f8aa24]">Go to my dashboard</Link>
+              ) : (
+                <>
+                  <Link to="/login" className="px-5 py-2.5 rounded-lg bg-[#FFAA17] text-[#1a1a2e] font-bold text-sm hover:bg-[#f8aa24]">Sign in</Link>
+                  <Link to="/register" className="px-5 py-2.5 rounded-lg border border-white/50 font-bold text-sm hover:bg-white/10">Register as an owner</Link>
+                </>
+              )}
+            </div>
+          </div>
+
+          <form onSubmit={submit} className="bg-white text-slate-800 rounded-2xl shadow-xl p-6" aria-label="Verify a certificate">
+            <h2 className="text-lg font-extrabold text-[#1a3a5c]">Verify a certificate</h2>
+            <p className="text-sm text-slate-600 mt-1">Enter the certificate number printed on the certificate, or the code from its QR link.</p>
+            <label htmlFor="cert-query" className="sr-only">Certificate number</label>
+            <input
+              id="cert-query"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="e.g. CERT-2026-000123"
+              className="mt-4 w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a5c]"
             />
+            <button type="submit" disabled={!query.trim()} className="mt-3 w-full px-4 py-2.5 rounded-lg bg-[#1a3a5c] text-white font-bold text-sm hover:bg-[#12263d] disabled:opacity-50">
+              Check certificate
+            </button>
+            <p className="mt-3 text-xs text-slate-500">
+              Have the PDF instead? <Link to="/verify-public" className="font-semibold text-[#1a3a5c] hover:underline">Upload it to check its fingerprint</Link>.
+            </p>
+          </form>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1a3a5c]">From application to certificate</h2>
+        <ol className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="rounded-2xl border border-slate-200 p-5 bg-white shadow-sm">
+              <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-[#1a3a5c] text-white text-sm font-bold">{i + 1}</span>
+              <h3 className="mt-3 font-bold text-slate-900">{s.title}</h3>
+              <p className="mt-1 text-sm text-slate-600 leading-relaxed">{s.text}</p>
+            </li>
           ))}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-        </div>
+        </ol>
+      </section>
 
-        {/* Hero Top Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-20 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Column: 5-Step Process & Live Document Preview (Screenshot 1) */}
-            <div className="lg:col-span-6 flex flex-col sm:flex-row items-center gap-6">
-              {/* Step Workflow */}
-              <div className="space-y-3 shrink-0">
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-bold text-white uppercase tracking-wider w-28 text-right">
-                    LOGIN
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-[#037DEE] text-white flex items-center justify-center font-bold text-xs shadow-md">
-                    ➔
-                  </div>
-                  <span className="w-5 h-5 rounded-full bg-white text-[#1a1a2e] font-bold text-[10px] flex items-center justify-center">1</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-bold text-white uppercase tracking-wider w-28 text-right">
-                    COMPLETE PROFILE
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-[#FF6B35] text-white flex items-center justify-center font-bold text-xs shadow-md">
-                    🪪
-                  </div>
-                  <span className="w-5 h-5 rounded-full bg-white text-[#1a1a2e] font-bold text-[10px] flex items-center justify-center">2</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-bold text-white uppercase tracking-wider w-28 text-right">
-                    SUBMIT APPLICATION
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-[#6B46C1] text-white flex items-center justify-center font-bold text-xs shadow-md">
-                    📄
-                  </div>
-                  <span className="w-5 h-5 rounded-full bg-white text-[#1a1a2e] font-bold text-[10px] flex items-center justify-center">3</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-bold text-white uppercase tracking-wider w-28 text-right">
-                    GET APPROVAL
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-[#10B981] text-white flex items-center justify-center font-bold text-xs shadow-md">
-                    ✓
-                  </div>
-                  <span className="w-5 h-5 rounded-full bg-white text-[#1a1a2e] font-bold text-[10px] flex items-center justify-center">4</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-bold text-white uppercase tracking-wider w-28 text-right">
-                    DOWNLOAD CERTIFICATE
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-[#FFAA17] text-white flex items-center justify-center font-bold text-xs shadow-md">
-                    📜
-                  </div>
-                  <span className="w-5 h-5 rounded-full bg-white text-[#1a1a2e] font-bold text-[10px] flex items-center justify-center">5</span>
+      {/* Trust */}
+      <section className="bg-[#F4F5F8] border-y border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1a3a5c]">Built so certificates can be trusted</h2>
+          <div className="mt-8 grid sm:grid-cols-2 gap-5">
+            {TRUST.map((t) => (
+              <div key={t.title} className="flex gap-4 rounded-2xl bg-white border border-slate-200 p-5">
+                <span className="shrink-0 w-11 h-11 rounded-xl bg-[#1a3a5c]/10 text-[#1a3a5c] flex items-center justify-center"><Icon d={t.icon} /></span>
+                <div>
+                  <h3 className="font-bold text-slate-900">{t.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600 leading-relaxed">{t.text}</p>
                 </div>
               </div>
-
-              {/* Approved Document Preview Card */}
-              <div className="relative bg-white p-4 rounded-xl shadow-2xl border border-slate-200 rotate-1 max-w-[220px] text-[9px] text-slate-800 space-y-1.5 select-none hidden sm:block">
-                <div className="text-center font-bold text-[10px] border-b pb-1 text-[#1a1a2e]">
-                  GOVERNMENT OF INDIA
-                </div>
-                <p className="font-semibold text-slate-900">Certificate of Model Approval</p>
-                <p className="text-slate-500 text-[8px] leading-tight">Legal Metrology Act, 2009 & General Rules, 2011</p>
-                <div className="h-16 bg-slate-100 rounded border border-slate-200 flex flex-col items-center justify-center text-[8px] text-slate-400 p-1">
-                  <span>Standard Laboratory Weights</span>
-                  <span className="text-[7px]">Calibration Class M1/E2</span>
-                </div>
-                {/* Rubber Stamp */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="border-2 border-emerald-600 text-emerald-600 font-extrabold text-sm px-2.5 py-0.5 rounded uppercase -rotate-12 bg-white/90 shadow-md">
-                    APPROVED
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Search Card & Heading (Screenshot 1) */}
-            <div className="lg:col-span-6 space-y-4">
-              <span className="inline-block px-3 py-1 rounded-md bg-black/60 text-[#FFAA17] text-xs font-bold uppercase tracking-wider">
-                Easy Approvals
-              </span>
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-white leading-tight">
-                Get Easy Approvals of Your Certificates and Licences
-              </h1>
-
-              {/* Track Form Card */}
-              <div className="bg-[#222429]/80 backdrop-blur-md rounded-xl p-5 border border-white/10 text-white space-y-3 shadow-xl">
-                <h2 className="text-sm font-bold text-white">Know Your Certificate/Licence Status</h2>
-                <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
-                  <select
-                    value={certType}
-                    onChange={(e) => setCertType(e.target.value)}
-                    className="px-3 py-2.5 bg-white text-[#222429] text-xs rounded-md font-medium border-0 focus:ring-2 focus:ring-[#FFAA17] cursor-pointer"
-                  >
-                    <option value="">Select Certificate</option>
-                    <option value="Weights & Measures">Weights & Measures</option>
-                    <option value="Model Approval">Model Approval</option>
-                    <option value="Importer Licence">Importer Licence</option>
-                  </select>
-
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      maxLength={25}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Enter certificate number"
-                      className="w-full px-3 py-2.5 bg-white text-[#222429] text-xs rounded-md font-medium border-0 focus:ring-2 focus:ring-[#FFAA17] pr-12"
-                    />
-                    <span className="absolute right-2 top-3 text-[10px] text-slate-400 font-mono">
-                      {searchQuery.length}/25
-                    </span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 bg-[#FFAA17] hover:bg-[#f8aa24] text-[#1a1a2e] font-extrabold text-xs uppercase tracking-wider rounded-md transition-colors shrink-0 shadow-sm"
-                  >
-                    SUBMIT
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-
-          {/* 3 Floating Feature Cards (Screenshot 2) */}
-          <div className="pt-10">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Card 1 */}
-              <div className="bg-white p-6 rounded-xl shadow-lg border border-slate-100 space-y-2">
-                <div className="w-10 h-10 bg-[#222429] rounded-md flex items-center justify-center p-2">
-                  <img src={iconFastSecure} alt="Secure And Easy" className="w-full h-full object-contain" />
-                </div>
-                <h3 className="font-extrabold text-base text-[#222429]">Secure And Easy</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  A secure platform streamlines certification and licence renewal with user-friendly digital tools.
-                </p>
-              </div>
-
-              {/* Card 2 */}
-              <div className="bg-white p-6 rounded-xl shadow-lg border border-slate-100 space-y-2">
-                <div className="w-10 h-10 bg-[#222429] rounded-md flex items-center justify-center p-2">
-                  <img src={iconFastProc} alt="Fast Processing" className="w-full h-full object-contain" />
-                </div>
-                <h3 className="font-extrabold text-base text-[#222429]">Fast Processing</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  A robust platform ensures swift processing of certificate applications, enhancing efficiency in regulatory compliance.
-                </p>
-              </div>
-
-              {/* Card 3 */}
-              <div className="bg-white p-6 rounded-xl shadow-lg border border-slate-100 space-y-2">
-                <div className="w-10 h-10 bg-[#222429] rounded-md flex items-center justify-center p-2">
-                  <img src={iconRealtime} alt="Real-Time Status" className="w-full h-full object-contain" />
-                </div>
-                <h3 className="font-extrabold text-base text-[#222429]">Real-Time Status & Tracking</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  In the realm of applications, a platform offers real-time status updates and tracking.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 2. OVERVIEW SECTION (Screenshots 2 & 3) */}
-      <section id="overview" className="w-full bg-white py-16 scroll-mt-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left: Collage Image */}
-            <div className="lg:col-span-5 relative flex items-center justify-center">
-              <div className="relative">
-                <img
-                  src={overviewImg}
-                  alt="Overview Legal Metrology"
-                  className="w-full max-w-md h-auto object-contain rounded-lg shadow-sm"
-                />
-                <div className="absolute -left-3 top-8 bottom-8 w-2 bg-[#FFAA17] rounded-full hidden sm:block" />
-              </div>
+      {/* Who it is for */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1a3a5c]">Who uses Pramaan</h2>
+        <dl className="mt-8 grid sm:grid-cols-2 gap-x-8 gap-y-5">
+          {ROLES.map((r) => (
+            <div key={r.who} className="border-l-4 border-[#FFAA17] pl-4">
+              <dt className="font-bold text-slate-900">{r.who}</dt>
+              <dd className="text-sm text-slate-600 mt-0.5">{r.what}</dd>
             </div>
-
-            {/* Right: Overview Text & 4 Items */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="space-y-3">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#222429]">Overview</h2>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Explore a Centralized Legal Metrology System where regulatory oversight and measurement standards converge on a unified platform. This system simplifies certification, verification, and compliance across sectors, ensuring consistent, accurate, and transparent weights and measures for commercial transactions.The platform enhances efficiency in monitoring and enforcement, bolstering consumer protection and fairness in the marketplace
-                </p>
-              </div>
-
-              <div className="space-y-4 pt-2">
-                {/* 1. Legislation */}
-                <div className="flex items-start gap-4">
-                  <img src={iconLegislation} alt="Legislation" className="w-8 h-8 object-contain shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <h3 className="font-extrabold text-sm text-[#222429]">Legislation</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      The Act received the assent of the President on the 13th January, 2010 and came into force with effect from 1st April, 2011.
-                    </p>
-                  </div>
-                </div>
-
-                {/* 2. Rules & Act */}
-                <div id="rules" className="flex items-start gap-4 scroll-mt-20">
-                  <img src={iconRules} alt="Rules & Act" className="w-8 h-8 object-contain shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <h3 className="font-extrabold text-sm text-[#222429]">Rules & Act</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      Specifications for weighing and measuring instruments have been prescribed in the Legal Metrology (General) Rules, 2011
-                    </p>
-                  </div>
-                </div>
-
-                {/* 3. Functions of the Legal Metrology */}
-                <div className="flex items-start gap-4">
-                  <img src={iconFunctions} alt="Functions" className="w-8 h-8 object-contain shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <h3 className="font-extrabold text-sm text-[#222429]">Functions of the Legal Metrology</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      A transparent and efficient legal metrology system inspires confidence in trade, industry and consumer and brings harmonious environment for conducting business.
-                    </p>
-                  </div>
-                </div>
-
-                {/* 4. Attached/ Subordinate Office */}
-                <div className="flex items-start gap-4">
-                  <img src={iconSubOffices} alt="Subordinate Office" className="w-8 h-8 object-contain shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <h3 className="font-extrabold text-sm text-[#222429]">Attached/ Subordinate Office</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      Regional Reference Standard Laboratories (RRSLs). Indian Institute of Legal Metrology, Ranchi
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          ))}
+        </dl>
       </section>
 
-      {/* 3. ONBOARD PROCESS SECTION (Screenshots 4 & 5) */}
-      <section id="onboard" className="w-full bg-[#F4F5F8] py-16 border-y border-slate-200 scroll-mt-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="text-center">
-            <span className="inline-block px-5 py-2 rounded-md bg-[#222429] text-white font-extrabold text-sm uppercase tracking-wider shadow-sm">
-              <span className="text-[#FFAA17]">pramaan</span> Onboard Process
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Step 1: REGISTRATION */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200 flex flex-col justify-between group">
-              <div className="h-44 w-full overflow-hidden relative">
-                <img src={step1Img} alt="Registration" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                <img src={iconArrow} alt="Arrow" className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 hidden lg:block brightness-200" />
-              </div>
-              <div className="flex bg-[#FFAA17]">
-                <div className="w-8 bg-[#222429] text-white text-[10px] font-extrabold flex items-center justify-center [writing-mode:vertical-lr] rotate-180 py-2 shrink-0">
-                  1. REGISTRATION
-                </div>
-                <div className="p-3.5 space-y-1.5 flex-1">
-                  <img src={iconId} alt="ID" className="w-5 h-5 object-contain" />
-                  <p className="text-xs text-[#222429] font-medium leading-tight">
-                    Users have to register themselves on the CLMS portal.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 2: LOGIN */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200 flex flex-col justify-between group">
-              <div className="h-44 w-full overflow-hidden relative bg-[#222429] flex items-center justify-center">
-                <img src={banner2} alt="Login" className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300" />
-                <img src={iconArrow} alt="Arrow" className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 hidden lg:block brightness-200" />
-              </div>
-              <div className="flex bg-[#FFAA17]">
-                <div className="w-8 bg-[#222429] text-white text-[10px] font-extrabold flex items-center justify-center [writing-mode:vertical-lr] rotate-180 py-2 shrink-0">
-                  2. LOGIN
-                </div>
-                <div className="p-3.5 space-y-1.5 flex-1">
-                  <img src={iconLogin} alt="Login" className="w-5 h-5 object-contain" />
-                  <p className="text-xs text-[#222429] font-medium leading-tight">
-                    After Registration, Login to the account basis of details filled during registration.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3: MAKE PROFILE */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200 flex flex-col justify-between group">
-              <div className="h-44 w-full overflow-hidden relative">
-                <img src={step3Img} alt="Make Profile" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                <img src={iconArrow} alt="Arrow" className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 hidden lg:block brightness-200" />
-              </div>
-              <div className="flex bg-[#FFAA17]">
-                <div className="w-8 bg-[#222429] text-white text-[10px] font-extrabold flex items-center justify-center [writing-mode:vertical-lr] rotate-180 py-2 shrink-0">
-                  3. MAKE PROFILE
-                </div>
-                <div className="p-3.5 space-y-1.5 flex-1">
-                  <img src={iconDesktop} alt="Desktop" className="w-5 h-5 object-contain" />
-                  <p className="text-xs text-[#222429] font-medium leading-tight">
-                    Complete the profile in few steps to get personalized Dashboard.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 4: APPLY */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200 flex flex-col justify-between group">
-              <div className="h-44 w-full overflow-hidden relative">
-                <img src={step4Img} alt="Apply" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div className="flex bg-[#FFAA17]">
-                <div className="w-8 bg-[#222429] text-white text-[10px] font-extrabold flex items-center justify-center [writing-mode:vertical-lr] rotate-180 py-2 shrink-0">
-                  4. APPLY
-                </div>
-                <div className="p-3.5 space-y-1.5 flex-1">
-                  <img src={iconDoc} alt="Document" className="w-5 h-5 object-contain" />
-                  <p className="text-xs text-[#222429] font-medium leading-tight">
-                    Apply and Track Application request through personalized Dashboard.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <Footer />
     </div>
   );
 };

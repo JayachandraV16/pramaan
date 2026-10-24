@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { NotificationBell } from "./NotificationBell";
 import { Badge } from "./Badge";
 import { useAuth } from "../../context/AuthContext";
 export const Navbar: React.FC = () => {
@@ -145,6 +146,7 @@ export const Navbar: React.FC = () => {
 
           {/* Right Area: Citizen Portal & Login / User Dropdown */}
           <div className="flex items-center gap-3">
+            {user && <NotificationBell />}
             <Link
               to="/verify-public"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#FFAA17] text-[#1a1a2e] shadow-xs hover:bg-[#f8aa24] uppercase tracking-wider"
@@ -219,6 +221,41 @@ export const Navbar: React.FC = () => {
                       >
                         My Dashboard
                       </Link>
+                      <Link
+                        to="/profile"
+                        onClick={() => setRoleDropdownOpen(false)}
+                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                      >
+                        My Profile
+                      </Link>
+                      {(
+
+                        <>
+                      <Link
+                        to="/due"
+                        onClick={() => setRoleDropdownOpen(false)}
+                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                      >
+                        Re-verification Due List
+                      </Link>
+                      <Link
+                        to="/reports"
+                        onClick={() => setRoleDropdownOpen(false)}
+                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                      >
+                        Reports & Exports
+                      </Link>
+                        </>
+                      )}
+                      {user.role_id === "ADMIN" && (
+                        <Link
+                          to="/fees"
+                          onClick={() => setRoleDropdownOpen(false)}
+                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                        >
+                          Fees & Validity Rules
+                        </Link>
+                        )}
 
                       {/* INSTRUMENT_OWNER links */}
                       {user.role_id === "INSTRUMENT_OWNER" && (
@@ -324,6 +361,13 @@ export const Navbar: React.FC = () => {
                             className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
                           >
                             Digital Certificates Vault
+                          </Link>
+                          <Link
+                            to="/users"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                          >
+                            User Accounts
                           </Link>
                         </>
                       )}
@@ -502,6 +546,15 @@ export const Navbar: React.FC = () => {
                   className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
                 >
                   Digital Certificates
+                </Link>
+              )}
+              {user.role_id === "ADMIN" && (
+                <Link
+                  to="/users"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-1.5 text-xs font-semibold text-slate-800"
+                >
+                  User Accounts
                 </Link>
               )}
             </div>

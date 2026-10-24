@@ -50,6 +50,9 @@ export function mapBackendApplicationToFrontend(item: any): VerificationApplicat
     schedule: item.schedule || undefined,
     verification_id: item.verification_id || item.verificationId || undefined,
     certificate_id: item.certificate_id || item.certificateId || undefined,
+    gras_challan_number: item.gras_challan_number || undefined,
+    payment_verified_at: item.payment_verified_at || null,
+    total_fee: item.total_fee != null ? Number(item.total_fee) : null,
   };
 }
 
@@ -106,6 +109,14 @@ export const applicationsApi = {
       return mapBackendApplicationToFrontend(response);
     }
     return null;
+  },
+
+  /**
+   * Withdraw an application that has not started (applicant or ADMIN).
+   * POST /api/applications/:id/cancel
+   */
+  async cancelApplication(id: string, reason?: string): Promise<void> {
+    await apiClient.post<any>(`/applications/${id}/cancel`, { reason: reason || undefined });
   },
 
   /**

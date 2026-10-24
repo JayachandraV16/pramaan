@@ -10,6 +10,7 @@ interface AuthContextType {
   register: (payload: RegisterPayload) => Promise<User>;
   logout: () => Promise<void>;
   switchRole: (role: RoleName) => Promise<User>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +65,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUser = async () => {
+    const current = await authApi.getCurrentUser();
+    if (current) setUser(current);
+  };
+
   const switchRole = async (role: RoleName): Promise<User> => {
     setIsLoading(true);
     try {
@@ -85,6 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         switchRole,
+        refreshUser,
       }}
     >
       {children}

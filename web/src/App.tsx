@@ -17,6 +17,12 @@ import { AssignmentsListPage } from "./pages/assignments/AssignmentsListPage";
 import { CertificatesListPage } from "./pages/certificates/CertificatesListPage";
 import { CertificateDetailPage } from "./pages/certificates/CertificateDetailPage";
 import { PublicVerifyPage } from "./pages/verify/PublicVerifyPage";
+import { UsersPage } from "./pages/admin/UsersPage";
+import { FeeRulesPage } from "./pages/admin/FeeRulesPage";
+import { ReportsPage } from "./pages/reports/ReportsPage";
+import { DueListPage } from "./pages/instruments/DueListPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 export const App: React.FC = () => {
   return (
@@ -54,6 +60,16 @@ export const App: React.FC = () => {
           {/* Certificates routes */}
           <Route path="/certificates" element={<CertificatesListPage />} />
           <Route path="/certificates/:id" element={<CertificateDetailPage />} />
+
+          {/* Admin: approve officers, suspend accounts */}
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/fees" element={<FeeRulesPage />} />
+
+          {/* Reports, re-verification tracking, own profile */}
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/due" element={<DueListPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
 
           {/* Public Verification route */}
           <Route path="/verify-public" element={<PublicVerifyPage />} />
