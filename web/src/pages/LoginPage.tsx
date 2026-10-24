@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n/I18nContext';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +7,7 @@ import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 
 export const LoginPage: React.FC = () => {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -60,10 +62,11 @@ export const LoginPage: React.FC = () => {
       <div className="max-w-md w-full space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-900">Sign In</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t('login.title', 'Sign In')}</h2>
         </div>
 
-        {/* Demo Fast Switcher */}
+        {/* Demo Fast Switcher: development builds only (it pre-fills a known dev password) */}
+        {import.meta.env.DEV && (
         <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3">
           <div className="grid grid-cols-2 gap-1.5">
             {demoAccounts.map((acc) => (
@@ -82,6 +85,7 @@ export const LoginPage: React.FC = () => {
             ))}
           </div>
         </div>
+        )}
 
         {/* Main Login Card */}
         <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-gov">
@@ -108,7 +112,7 @@ export const LoginPage: React.FC = () => {
             {/* Email / Mobile */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Email Address / Registered Mobile
+                {t('login.identifier', 'Email Address / Registered Mobile')}
               </label>
               <input
                 type="text"
@@ -123,7 +127,7 @@ export const LoginPage: React.FC = () => {
             {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">Password</label>
+                <label className="text-xs font-semibold text-slate-700">{t('login.password', 'Password')}</label>
                 <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Demo password is: Pramaan@2026'); }} className="text-[11px] text-amber-700 hover:underline">
                   Forgot?
                 </a>

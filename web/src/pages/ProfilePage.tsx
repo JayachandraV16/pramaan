@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/I18nContext';
 import { profileApi } from '../api/workflow.api';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -20,6 +21,9 @@ const NoticeLine: React.FC<{ n: Notice }> = ({ n }) =>
 /** Own profile and password. Role, e-mail and status cannot be changed here. */
 export const ProfilePage: React.FC = () => {
   const { user, isLoading, refreshUser } = useAuth();
+  const { lang, setLang } = useI18n();
+  const [prefs, setPrefs] = useState({ notifyEmail: true, notifySms: true });
+  const [prefsNotice, setPrefsNotice] = useState<Notice>(null);
   const [form, setForm] = useState({ fullName: '', phone: '', organizationName: '', address: '' });
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [profileNotice, setProfileNotice] = useState<Notice>(null);
@@ -27,6 +31,7 @@ export const ProfilePage: React.FC = () => {
   const [busy, setBusy] = useState<'profile' | 'pw' | null>(null);
 
   useEffect(() => {
+    if (user) setPrefs({ notifyEmail: user.notify_email !== false, notifySms: user.notify_sms !== false });
     if (user) setForm({ fullName: user.full_name || '', phone: user.phone || '', organizationName: user.organization_name || '', address: user.address || '' });
   }, [user]);
 
@@ -43,6 +48,21 @@ export const ProfilePage: React.FC = () => {
       setProfileNotice({ kind: 'ok', text: 'Profile updated.' });
     } catch (err: any) {
       setProfileNotice({ kind: 'err', text: err?.message || 'Could not update the profile.' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const savePrefs = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy('profile');
+    setPrefsNotice(null);
+    try {
+      await profileApi.update({ ...prefs, preferredLanguage: lang });
+      await refreshUser();
+      setPrefsNotice({ kind: 'ok', text: 'Preferences saved.' });
+    } catch (err: any) {
+      setPrefsNotice({ kind: 'err', text: err?.message || 'Could not save preferences.' });
     } finally {
       setBusy(null);
     }
@@ -84,6 +104,27 @@ export const ProfilePage: React.FC = () => {
         <label className="block text-xs font-semibold text-slate-700">Address<input value={form.address} onChange={f('address')} className={inputCls} /></label>
         <NoticeLine n={profileNotice} />
         <Button type="submit" isLoading={busy === 'profile'}>Save changes</Button>
+      </form>
+
+      <form onSubmit={savePrefs} className={card}>
+        <h2 className="text-sm font-bold text-slate-900">Language and notifications</h2>
+        <label className="block text-xs font-semibold text-slate-700">Language / भाषा
+          <select value={lang} onChange={(e) => setLang(e.target.value === 'hi' ? 'hi' : 'en')} className={inputCls}>
+            <option value="en">English</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+        </label>
+        <p className="text-xs text-slate-500">Notifications, e-mails and SMS are sent in this language.</p>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={prefs.notifyEmail} onChange={(e) => setPrefs({ ...prefs, notifyEmail: e.target.checked })} />
+          Send me e-mail notifications
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={prefs.notifySms} onChange={(e) => setPrefs({ ...prefs, notifySms: e.target.checked })} />
+          Send me SMS for important events (certificates, schedules, enforcement)
+        </label>
+        <NoticeLine n={prefsNotice} />
+        <Button type="submit" isLoading={busy === 'profile'}>Save preferences</Button>
       </form>
 
       <form onSubmit={savePassword} className={card}>

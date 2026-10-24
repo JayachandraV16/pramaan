@@ -23,6 +23,7 @@ import { ReportsPage } from "./pages/reports/ReportsPage";
 import { DueListPage } from "./pages/instruments/DueListPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { EnforcementPage } from "./pages/enforcement/EnforcementPage";
 
 export const App: React.FC = () => {
   return (
@@ -70,6 +71,7 @@ export const App: React.FC = () => {
           <Route path="/due" element={<DueListPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/enforcement" element={<EnforcementPage />} />
 
           {/* Public Verification route */}
           <Route path="/verify-public" element={<PublicVerifyPage />} />

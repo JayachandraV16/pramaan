@@ -19,6 +19,9 @@ export interface User {
   status: UserStatus;
   created_at: string;
   updated_at?: string;
+  preferred_language?: 'en' | 'hi';
+  notify_email?: boolean;
+  notify_sms?: boolean;
 }
 
 export type InstrumentStatus =
@@ -50,6 +53,9 @@ export interface BackendUser {
   address?: string | null;
   created_at: string;
   role: RoleName;
+  preferred_language?: 'en' | 'hi';
+  notify_email?: boolean;
+  notify_sms?: boolean;
 }
 
 export interface BackendAuthResponse {

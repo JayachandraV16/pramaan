@@ -66,6 +66,9 @@ export interface PublicVerificationResponse {
     signature: 'VALID' | 'INVALID' | 'NOT_PROVIDED';
     recordHash: 'MATCH' | 'MISMATCH' | 'UNAVAILABLE';
     pdfSha256: string | null;
+    pdfSigned?: boolean;
+    signerSubject?: string | null;
+    signedAt?: string | null;
     recordFingerprint: string | null;
   } | null;
   verifiedAt: string;
@@ -78,6 +81,16 @@ export interface DocumentCheckResponse {
   status?: string;
   validUntil?: string;
   message: string;
+  /** The PDF's own embedded digital signature, checked independently of the registry. */
+  signature?: {
+    signed: boolean;
+    valid?: boolean;
+    digestMatches?: boolean;
+    coversWholeFile?: boolean;
+    subject?: string;
+    selfSigned?: boolean;
+    reason?: string;
+  };
 }
 
 function applyFilters(list: VerificationCertificate[], params?: { status?: CertificateStatus; search?: string }) {

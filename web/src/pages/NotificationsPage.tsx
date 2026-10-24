@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/I18nContext';
 import { notificationsApi, AppNotification } from '../api/workflow.api';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -24,13 +25,14 @@ const TONE: Record<string, string> = {
   CERTIFICATE_ISSUED: 'bg-emerald-100 text-emerald-800',
 };
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const when = (iso: string, lang: string) =>
+  new Date(iso).toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /** In-app notification centre: application updates, schedules, certificate and expiry alerts, queries. */
 export const NotificationsPage: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { t, lang } = useI18n();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -90,15 +92,15 @@ export const NotificationsPage: React.FC = () => {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-          <p className="text-sm text-slate-600">{unread ? `${unread} unread` : 'You are all caught up.'}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('notif.title', 'Notifications')}</h1>
+          <p className="text-sm text-slate-600">{unread ? t('notif.unreadCount', '{n} unread', { n: unread }) : t('notif.caughtUp', 'You are all caught up.')}</p>
         </div>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={onlyUnread} onChange={(e) => setOnlyUnread(e.target.checked)} />
-          Unread only
+          {t('notif.unreadOnly', 'Unread only')}
         </label>
         <Button size="sm" variant="secondary" isLoading={busy} disabled={!unread} onClick={markAll}>
-          Mark all as read
+          {t('notif.markAll', 'Mark all as read')}
         </Button>
       </div>
 
@@ -107,7 +109,7 @@ export const NotificationsPage: React.FC = () => {
       {loading ? (
         <LoadingSpinner label="Loading notifications..." />
       ) : shown.length === 0 && !error ? (
-        <EmptyState title="Nothing to show" description={onlyUnread ? 'No unread notifications.' : 'Updates about your applications and certificates will appear here.'} />
+        <EmptyState title={t('notif.empty', 'Nothing to show')} description={onlyUnread ? t('notif.emptyHelp', 'Updates about your applications and certificates will appear here.') : t('notif.emptyHelp', 'Updates about your applications and certificates will appear here.')} />
       ) : (
         <ul className="bg-white rounded-2xl border border-slate-200 shadow-gov divide-y divide-slate-100 overflow-hidden">
           {shown.map((n) => (
@@ -121,12 +123,12 @@ export const NotificationsPage: React.FC = () => {
                 <span className="flex-1 min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className={`text-sm ${n.read_at ? 'font-medium' : 'font-bold'} text-slate-900`}>{n.title}</span>
-                    <span className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ${TONE[n.type] || 'bg-slate-100 text-slate-700'}`}>{TYPE_LABEL[n.type] || n.type}</span>
+                    <span className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ${TONE[n.type] || 'bg-slate-100 text-slate-700'}`}>{t(`notif.type.${n.type}`, TYPE_LABEL[n.type] || n.type)}</span>
                   </span>
                   <span className="block text-sm text-slate-600 mt-0.5">{n.message}</span>
-                  <span className="block text-[11px] text-slate-400 mt-1">{when(n.created_at)}</span>
+                  <span className="block text-[11px] text-slate-400 mt-1">{when(n.created_at, lang)}</span>
                 </span>
-                {target(n) && <span className="self-center text-xs text-[#1a3a5c] font-semibold">Open →</span>}
+                {target(n) && <span className="self-center text-xs text-[#1a3a5c] font-semibold">{t('notif.open', 'Open →')}</span>}
               </button>
             </li>
           ))}

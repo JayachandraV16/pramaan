@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NotificationBell } from "./NotificationBell";
+import { useI18n } from "../../i18n/I18nContext";
 import { Badge } from "./Badge";
 import { useAuth } from "../../context/AuthContext";
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { lang, setLang, t } = useI18n();
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -46,10 +48,12 @@ export const Navbar: React.FC = () => {
   };
 
   const navMenuItems = [
-    { label: "Home", anchorId: "" },
-    { label: "About Us", anchorId: "overview" },
+    { label: "Home", key: "nav.home", english: "Home", anchorId: "" },
+    { label: "How it works", key: "nav.how", english: "How it works", anchorId: "how-it-works" },
     {
       label: "Act & Rules",
+      key: "nav.rules",
+      english: "Act & Rules",
       anchorId: "rules",
       action: () => setActModalOpen(true),
     },
@@ -72,7 +76,7 @@ export const Navbar: React.FC = () => {
                   pram<span className="text-[#FFAA17]">aa</span>n
                 </span>
                 <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">
-                  Legal Metrology Portal
+                  {t("nav.portal", "Legal Metrology Portal")}
                 </span>
               </div>
             </div>
@@ -86,7 +90,7 @@ export const Navbar: React.FC = () => {
             onClick={() => handleNavClick("hero")}
             className="hidden md:inline-flex px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-md transition-colors"
           >
-            Skip to Main Content
+            {t("nav.skip", "Skip to Main Content")}
           </button>
 
           <div className="w-6 h-6 rounded-full bg-[#1a1a2e] text-white flex items-center justify-center text-[10px] font-bold">
@@ -101,7 +105,12 @@ export const Navbar: React.FC = () => {
 
           <span className="text-slate-300 hidden sm:inline">|</span>
 
-          <select className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer py-1">
+          <select
+            aria-label={t("lang.label", "Language")}
+            value={lang}
+            onChange={(e) => setLang(e.target.value === "hi" ? "hi" : "en")}
+            className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer py-1"
+          >
             <option value="en">English</option>
             <option value="hi">हिन्दी</option>
           </select>
@@ -135,7 +144,7 @@ export const Navbar: React.FC = () => {
                       : "text-[#1a1a2e] hover:text-[#FFAA17]"
                   }`}
                 >
-                  {item.label}
+                  {t(item.key, item.english)}
                   {isHome && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FFAA17]" />
                   )}
@@ -164,7 +173,7 @@ export const Navbar: React.FC = () => {
                   d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
                 />
               </svg>
-              Verify documents
+              {t("nav.verify", "Verify documents")}
             </Link>
 
             {isAuthenticated && user ? (
@@ -219,14 +228,14 @@ export const Navbar: React.FC = () => {
                         onClick={() => setRoleDropdownOpen(false)}
                         className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
                       >
-                        My Dashboard
+                        {t("nav.dashboard", "My Dashboard")}
                       </Link>
                       <Link
                         to="/profile"
                         onClick={() => setRoleDropdownOpen(false)}
                         className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
                       >
-                        My Profile
+                        {t("nav.profile", "My Profile")}
                       </Link>
                       {(
 
@@ -236,14 +245,21 @@ export const Navbar: React.FC = () => {
                         onClick={() => setRoleDropdownOpen(false)}
                         className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
                       >
-                        Re-verification Due List
+                        {t("nav.due", "Re-verification Due List")}
                       </Link>
                       <Link
                         to="/reports"
                         onClick={() => setRoleDropdownOpen(false)}
                         className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
                       >
-                        Reports & Exports
+                        {t("nav.reports", "Reports & Exports")}
+                      </Link>
+                      <Link
+                        to="/enforcement"
+                        onClick={() => setRoleDropdownOpen(false)}
+                        className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                      >
+                        {t("nav.enforcement", "Enforcement")}
                       </Link>
                         </>
                       )}
@@ -253,7 +269,7 @@ export const Navbar: React.FC = () => {
                           onClick={() => setRoleDropdownOpen(false)}
                           className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
                         >
-                          Fees & Validity Rules
+                          {t("nav.fees", "Fees & Validity Rules")}
                         </Link>
                         )}
 
@@ -383,7 +399,7 @@ export const Navbar: React.FC = () => {
                           }}
                           className="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
                         >
-                          Sign Out
+                          {t("nav.signOut", "Sign Out")}
                         </button>
                       </div>
                     </div>
@@ -426,14 +442,14 @@ export const Navbar: React.FC = () => {
                         onClick={() => setLoginDropdownOpen(false)}
                         className="block px-3 py-2 rounded-lg text-xs font-bold text-[#1a1a2e] hover:bg-slate-100"
                       >
-                        Sign In
+                        {t("nav.signIn", "Sign In")}
                       </Link>
                       <Link
                         to="/register"
                         onClick={() => setLoginDropdownOpen(false)}
                         className="block px-3 py-2 rounded-lg text-xs font-bold text-amber-700 hover:bg-amber-50"
                       >
-                        Register New Account
+                        {t("nav.register", "Register New Account")}
                       </Link>
                     </div>
                   </>

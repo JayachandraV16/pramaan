@@ -157,7 +157,7 @@ export const dueApi = {
 /* ---------- profile ---------- */
 
 export const profileApi = {
-  update: (body: { fullName?: string; phone?: string; organizationName?: string; address?: string }) =>
+  update: (body: { fullName?: string; phone?: string; organizationName?: string; address?: string; preferredLanguage?: 'en' | 'hi'; notifyEmail?: boolean; notifySms?: boolean }) =>
     apiClient.patch<unknown>('/users/me', body),
   changePassword: (currentPassword: string, newPassword: string) =>
     apiClient.post<unknown>('/users/me/password', { currentPassword, newPassword }),
@@ -181,4 +181,65 @@ export const notificationsApi = {
   list: () => apiClient.get<AppNotification[]>('/notifications'),
   markRead: (id: string) => apiClient.patch<unknown>(`/notifications/${id}/read`, {}),
   markAllRead: () => apiClient.patch<unknown>('/notifications/read-all', {}),
+};
+
+/* ---------- enforcement ---------- */
+
+export type OffenceType = 'NONE' | 'UNVERIFIED_INSTRUMENT' | 'EXPIRED_CERTIFICATE' | 'UNSTAMPED_INSTRUMENT' | 'SEAL_TAMPERING' | 'FALSE_WEIGHT_OR_MEASURE' | 'OTHER';
+export type EnforcementStatus = 'OPEN' | 'NOTICE_ISSUED' | 'PENALTY_IMPOSED' | 'RESOLVED' | 'DISMISSED';
+export type EnforcementSource = 'SPOT_CHECK' | 'COMPLAINT' | 'ROUTINE_INSPECTION';
+
+export interface EnforcementCase {
+  id: string;
+  case_number: string;
+  source: EnforcementSource;
+  offence_type: OffenceType;
+  status: EnforcementStatus;
+  subject_name: string;
+  subject_organization: string | null;
+  subject_phone: string | null;
+  description: string;
+  location: string | null;
+  detected_on: string;
+  detected_by_name?: string;
+  instrument_name?: string | null;
+  serial_number?: string | null;
+  certificate_number?: string | null;
+  offence_number: number;
+  penalty_amount: string | number | null;
+  penalty_reference: string | null;
+  resolution_note: string | null;
+  offender_flag?: 'FIRST' | 'REPEAT' | 'HABITUAL' | null;
+  offender_offences_12m?: number | null;
+  events?: Array<{ id: string; from_status: string | null; to_status: string; note: string | null; created_at: string; actor_name: string | null }>;
+}
+
+export interface RepeatOffender {
+  offender_key: string;
+  subject_name: string;
+  subject_organization: string | null;
+  offences_total: number;
+  offences_12m: number;
+  last_offence_on: string | null;
+  penalties_total: string | number;
+  flag: 'FIRST' | 'REPEAT' | 'HABITUAL';
+}
+
+export interface EnforcementSummary {
+  byStatus: Array<{ status: string; count: number }>;
+  byType: Array<{ offence_type: string; count: number }>;
+  bySource: Array<{ source: string; count: number }>;
+  monthly: Array<{ month: string; cases: number }>;
+  totals: { open_cases: number; compliant_spot_checks: number; penalties_total: string | number };
+  offenderFlags: Array<{ flag: string; count: number }>;
+}
+
+export const enforcementApi = {
+  list: () => apiClient.get<EnforcementCase[]>('/enforcement'),
+  get: (id: string) => apiClient.get<EnforcementCase>(`/enforcement/${id}`),
+  create: (body: Record<string, unknown>) => apiClient.post<EnforcementCase>('/enforcement', body),
+  setStatus: (id: string, body: { status: EnforcementStatus; note?: string; penaltyAmount?: number; penaltyReference?: string }) =>
+    apiClient.patch<EnforcementCase>(`/enforcement/${id}/status`, body),
+  offenders: (all = false) => apiClient.get<RepeatOffender[]>(`/enforcement/offenders${all ? '?all=true' : ''}`),
+  summary: () => apiClient.get<EnforcementSummary>('/enforcement/summary'),
 };

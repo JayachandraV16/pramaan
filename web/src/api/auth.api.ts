@@ -57,6 +57,9 @@ export function mapBackendUserToFrontend(backendUser: BackendUser): User {
     address: backendUser.address || undefined,
     status: backendUser.status || 'ACTIVE',
     created_at: backendUser.created_at || new Date().toISOString(),
+    preferred_language: backendUser.preferred_language,
+    notify_email: backendUser.notify_email,
+    notify_sms: backendUser.notify_sms,
   };
 }
 

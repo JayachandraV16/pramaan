@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n/I18nContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -74,6 +75,7 @@ const INTEGRITY_LABEL: Record<string, string> = {
 };
 
 export const PublicVerifyPage: React.FC = () => {
+  const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParam = searchParams.get('q') || '';
   const signatureParam = searchParams.get('s') || '';
@@ -156,16 +158,16 @@ export const PublicVerifyPage: React.FC = () => {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       <div className="text-center">
         <img src={pramaanLogoMain} alt="Pramaan" className="w-16 h-16 mx-auto mb-2 object-contain" />
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Verify a certificate</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('verify.title', 'Verify a certificate')}</h1>
         <p className="text-sm text-slate-600 mt-1">
-          Scan the QR code on the certificate, or enter its certificate number.
+          {t('verify.intro', 'Scan the QR code on the certificate, or enter its certificate number.')}
         </p>
       </div>
 
       <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-gov space-y-4">
         <form onSubmit={handleSubmit} className="space-y-3">
           <label htmlFor="verify-query" className="block text-xs font-semibold text-slate-700">
-            Certificate number or QR token *
+            {t('verify.queryLabel', 'Certificate number or QR token *')}
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
@@ -195,8 +197,8 @@ export const PublicVerifyPage: React.FC = () => {
       {result && verdict && (
         <div className="space-y-6">
           <div className={`rounded-2xl p-6 border shadow-gov ${VERDICT_COPY[verdict].tone}`} role="status">
-            <h2 className="text-lg font-bold">{VERDICT_COPY[verdict].title}</h2>
-            <p className="text-sm mt-1 leading-relaxed">{VERDICT_COPY[verdict].text}</p>
+            <h2 className="text-lg font-bold">{t(`verify.${verdict}.title`, VERDICT_COPY[verdict].title)}</h2>
+            <p className="text-sm mt-1 leading-relaxed">{t(`verify.${verdict}.text`, VERDICT_COPY[verdict].text)}</p>
             {result.certificate?.revokedAt && (
               <p className="text-xs mt-2">Revoked on {formatDate(result.certificate.revokedAt)}.</p>
             )}
@@ -221,7 +223,7 @@ export const PublicVerifyPage: React.FC = () => {
 
           {result.integrity && (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-gov p-5 space-y-2">
-              <h3 className="text-sm font-bold text-slate-800">Integrity checks</h3>
+              <h3 className="text-sm font-bold text-slate-800">{t('verify.integrity', 'Integrity checks')}</h3>
               <ul className="text-sm text-slate-700 space-y-1">
                 <li>
                   QR signature:{' '}
@@ -237,6 +239,14 @@ export const PublicVerifyPage: React.FC = () => {
                     <code className="font-mono text-xs">{result.integrity.recordFingerprint}</code>
                   </li>
                 )}
+                <li>
+                  {t('verify.signature', 'Digital signature')}:{' '}
+                  <strong>
+                    {result.integrity.pdfSigned
+                      ? t('verify.signedBy', 'Signed by {who}', { who: result.integrity.signerSubject || '-' })
+                      : t('verify.notSigned', 'Not digitally signed (issued without a signing key)')}
+                  </strong>
+                </li>
                 {result.integrity.pdfSha256 && (
                   <li className="break-all">
                     PDF SHA-256: <code className="font-mono text-xs">{result.integrity.pdfSha256}</code>
@@ -250,7 +260,7 @@ export const PublicVerifyPage: React.FC = () => {
       )}
 
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-gov space-y-3">
-        <h2 className="text-sm font-bold text-slate-800">Check a certificate PDF</h2>
+        <h2 className="text-sm font-bold text-slate-800">{t('verify.checkPdf', 'Check a certificate PDF')}</h2>
         <p className="text-xs text-slate-600">
           Received a certificate as a file? Upload it to confirm it is byte-for-byte the document Pramaan issued.
           Any edit, even a single character, will be detected. The file is not stored.
@@ -282,6 +292,18 @@ export const PublicVerifyPage: React.FC = () => {
             {docResult.matches && (
               <p className="mt-1 text-xs">
                 Certificate {docResult.certificateNumber} · status {docResult.status}
+              </p>
+            )}
+            {docResult.signature && (
+              <p className="mt-1 text-xs">
+                {t('verify.signature', 'Digital signature')}:{' '}
+                {!docResult.signature.signed
+                  ? t('verify.fileNotSigned', 'this file carries no signature')
+                  : docResult.signature.valid
+                  ? t('verify.sigValid', 'valid, signed by {who}', { who: docResult.signature.subject || '-' }) +
+                    (docResult.signature.coversWholeFile === false ? ' ' + t('verify.sigExtra', '(content was added after signing)') : '') +
+                    (docResult.signature.selfSigned ? ' ' + t('verify.sigSelf', '(self-signed key: not from a certifying authority)') : '')
+                  : t('verify.sigBroken', 'INVALID - the document was changed after it was signed')}
               </p>
             )}
             <p className="mt-1 break-all text-[11px] font-mono opacity-80">SHA-256 {docResult.sha256}</p>
