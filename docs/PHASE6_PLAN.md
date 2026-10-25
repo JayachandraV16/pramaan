@@ -46,6 +46,6 @@ Out of scope for now: Hindi OCR, PDF documents, handwriting, on-phone OCR, autom
 
 ## 4. Plans for the others (not started)
 
-- **Command HQ**: one `GET /api/hq/overview` (national counters, trend, risk list) and drill-down endpoints that return the underlying records with their evidence (certificate number + hashes, inspection photos, officer, time, GPS); a page with KPI tiles, charts, a division table and a simple coordinate map (plain SVG or one small open-source library); an "evidence pack" export per certificate or case listing every hash so a third party can re-verify it.
+- **Command HQ** (built; see `docs/TEST_REPORT.md` 4i and `docs/API_CONTRACTS.md`): one `GET /api/hq/overview` (national counters, trend, risk list) and drill-down endpoints that return the underlying records with their evidence (certificate number + hashes, inspection photos, officer, time, GPS); a page with KPI tiles, charts, a division table and a simple coordinate map (plain SVG or one small open-source library); an "evidence pack" export per certificate or case listing every hash so a third party can re-verify it.
 - **Real-device offline**: written device test script (airplane-mode inspection, sync, kill app mid-sync, clock skew, duplicate pushes); add camera/image-picker and a photo queue with client IDs on attachments (server change needed); offline accept; fix what the device run finds.
 - **Ed25519**: follow the design: dual-mode verifier first, then v2 issuance behind a flag, then the mobile verifier and signed revocation list.

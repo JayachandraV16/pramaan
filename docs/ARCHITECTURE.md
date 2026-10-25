@@ -139,3 +139,5 @@ Migrations are append-only and applied in filename order inside a transaction ea
 - **Certificate numbers** (`utils/certificateId.js`): legacy or structured with check character and keyed tag, switch `CERT_ID_SCHEME`.
 - **Paper-copy check** (`modules/qr-auth/copyCheck.js`): QR (jsQR) + local OCR + registry comparison; image decoding in `utils/imageTools.js`.
 - **Storage tools** (`src/storage`, `stored_files`): audit, cleanup and migration between the local and S3-compatible drivers; see `docs/STORAGE.md`.
+
+- **Command HQ** (`modules/hq`, web `/hq`): admin-only overview, map, drill-down and evidence packs/report; reuses the reports and enforcement summaries; see D32.

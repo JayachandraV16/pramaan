@@ -2,8 +2,8 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `08298a3` plus the query-resolution fix described in 4e (update).
-- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 34 migrations applied. No real or production data is used.
+- Code: `develop` at the query-resolution commit plus Command HQ (4i).
+- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 35 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
 
@@ -11,7 +11,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 197 of 197** (0 failed) |
+| API automated tests | **PASS: 206 of 206** (0 failed; two consecutive full runs) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
@@ -21,6 +21,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 | Structured certificate number and full fingerprints in a real browser (4f) | **PASS: 13 of 13** |
 | Paper-copy check in a real browser with the real OCR engine (4g) | **PASS: 11 of 11** |
 | Upload validation and rotated photos in a real browser (4h) | **PASS: 5 of 5** |
+| Command HQ in a real browser (4i) | **PASS: 25 of 25** |
 | Every other page in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
 
 ## 1. End-to-end workflow: owner → admin → officer → certificate → public verification
@@ -228,6 +229,28 @@ Local storage stays the default; the S3-compatible driver is unchanged in behavi
 | Against a **real** S3 / MinIO / R2 bucket (credentials, endpoint styles, server-side encryption, large objects) | | **NOT TESTED** (fake client only) |
 | Migrating a large real upload folder; running the tools against the developer database (migration 034 is not applied there) | | **NOT TESTED** |
 | Re-encoding or thumbnailing stored pictures | | **NOT BUILT** (originals are kept unchanged on purpose; viewers and the OCR/QR paths apply the orientation) |
+
+## 4i. Command HQ (administrators only)
+
+New module `api/src/modules/hq` (`/api/hq/*`) and page `/hq`. It reuses the management summary, monthly trends and enforcement summary that already existed and adds the counters, the map, the drill-down lists and the evidence packs. Migration 035 (partial indexes).
+
+| Item | Evidence | Result |
+|---|---|---|
+| Admin only: anonymous 401, owner / LMO / GATC 403, admin 200, on all six routes | `hq.test.js` | PASS |
+| Every tile equals the database count, and every tile has a drill-down whose total is the same number (one definition feeds both) | `hq.test.js` | PASS |
+| Drill-down rows: reference, subject, status, date, responsible person, link to the record; division filter; pagination with a capped page size; unknown metric is 404 | `hq.test.js` | PASS |
+| Map: only instruments with coordinates are returned, with verification state, certificate number, due date and owner; open enforcement cases with coordinates; state filter; bad filter is 400 | `hq.test.js` | PASS |
+| Certificate evidence pack: IDs, record and PDF fingerprints (the record fingerprint is recomputed and compared), result seal, readings, officer / issuer / decider, inspection photos with SHA-256, GPS and uploader, nameplate checks, audit trail with hashes, signed file links | `hq.test.js` | PASS |
+| A certificate whose record was changed in the database shows `recordMatches: false` in its pack | `hq.test.js` | PASS |
+| Enforcement case evidence pack (case, events, actors, linked certificate hashes, audit trail) | `hq.test.js` | PASS |
+| Evidence report (CSV): one row per certificate with IDs, fingerprints, photo IDs and fingerprints, officer, issuer; status and date filters validated; empty range gives a header only | `hq.test.js` | PASS |
+| Opening an evidence pack and exporting the report are recorded in the audit log with the administrator's ID | `hq.test.js` | PASS |
+| Query plans use the new partial indexes (checked with sequential scans disabled); the overview answers in under 3 s on the test data | `hq.test.js` | PASS (small data: see below) |
+| Browser: owner, LMO and signed-out visitors are sent away from `/hq` (and the API refuses them); admin menu link; tiles match the API; OpenStreetMap tiles load; every located instrument and open case is a marker; the filter changes the markers; a marker shows what it is; a tile opens its records; a division opens its open applications; the evidence pack shows the full 64-character fingerprints, people, photo SHA-256 and audit trail; the CSV downloads | browser, 25 of 25 | PASS |
+| Query speed on a large register (tens of thousands of instruments and applications) | | **NOT TESTED** (indexes are in place and the plans are as intended, but only a small data set was used) |
+| Map with thousands of markers (it draws at most 2000 and says so; no clustering) | | **NOT TESTED** |
+| Touch use of the map and the page on a phone; other browsers than Edge | | **NOT TESTED** |
+| Division names come from what applicants typed (no controlled list), so one division can appear under several spellings | | known limitation |
 
 ## 5. Defects found and fixed during this work
 

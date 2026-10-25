@@ -25,11 +25,13 @@ const syncRoutes = require('./sync/sync.routes');
 const enforcementRoutes = require('./enforcement/enforcement.routes');
 const documentsRoutes = require('./documents/documents.routes');
 const nameplateRoutes = require('./nameplate/nameplate.routes');
+const hqRoutes = require('./hq/hq.routes');
 const { dashboardRouter, reportsRouter } = require('./reports/reports.routes');
 
 const router = express.Router();
 
 router.use('/auth', authRoutes);
+router.use('/hq', hqRoutes);
 router.use('/instruments', instrumentsRoutes);
 router.use('/applications', applicationsRoutes);
 router.use('/assignments', assignmentsRoutes);

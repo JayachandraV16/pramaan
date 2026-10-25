@@ -94,3 +94,6 @@ Evidence photos are fingerprinted at upload, so they are stored byte-for-byte. R
 
 ## D31 — Storage migration copies, verifies and never deletes
 `npm run storage:migrate` copies every file to the other driver, reads each copy back and compares SHA-256, never overwrites a different file on the target, and never touches the source. Switching `STORAGE_DRIVER` is a separate, deliberate step after a clean report.
+
+## D32 — Command HQ: one definition per number, administrators only
+Every figure on the HQ page is defined once (`hq.repository.js`, `DRILL`) and the same definition produces the tile and the list behind it, so they cannot disagree; a test compares each tile with its list and with the database. The routes require ADMIN and the service checks it again. Evidence packs recompute the record fingerprint instead of only repeating the stored one, so a record changed behind the application's back shows up. Looking at evidence and exporting the report are themselves audit-logged. The map draws at most 2000 instruments (no clustering yet) and says when it has cut the list; instruments without coordinates are counted, never invented onto the map.

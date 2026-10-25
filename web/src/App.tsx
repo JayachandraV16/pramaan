@@ -26,6 +26,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { EnforcementPage } from "./pages/enforcement/EnforcementPage";
 import { NameplateQueuePage } from "./pages/nameplate/NameplateQueuePage";
 import { QueriesInboxPage } from "./pages/queries/QueriesInboxPage";
+import { CommandHqPage } from "./pages/hq/CommandHqPage";
 
 export const App: React.FC = () => {
   return (
@@ -76,6 +77,7 @@ export const App: React.FC = () => {
           <Route path="/enforcement" element={<EnforcementPage />} />
           <Route path="/nameplate-queue" element={<NameplateQueuePage />} />
           <Route path="/queries" element={<QueriesInboxPage />} />
+          <Route path="/hq" element={<CommandHqPage />} />
 
           {/* Public Verification route */}
           <Route path="/verify-public" element={<PublicVerifyPage />} />

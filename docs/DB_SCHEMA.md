@@ -19,6 +19,7 @@ PostgreSQL. All primary keys are UUIDs (`gen_random_uuid()`), statuses are nativ
 | 019 | security & integrity | `PENDING_APPROVAL` user status; certificate `pdf_sha256`, `record_sha256`, revocation fields and the immutability trigger; `attachments.file_sha256`; `audit_log` (append-only, hash-chained) |
 | 020 | numbering, validity, due dates | `certificate_number_counters`; `instrument_types.default_validity_months`; `CERTIFICATE_REVOKED` notification type; view `instrument_verification_status` |
 | 021 | workflow integrity & evidence | `application_status_history`; `verification_results.result_sha256`; triggers locking readings/observations/results; GPS + capture time on attachments, start GPS on verifications |
+| 035 | Command HQ indexes | partial indexes: located instruments, open enforcement cases with coordinates, open applications by age, recent FAIL results |
 | 034 | stored files | `stored_files` (key, kind, MIME type, size, SHA-256, picture size, EXIF orientation, driver, uploader): the facts about every upload, independent of where the bytes live |
 | 033 | certificate id counters | `certificate_id_counters` (year, office): serial behind `PRM-YY-OOO-NNNNNNN-C-TTTT` numbers; legacy `CERT-` numbers keep `certificate_number_counters` |
 | 032 | query kinds and reply files | `query_kind` (CLARIFICATION, DOCUMENT_REQUEST), `application_queries.kind/requested_items`; `attachments.query_message_id` (the file still belongs to the application) |
