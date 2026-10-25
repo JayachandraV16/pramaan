@@ -1,0 +1,444 @@
+const pool = require('../../pool');
+
+// Find assignment
+async function findAssignmentById(id) {
+  const { rows } = await pool.query(
+    `SELECT id, application_id, assigned_to_id, status
+     FROM verification_assignments
+     WHERE id = $1`,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+// Find schedule
+async function findScheduleById(id) {
+  const { rows } = await pool.query(
+    `SELECT id, application_id, assignment_id, status
+     FROM verification_schedules
+     WHERE id = $1`,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+// Create actual verification
+async function createVerification({
+  applicationId,
+  assignmentId,
+  scheduleId,
+  performedById,
+  location,
+  remarks,
+  latitude,
+  longitude,
+  clientId,
+  clientStartedAt,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO verifications (
+      application_id,
+      assignment_id,
+      schedule_id,
+      performed_by_id,
+      verification_date,
+      start_time,
+      location,
+      remarks,
+      start_latitude,
+      start_longitude,
+      client_id,
+      client_started_at
+    )
+    VALUES ($1, $2, $3, $4, CURRENT_DATE, NOW(), $5, $6, $7, $8, $9, $10)
+    RETURNING *`,
+    [
+      applicationId,
+      assignmentId,
+      scheduleId || null,
+      performedById,
+      location || null,
+      remarks || null,
+      latitude ?? null,
+      longitude ?? null,
+      clientId || null,
+      clientStartedAt || null,
+    ]
+  );
+
+  return rows[0];
+}
+
+// Add qualitative observation
+async function createObservation({
+  verificationId,
+  observationType,
+  observationDescription,
+  observedValue,
+  remarks,
+  clientId,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO inspection_observations (
+      verification_id,
+      observation_type,
+      observation_description,
+      observed_value,
+      remarks,
+      client_id
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *`,
+    [
+      verificationId,
+      observationType,
+      observationDescription || null,
+      observedValue || null,
+      remarks || null,
+      clientId || null,
+    ]
+  );
+
+  return rows[0];
+}
+
+// Add measurement reading
+async function createReading({
+  verificationId,
+  readingType,
+  expectedValue,
+  observedValue,
+  unit,
+  tolerance,
+  result,
+  remarks,
+  clientId,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO verification_readings (
+      verification_id,
+      reading_type,
+      expected_value,
+      observed_value,
+      unit,
+      tolerance,
+      result,
+      remarks,
+      client_id
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING *`,
+    [
+      verificationId,
+      readingType,
+      expectedValue ?? null,
+      observedValue,
+      unit,
+      tolerance ?? null,
+      result,
+      remarks || null,
+      clientId || null,
+    ]
+  );
+
+  return rows[0];
+}
+
+// Get basic verification
+async function findVerificationById(id) {
+  const { rows } = await pool.query(
+    `SELECT v.*,
+            app.application_number,
+            app.application_type,
+            app.purpose,
+            i.id AS instrument_id,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            i.location_address,
+            i.location_lat,
+            i.location_lng,
+            owner.full_name AS owner_name,
+            owner.email AS owner_email,
+            owner.phone AS owner_phone,
+            owner.organization_name AS owner_organization,
+            u.full_name AS performed_by_name
+     FROM verifications v
+     JOIN verification_applications app
+       ON app.id = v.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     JOIN users u
+       ON u.id = v.performed_by_id
+     WHERE v.id = $1`,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+// Get observations for verification
+async function findObservationsByVerificationId(verificationId) {
+  const { rows } = await pool.query(
+    `SELECT *
+     FROM inspection_observations
+     WHERE verification_id = $1
+     ORDER BY observed_at ASC`,
+    [verificationId]
+  );
+
+  return rows;
+}
+
+// Get readings for verification
+async function findReadingsByVerificationId(verificationId) {
+  const { rows } = await pool.query(
+    `SELECT *
+     FROM verification_readings
+     WHERE verification_id = $1
+     ORDER BY recorded_at ASC`,
+    [verificationId]
+  );
+
+  return rows;
+}
+
+// Get final result
+async function findResultByVerificationId(verificationId) {
+  const { rows } = await pool.query(
+    `SELECT vr.*,
+            u.full_name AS decided_by_name
+     FROM verification_results vr
+     JOIN users u ON u.id = vr.decided_by_id
+     WHERE vr.verification_id = $1`,
+    [verificationId]
+  );
+
+  return rows[0] || null;
+}
+
+// Create final PASS/FAIL result
+async function createResult({
+  verificationId,
+  decision,
+  decidedById,
+  remarks,
+  resultSha256,
+}, client = pool) {
+  const { rows } = await client.query(
+    `INSERT INTO verification_results (
+      verification_id,
+      decision,
+      decided_by_id,
+      remarks,
+      result_sha256
+    )
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *`,
+    [
+      verificationId,
+      decision,
+      decidedById,
+      remarks || null,
+      resultSha256 || null,
+    ]
+  );
+
+  return rows[0];
+}
+
+// Mark verification as completed
+async function completeVerification(id) {
+  const { rows } = await pool.query(
+    `UPDATE verifications
+     SET status = 'COMPLETED',
+         end_time = NOW()
+     WHERE id = $1
+     RETURNING *`,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+// Get all verifications for ADMIN
+async function findAllVerifications() {
+  const { rows } = await pool.query(
+    `SELECT v.*,
+            app.application_number,
+            app.application_type,
+            i.id AS instrument_id,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.phone, applicant.phone) AS owner_phone,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            u.full_name AS performed_by_name,
+            (SELECT json_agg(json_build_object(
+               'id', io.id,
+               'verification_id', io.verification_id,
+               'observation_type', io.observation_type,
+               'observation_description', io.observation_description,
+               'observed_value', io.observed_value,
+               'remarks', io.remarks,
+               'observed_at', io.observed_at
+             )) FROM inspection_observations io WHERE io.verification_id = v.id) AS observations,
+            (SELECT json_agg(json_build_object(
+               'id', vrg.id,
+               'verification_id', vrg.verification_id,
+               'reading_type', vrg.reading_type,
+               'expected_value', vrg.expected_value,
+               'observed_value', vrg.observed_value,
+               'unit', vrg.unit,
+               'tolerance', vrg.tolerance,
+               'result', vrg.result,
+               'remarks', vrg.remarks,
+               'recorded_at', vrg.recorded_at
+             )) FROM verification_readings vrg WHERE vrg.verification_id = v.id) AS readings,
+            (SELECT json_build_object(
+               'id', vr.id,
+               'verification_id', vr.verification_id,
+               'decision', vr.decision,
+               'decided_by_id', vr.decided_by_id,
+               'decided_by_name', decider.full_name,
+               'remarks', vr.remarks,
+               'result_date', vr.result_date,
+               'created_at', vr.created_at
+             ) FROM verification_results vr
+               LEFT JOIN users decider ON decider.id = vr.decided_by_id
+               WHERE vr.verification_id = v.id LIMIT 1) AS result
+     FROM verifications v
+     JOIN verification_applications app
+       ON app.id = v.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     JOIN users u
+       ON u.id = v.performed_by_id
+     ORDER BY v.created_at DESC`
+  );
+
+  return rows;
+}
+
+// Get verifications performed by an officer
+async function findVerificationsByOfficerId(userId) {
+  const { rows } = await pool.query(
+    `SELECT v.*,
+            app.application_number,
+            app.application_type,
+            i.id AS instrument_id,
+            i.instrument_name,
+            i.manufacturer,
+            i.model,
+            i.serial_number AS instrument_serial,
+            i.capacity,
+            i.capacity_unit,
+            i.accuracy_class,
+            COALESCE(i.location_address, owner.address, applicant.address) AS location_address,
+            COALESCE(owner.full_name, applicant.full_name) AS owner_name,
+            COALESCE(owner.phone, applicant.phone) AS owner_phone,
+            COALESCE(owner.organization_name, applicant.organization_name) AS owner_organization,
+            u.full_name AS performed_by_name,
+            (SELECT json_agg(json_build_object(
+               'id', io.id,
+               'verification_id', io.verification_id,
+               'observation_type', io.observation_type,
+               'observation_description', io.observation_description,
+               'observed_value', io.observed_value,
+               'remarks', io.remarks,
+               'observed_at', io.observed_at
+             )) FROM inspection_observations io WHERE io.verification_id = v.id) AS observations,
+            (SELECT json_agg(json_build_object(
+               'id', vrg.id,
+               'verification_id', vrg.verification_id,
+               'reading_type', vrg.reading_type,
+               'expected_value', vrg.expected_value,
+               'observed_value', vrg.observed_value,
+               'unit', vrg.unit,
+               'tolerance', vrg.tolerance,
+               'result', vrg.result,
+               'remarks', vrg.remarks,
+               'recorded_at', vrg.recorded_at
+             )) FROM verification_readings vrg WHERE vrg.verification_id = v.id) AS readings,
+            (SELECT json_build_object(
+               'id', vr.id,
+               'verification_id', vr.verification_id,
+               'decision', vr.decision,
+               'decided_by_id', vr.decided_by_id,
+               'decided_by_name', decider.full_name,
+               'remarks', vr.remarks,
+               'result_date', vr.result_date,
+               'created_at', vr.created_at
+             ) FROM verification_results vr
+               LEFT JOIN users decider ON decider.id = vr.decided_by_id
+               WHERE vr.verification_id = v.id LIMIT 1) AS result
+     FROM verifications v
+     JOIN verification_applications app
+       ON app.id = v.application_id
+     JOIN instruments i
+       ON i.id = app.instrument_id
+     LEFT JOIN users owner
+       ON owner.id = i.owner_id
+     LEFT JOIN users applicant
+       ON applicant.id = app.applicant_id
+     JOIN users u
+       ON u.id = v.performed_by_id
+     WHERE v.performed_by_id = $1
+     ORDER BY v.created_at DESC`,
+    [userId]
+  );
+
+  return rows;
+}
+async function completeApplication(applicationId) {
+  const { rows } = await pool.query(
+    `UPDATE verification_applications
+     SET status = 'COMPLETED'
+     WHERE id = $1
+     RETURNING *`,
+    [applicationId]
+  );
+
+  await pool.query(
+    `UPDATE verification_assignments
+     SET status = 'COMPLETED'
+     WHERE application_id = $1 AND status != 'DECLINED'`,
+    [applicationId]
+  );
+
+  return rows[0] || null;
+}
+module.exports = {
+  findAssignmentById,
+  findScheduleById,
+  createVerification,
+  createObservation,
+  createReading,
+  findVerificationById,
+  findObservationsByVerificationId,
+  findReadingsByVerificationId,
+  findResultByVerificationId,
+  createResult,
+  completeVerification,
+  findAllVerifications,
+  findVerificationsByOfficerId,
+  completeApplication,
+};

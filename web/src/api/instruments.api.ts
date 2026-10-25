@@ -1,0 +1,200 @@
+import {
+  Instrument,
+  InstrumentType,
+  InstrumentStatus,
+  BackendInstrumentResponse,
+  BackendInstrumentTypeResponse,
+  BackendCreateInstrumentRequest,
+} from '../types';
+import {
+  apiClient,
+} from './client';
+
+
+export interface CreateInstrumentPayload {
+  instrument_type_id: string;
+  instrument_name: string;
+  manufacturer: string;
+  model: string;
+  serial_number: string;
+  capacity: number;
+  capacity_unit: string;
+  accuracy_class: string;
+  location_address: string;
+  location_lat?: number;
+  location_lng?: number;
+  owner_id?: string;
+  owner_name?: string;
+}
+
+
+/**
+ * Data Mapper: Maps backend instrument response to the frontend Instrument interface
+ */
+export function mapBackendInstrumentToFrontend(item: BackendInstrumentResponse): Instrument {
+  const typeId = item.instrumentTypeId || item.instrument_type_id || '';
+  const typeName =
+    item.instrumentTypeName ||
+    item.instrument_type_name ||
+    'General Metrology Instrument';
+
+  const rawLat = item.locationLat ?? item.location_lat;
+  const rawLng = item.locationLng ?? item.location_lng;
+  const rawCap = item.capacity;
+
+  return {
+    id: item.id,
+    owner_id: item.ownerId || item.owner_id || '',
+    owner_name: item.ownerName || item.owner_name || undefined,
+    owner_phone: item.ownerPhone || item.owner_phone || undefined,
+    owner_email: item.ownerEmail || item.owner_email || undefined,
+    owner_organization: item.ownerOrganization || item.owner_organization || undefined,
+    owner_address: item.ownerAddress || item.owner_address || undefined,
+    instrument_type_id: typeId,
+    instrument_type_name: typeName,
+    instrument_name: item.instrumentName || item.instrument_name || item.model || 'Weighing Asset',
+    manufacturer: item.manufacturer || '',
+    model: item.model || '',
+    serial_number: item.serialNumber || item.serial_number || `SN-${item.id}`,
+    registration_number: item.registrationNumber ?? item.registration_number ?? null,
+    capacity: rawCap !== null && rawCap !== undefined && rawCap !== '' ? Number(rawCap) : 0,
+    capacity_unit: item.capacityUnit || item.capacity_unit || 'kg',
+    accuracy_class: item.accuracyClass || item.accuracy_class || '',
+    location_address: item.locationAddress || item.location_address || '',
+    location_lat: rawLat !== null && rawLat !== undefined && rawLat !== '' ? Number(rawLat) : undefined,
+    location_lng: rawLng !== null && rawLng !== undefined && rawLng !== '' ? Number(rawLng) : undefined,
+    registration_date:
+      item.registrationDate ||
+      item.registration_date ||
+      (item.createdAt ? item.createdAt.split('T')[0] : item.created_at ? item.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+    status: (item.status as InstrumentStatus) || 'REGISTERED',
+    status_reason: item.statusReason ?? item.status_reason ?? null,
+    created_at: item.createdAt || item.created_at || new Date().toISOString(),
+    updated_at: item.updatedAt || item.updated_at || new Date().toISOString(),
+  };
+}
+
+/**
+ * Data Mapper: Maps backend instrument type response to frontend InstrumentType interface
+ */
+export function mapBackendInstrumentTypeToFrontend(item: BackendInstrumentTypeResponse): InstrumentType {
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description || '',
+    default_unit: item.defaultUnit || item.default_unit || 'kg',
+    is_active: item.isActive ?? item.is_active ?? true,
+    created_at: item.createdAt || item.created_at || new Date().toISOString(),
+  };
+}
+
+/**
+ * Data Mapper: Maps frontend create payload to backend camelCase request structure
+ */
+export function mapFrontendCreateDtoToBackend(payload: CreateInstrumentPayload): BackendCreateInstrumentRequest {
+  return {
+    instrumentTypeId: payload.instrument_type_id,
+    instrumentName: payload.instrument_name,
+    serialNumber: payload.serial_number,
+    manufacturer: payload.manufacturer,
+    model: payload.model,
+    capacity: Number(payload.capacity),
+    capacityUnit: payload.capacity_unit,
+    accuracyClass: payload.accuracy_class,
+    locationAddress: payload.location_address,
+    locationLat: payload.location_lat,
+    locationLng: payload.location_lng,
+  };
+}
+
+export const instrumentsApi = {
+  /**
+   * Get all instrument types matching PostgreSQL master instrument_types catalog
+   */
+  async getInstrumentTypes(): Promise<InstrumentType[]> {
+    // Types come from the database (GET /api/instruments/types): their ids are generated per database.
+    const rows = await apiClient.get<Array<{ id: string; name: string; description?: string | null; default_unit?: string | null; is_active?: boolean }>>('/instruments/types');
+    return (Array.isArray(rows) ? rows : []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description || '',
+      default_unit: r.default_unit || 'kg',
+      is_active: r.is_active !== false,
+      created_at: '',
+    }));
+  },
+
+  /**
+   * List instruments with optional filtering by owner, status, or search query
+   * Calls GET /api/instruments
+   */
+  async listInstruments(params?: {
+    ownerId?: string;
+    status?: InstrumentStatus;
+    search?: string;
+    typeId?: string;
+  }): Promise<Instrument[]> {
+    const query = new URLSearchParams();
+    if (params?.ownerId) query.append('ownerId', params.ownerId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.typeId) query.append('typeId', params.typeId);
+    if (params?.search) query.append('search', params.search);
+
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const response = await apiClient.get<BackendInstrumentResponse[]>(`/instruments${qs}`);
+
+    if (!Array.isArray(response)) {
+      return [];
+    }
+
+    let list = response.map(mapBackendInstrumentToFrontend);
+
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      list = list.filter(
+        (i) =>
+          i.instrument_name.toLowerCase().includes(q) ||
+          i.serial_number.toLowerCase().includes(q) ||
+          (i.registration_number && i.registration_number.toLowerCase().includes(q)) ||
+          i.manufacturer.toLowerCase().includes(q) ||
+          i.location_address.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  },
+
+  /**
+   * Get single instrument by ID from backend GET /api/instruments/:id
+   */
+  async getInstrumentById(id: string): Promise<Instrument | null> {
+    const response = await apiClient.get<BackendInstrumentResponse>(`/instruments/${id}`);
+    if (response && response.id) {
+      return mapBackendInstrumentToFrontend(response);
+    }
+    return null;
+  },
+
+  /**
+   * Register a new instrument via backend POST /api/instruments
+   */
+  async createInstrument(payload: CreateInstrumentPayload): Promise<Instrument> {
+    const backendBody = mapFrontendCreateDtoToBackend(payload);
+    const response = await apiClient.post<BackendInstrumentResponse>('/instruments', backendBody);
+    if (!response || !response.id) {
+      throw new Error('Failed to create instrument. Invalid response received from server.');
+    }
+    return mapBackendInstrumentToFrontend(response);
+  },
+
+  /**
+   * Update instrument status or details via backend PATCH /api/instruments/:id
+   */
+  async updateInstrument(id: string, updates: Partial<Instrument>): Promise<Instrument> {
+    const response = await apiClient.patch<BackendInstrumentResponse>(`/instruments/${id}`, updates);
+    if (!response || !response.id) {
+      throw new Error(`Failed to update instrument ${id}.`);
+    }
+    return mapBackendInstrumentToFrontend(response);
+  },
+};

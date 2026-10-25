@@ -1,0 +1,310 @@
+const pool = require('../../pool');
+
+async function findInstrumentTypeById(id) {
+  const { rows } = await pool.query(
+    `SELECT id, name, description, default_unit
+     FROM instrument_types
+     WHERE id = $1 AND is_active = TRUE`,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+async function createInstrument({
+  ownerId,
+  instrumentTypeId,
+  instrumentName,
+  manufacturer,
+  model,
+  serialNumber,
+  capacity,
+  capacityUnit,
+  accuracyClass,
+  locationAddress,
+  locationLat,
+  locationLng,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO instruments (
+      owner_id,
+      instrument_type_id,
+      instrument_name,
+      manufacturer,
+      model,
+      serial_number,
+      capacity,
+      capacity_unit,
+      accuracy_class,
+      location_address,
+      location_lat,
+      location_lng
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    RETURNING *`,
+    [
+      ownerId,
+      instrumentTypeId,
+      instrumentName,
+      manufacturer || null,
+      model || null,
+      serialNumber,
+      capacity ?? null,
+      capacityUnit || null,
+      accuracyClass || null,
+      locationAddress || null,
+      locationLat ?? null,
+      locationLng ?? null,
+    ]
+  );
+
+  return rows[0];
+}
+
+async function findInstrumentById(id) {
+  const { rows } = await pool.query(
+    `SELECT i.*,
+            it.name AS instrument_type_name,
+            COALESCE(u.full_name, app_user.full_name) AS owner_name,
+            COALESCE(u.phone, app_user.phone) AS owner_phone,
+            COALESCE(u.email, app_user.email) AS owner_email,
+            COALESCE(u.organization_name, app_user.organization_name) AS owner_organization,
+            COALESCE(u.address, app_user.address) AS owner_address
+     FROM instruments i
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users u ON u.id = i.owner_id
+     LEFT JOIN LATERAL (
+       SELECT va_user.full_name, va_user.phone, va_user.email, va_user.organization_name, va_user.address
+       FROM verification_applications va
+       JOIN users va_user ON va_user.id = va.applicant_id
+       WHERE va.instrument_id = i.id
+       ORDER BY va.created_at DESC
+       LIMIT 1
+     ) app_user ON true
+     WHERE i.id = $1`,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+async function findInstrumentsByOwnerId(ownerId) {
+  const { rows } = await pool.query(
+    `SELECT i.*,
+            it.name AS instrument_type_name,
+            COALESCE(u.full_name, app_user.full_name) AS owner_name,
+            COALESCE(u.phone, app_user.phone) AS owner_phone,
+            COALESCE(u.email, app_user.email) AS owner_email,
+            COALESCE(u.organization_name, app_user.organization_name) AS owner_organization,
+            COALESCE(u.address, app_user.address) AS owner_address
+     FROM instruments i
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users u ON u.id = i.owner_id
+     LEFT JOIN LATERAL (
+       SELECT va_user.full_name, va_user.phone, va_user.email, va_user.organization_name, va_user.address
+       FROM verification_applications va
+       JOIN users va_user ON va_user.id = va.applicant_id
+       WHERE va.instrument_id = i.id
+       ORDER BY va.created_at DESC
+       LIMIT 1
+     ) app_user ON true
+     WHERE i.owner_id = $1
+     ORDER BY i.created_at DESC`,
+    [ownerId]
+  );
+
+  return rows;
+}
+
+async function findAllInstruments() {
+  const { rows } = await pool.query(
+    `SELECT i.*,
+            it.name AS instrument_type_name,
+            COALESCE(u.full_name, app_user.full_name) AS owner_name,
+            COALESCE(u.phone, app_user.phone) AS owner_phone,
+            COALESCE(u.email, app_user.email) AS owner_email,
+            COALESCE(u.organization_name, app_user.organization_name) AS owner_organization,
+            COALESCE(u.address, app_user.address) AS owner_address
+     FROM instruments i
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users u ON u.id = i.owner_id
+     LEFT JOIN LATERAL (
+       SELECT va_user.full_name, va_user.phone, va_user.email, va_user.organization_name, va_user.address
+       FROM verification_applications va
+       JOIN users va_user ON va_user.id = va.applicant_id
+       WHERE va.instrument_id = i.id
+       ORDER BY va.created_at DESC
+       LIMIT 1
+     ) app_user ON true
+     ORDER BY i.created_at DESC`
+  );
+
+  return rows;
+}
+
+async function findInstrumentsAssignedToOfficerId(officerId) {
+  const { rows } = await pool.query(
+    `SELECT DISTINCT i.*,
+            it.name AS instrument_type_name,
+            COALESCE(u.full_name, app_user.full_name) AS owner_name,
+            COALESCE(u.phone, app_user.phone) AS owner_phone,
+            COALESCE(u.email, app_user.email) AS owner_email,
+            COALESCE(u.organization_name, app_user.organization_name) AS owner_organization,
+            COALESCE(u.address, app_user.address) AS owner_address
+     FROM instruments i
+     JOIN verification_applications va ON va.instrument_id = i.id
+     JOIN verification_assignments vas ON vas.application_id = va.id
+     LEFT JOIN instrument_types it ON it.id = i.instrument_type_id
+     LEFT JOIN users u ON u.id = i.owner_id
+     LEFT JOIN LATERAL (
+       SELECT va_user.full_name, va_user.phone, va_user.email, va_user.organization_name, va_user.address
+       FROM verification_applications va2
+       JOIN users va_user ON va_user.id = va2.applicant_id
+       WHERE va2.instrument_id = i.id
+       ORDER BY va2.created_at DESC
+       LIMIT 1
+     ) app_user ON true
+     WHERE vas.assigned_to_id = $1
+     ORDER BY i.created_at DESC`,
+    [officerId]
+  );
+
+  return rows;
+}
+
+async function isInstrumentAssignedToOfficer(instrumentId, officerId) {
+  const { rows } = await pool.query(
+    `SELECT vas.id
+     FROM verification_assignments vas
+     JOIN verification_applications va ON va.id = vas.application_id
+     WHERE va.instrument_id = $1 AND vas.assigned_to_id = $2`,
+    [instrumentId, officerId]
+  );
+
+  return rows.length > 0;
+}
+
+// Updates only the given columns (names come from a fixed whitelist in the service).
+async function updateInstrumentColumns(id, columns) {
+  const keys = Object.keys(columns);
+  const sets = keys.map((k, i) => `${k} = $${i + 2}`);
+  const { rows } = await pool.query(
+    `UPDATE instruments SET ${sets.join(', ')} WHERE id = $1 RETURNING id`,
+    [id, ...keys.map((k) => columns[k])]
+  );
+  return rows[0] || null;
+}
+
+async function setInstrumentStatus(client, id, { status, reason, actorId }) {
+  const { rows } = await client.query(
+    `UPDATE instruments
+        SET status = $2, status_reason = $3, status_changed_at = now(), status_changed_by_id = $4
+      WHERE id = $1 RETURNING id`,
+    [id, status, reason || null, actorId]
+  );
+  return rows[0] || null;
+}
+
+async function findOpenApplication(instrumentId) {
+  const { rows } = await pool.query(
+    `SELECT id, application_number, status FROM verification_applications
+      WHERE instrument_id = $1 AND status IN ('SUBMITTED', 'UNDER_REVIEW', 'SCHEDULED') LIMIT 1`,
+    [instrumentId]
+  );
+  return rows[0] || null;
+}
+
+async function countApplications(instrumentId) {
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM verification_applications WHERE instrument_id = $1', [instrumentId]);
+  return rows[0].n;
+}
+
+async function findInstrumentBySerialNumber(serialNumber) {
+  const { rows } = await pool.query(
+    `SELECT id FROM instruments WHERE serial_number = $1`,
+    [serialNumber]
+  );
+
+  return rows[0] || null;
+}
+
+// Re-verification tracking (view instrument_verification_status, migration 020).
+// scope: { ownerId } | { officerId } | {} (all). state: optional filter,
+// withinDays: only instruments due within N days (overdue ones included).
+async function findVerificationStatus({ ownerId, officerId, state, withinDays }) {
+  const where = [];
+  const params = [];
+  if (ownerId) {
+    params.push(ownerId);
+    where.push(`s.owner_id = $${params.length}`);
+  }
+  if (officerId) {
+    params.push(officerId);
+    where.push(`EXISTS (
+      SELECT 1 FROM verification_applications va
+      JOIN verification_assignments vas ON vas.application_id = va.id
+      WHERE va.instrument_id = s.instrument_id AND vas.assigned_to_id = $${params.length}
+    )`);
+  }
+  if (state) {
+    params.push(state);
+    where.push(`s.verification_state = $${params.length}`);
+  }
+  if (withinDays !== undefined) {
+    params.push(withinDays);
+    where.push(`(s.verification_state = 'OVERDUE' OR s.days_until_due <= $${params.length})`);
+  }
+  // Instruments taken out of service are not "due" for anything.
+  where.push("s.instrument_status NOT IN ('INACTIVE', 'DECOMMISSIONED')");
+  const { rows } = await pool.query(
+    `SELECT s.*, u.full_name AS owner_name, u.organization_name AS owner_organization
+     FROM instrument_verification_status s
+     LEFT JOIN users u ON u.id = s.owner_id
+     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+     ORDER BY s.next_due_date ASC NULLS FIRST, s.instrument_name`,
+    params
+  );
+  return rows;
+}
+
+async function listInstrumentTypes({ activeOnly }) {
+  const { rows } = await pool.query(
+    `SELECT id, name, description, default_unit, default_validity_months, is_active
+     FROM instrument_types
+     ${activeOnly ? 'WHERE is_active = TRUE' : ''}
+     ORDER BY name`
+  );
+  return rows;
+}
+
+async function updateInstrumentType(id, { defaultValidityMonths, isActive, description, defaultUnit }) {
+  const { rows } = await pool.query(
+    `UPDATE instrument_types SET
+       default_validity_months = COALESCE($2, default_validity_months),
+       is_active = COALESCE($3, is_active),
+       description = COALESCE($4, description),
+       default_unit = COALESCE($5, default_unit)
+     WHERE id = $1
+     RETURNING id, name, description, default_unit, default_validity_months, is_active`,
+    [id, defaultValidityMonths ?? null, isActive ?? null, description ?? null, defaultUnit ?? null]
+  );
+  return rows[0] || null;
+}
+
+module.exports = {
+  listInstrumentTypes,
+  updateInstrumentType,
+  findVerificationStatus,
+  findInstrumentTypeById,
+  findInstrumentBySerialNumber,
+  updateInstrumentColumns,
+  setInstrumentStatus,
+  findOpenApplication,
+  countApplications,
+  createInstrument,
+  findInstrumentById,
+  findInstrumentsByOwnerId,
+  findInstrumentsAssignedToOfficerId,
+  isInstrumentAssignedToOfficer,
+  findAllInstruments,
+};

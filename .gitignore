@@ -1,0 +1,36 @@
+web/node_modules/
+web/dist/
+web/.vite/
+api/node_modules/
+.env
+.env.*
+api/.env
+api/.env.*
+web/.env
+web/.env.*
+api/uploads/
+api/src/uploads/
+
+# signing keys
+api/signing/
+
+# OCR model downloaded by "npm run ocr:setup"
+api/ocr-data/
+*.p12
+*.pfx
+
+# logs, coverage, OS files
+*.log
+npm-debug.log*
+coverage/
+.DS_Store
+Thumbs.db
+
+
+# keep example env files tracked
+!.env.example
+!api/.env.example
+!web/.env.example
+
+# local AI-assistant instructions (kept on this machine, not in the repository)
+/CLAUDE.md
