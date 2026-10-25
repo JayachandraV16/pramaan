@@ -36,6 +36,19 @@ const INSTRUMENT_ACTION = {
   hi: { deactivated: 'निष्क्रिय किया गया', reactivated: 'पुनः सक्रिय किया गया', decommissioned: 'सेवा से हटाया गया' },
 };
 
+const NAMEPLATE_OUTCOME = {
+  en: {
+    CONFIRMED_MATCH: 'the details agree with the registered record',
+    CONFIRMED_MISMATCH: 'the details do not match the registered record - please contact the department',
+    UNREADABLE: 'the photo could not be read - please upload a clearer, straight-on photo',
+  },
+  hi: {
+    CONFIRMED_MATCH: 'विवरण पंजीकृत अभिलेख से मेल खाता है',
+    CONFIRMED_MISMATCH: 'विवरण पंजीकृत अभिलेख से मेल नहीं खाता - कृपया विभाग से संपर्क करें',
+    UNREADABLE: 'फ़ोटो पढ़ी नहीं जा सकी - कृपया अधिक स्पष्ट, सामने से ली गई फ़ोटो अपलोड करें',
+  },
+};
+
 const enWhen = (d) => (d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`);
 const hiWhen = (d) => (d === 0 ? 'आज' : d === 1 ? 'कल' : `${d} दिन में`);
 
@@ -74,6 +87,10 @@ const MESSAGES = {
     'verification.failed': (p) => ({
       title: 'Verification failed',
       message: `Your instrument did not pass verification for application ${p.applicationNumber}. You may apply again after correcting the issues.`,
+    }),
+    'nameplate.result': (p) => ({
+      title: 'Nameplate check reviewed',
+      message: `The nameplate of your instrument ${p.name} (${p.serial}) was reviewed: ${NAMEPLATE_OUTCOME.en[p.decision] || p.decision}.${p.note ? ` Note: ${p.note}` : ''}`,
     }),
     'instrument.status': (p) => ({
       title: `Instrument ${INSTRUMENT_ACTION.en[p.action] || p.action}`,
@@ -127,6 +144,10 @@ const MESSAGES = {
     'verification.failed': (p) => ({
       title: 'सत्यापन असफल',
       message: `आवेदन ${p.applicationNumber} के लिए आपका उपकरण सत्यापन में उत्तीर्ण नहीं हुआ। कमियाँ दूर करने के बाद आप पुनः आवेदन कर सकते हैं।`,
+    }),
+    'nameplate.result': (p) => ({
+      title: 'नेमप्लेट जाँच की समीक्षा हुई',
+      message: `आपके उपकरण ${p.name} (${p.serial}) की नेमप्लेट की समीक्षा हुई: ${NAMEPLATE_OUTCOME.hi[p.decision] || p.decision}।${p.note ? ` टिप्पणी: ${p.note}` : ''}`,
     }),
     'instrument.status': (p) => ({
       title: `उपकरण ${INSTRUMENT_ACTION.hi[p.action] || p.action}`,

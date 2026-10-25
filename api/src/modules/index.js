@@ -24,6 +24,7 @@ const queriesRoutes = require('./queries/queries.routes');
 const syncRoutes = require('./sync/sync.routes');
 const enforcementRoutes = require('./enforcement/enforcement.routes');
 const documentsRoutes = require('./documents/documents.routes');
+const nameplateRoutes = require('./nameplate/nameplate.routes');
 const { dashboardRouter, reportsRouter } = require('./reports/reports.routes');
 
 const router = express.Router();
@@ -44,6 +45,7 @@ router.use('/queries', queriesRoutes);
 router.use('/sync', syncRoutes);
 router.use('/enforcement', enforcementRoutes);
 router.use('/documents', documentsRoutes);
+router.use('/nameplate', nameplateRoutes);
 router.use('/dashboard', dashboardRouter);
 router.use('/reports', reportsRouter);
 

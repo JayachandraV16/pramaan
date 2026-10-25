@@ -127,6 +127,14 @@ const config = {
     intervalSeconds: parseInt(process.env.DELIVERY_INTERVAL_SECONDS, 10) || 60,
   },
 
+  // Local OCR for nameplate checks (see modules/nameplate). The model is fetched once by `npm run ocr:setup`.
+  ocr: {
+    enabled: process.env.OCR_ENABLED !== 'false',
+    lang: 'eng',
+    langPath: path.resolve(process.env.OCR_LANG_PATH || path.join(__dirname, '..', '..', 'ocr-data')),
+    timeoutMs: Math.max(parseInt(process.env.OCR_TIMEOUT_MS, 10) || 60000, 5000),
+  },
+
   // Renewal opens this many days before a valid certificate expires (see utils/renewal.js).
   renewalWindowDays: Math.max(parseInt(process.env.RENEWAL_WINDOW_DAYS, 10) || 60, 0),
 

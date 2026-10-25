@@ -8,10 +8,11 @@ Guidance for Claude Code in this repository. Background and audit: `docs/context
 
 ## Branch / git state
 
-- Work on **`develop`**. It is a local fast-forward of `web-frontend` and is **ahead of `origin/develop` and unpushed**. Never modify `main`. **Do not commit or push unless asked.**
-- Uncommitted work is substantial (security hardening, certificate integrity, workflow rules, reports, fees, queries, tests, docs). Check `git status` before assuming a clean tree.
-- Other remote branches: `pushkar-mobile-auth` (Expo mobile + `api1/`, `pramaan1/` folders; not merged, not inspected) and `deploy` ("Ready for neonDB"; not inspected).
-- Still tracked in git although they should not be: `api/node_modules/` (~2,860 files) and a few generated files. History also still contains the old `api/.env` — treat those credentials as leaked and rotate them. Untracking needs the owner's approval (see "Do not").
+- Work on **`develop`**. Never modify `main` (`0eff1fc`). **Do not commit or push unless asked.** Always run `git status` and `git log origin/develop..develop` first: the state changes between sessions (at the last review `origin/develop` was at the Phase 5 baseline and later commits were still local).
+- `api/node_modules`, `.env`, uploads, signing keys and the OCR model are untracked and git-ignored; keep it that way.
+- **Commit hygiene (learned the hard way):** stage explicit paths with `git add -A -- <paths>` and use a plain `git commit`. Do **not** use `git commit --only -- <directory>` to commit staged deletions: git re-reads the files from disk and silently undoes them. After every commit run `git show --stat HEAD` and check the file list.
+- Other remote branches: `pushkar-mobile-auth` (the mobile app was copied from its `pramaan1/` folder into `mobile/`; its separate `api1/` backend is not used) and `deploy` ("Ready for neonDB"). Both still contain old `.env` files in history.
+- **Credentials:** the old `api/.env` values are in git history on GitHub (public). The old local DB password has been rotated and is rejected. **The old Neon `DATABASE_URL` (on `origin/deploy`) was still ACTIVE at the last check and must be rotated in the Neon console.** Never print secret values; to re-check run a connect-only test and report only accepted/rejected.
 
 ## Stack
 
@@ -29,6 +30,7 @@ npm run db:setup               # reset + migrate + seed
 npm run jobs:run               # expire lapsed certificates + send expiry reminders once
 npm run demo:users             # DEV ONLY: create demo.admin/owner/lmo@pramaan.local, prints a password once
 npm run signing:dev-cert       # DEV ONLY: self-signed PDF signing key in api/signing/ (git-ignored)
+npm run ocr:setup              # downloads the local OCR model into api/ocr-data (git-ignored); ocr:demo-plate makes a sample plate image
 npm test                       # throw-away embedded PostgreSQL, applies all migrations, runs api/test/*.test.js
 npm test -- test/workflow.test.js   # one file
 
@@ -38,7 +40,7 @@ npm run dev                    # http://localhost:5173
 npx tsc --noEmit && npx vite build   # type-check + production build (no UI tests yet)
 ```
 
-Config: copy `api/.env.example` → `api/.env` and `web/.env.example` → `web/.env`. `JWT_SECRET` is required; in production `INTEGRITY_SECRET` (≥32 chars, different from the JWT secret) is required too. `npm test` never reads `.env` and never touches a configured database. The seeded `*@pramaan.local` users share a development password hash that is not documented; create your own users (admin console or SQL) for manual testing.
+Config: copy `api/.env.example` → `api/.env` and `web/.env.example` → `web/.env`. `JWT_SECRET` is required; in production `INTEGRITY_SECRET` (≥32 chars, different from the JWT secret) is required too. `npm test` never reads `.env` and never touches a configured database (it uses a fresh embedded PostgreSQL 18 with a UTF8 cluster, needed for Hindi text). The seeded `dev.*@pramaan.local` users, including an ADMIN, all use the publicly known password `DevPassword123!`; `npm run demo:users` creates `demo.*@pramaan.local` accounts with a printed password. Both are development only: with `NODE_ENV=production` the API refuses to start while any `*@pramaan.local` account is ACTIVE (`utils/startupChecks.js`). The login page's demo quick-fill is development-build only. The database must be UTF8.
 
 ## Architecture (see docs/ARCHITECTURE.md)
 
@@ -48,9 +50,9 @@ api/src/
   config/ middleware/ utils/          env, auth/RBAC/security/upload, shared helpers
   modules/<feature>/                  routes → controller → service → repository (+ validation)
      auth users instruments applications assignments schedules verifications
-     certificates qr-auth attachments notifications fees queries reports sync enforcement documents
+     certificates qr-auth attachments notifications fees queries reports sync enforcement documents nameplate
   jobs/                               expiry sweep, reminders, scheduler (advisory-lock guarded)
-  db/migrations (001–029), db/seeds
+  db/migrations (001–030), db/seeds
 api/test/                             run.js (temp Postgres), helpers.js, workflow.js, *.test.js
 mobile/services/offline/              syncCore.ts (pure model), syncEngine.ts (push/pull via injected Http), OfflineContext.tsx (storage + auto-sync)
 mobile/app/inspector/offline/         Field work list + inspection form (works without a connection)
@@ -65,7 +67,7 @@ Rules the code follows (keep following them):
 - SQL `DATE` columns are returned as `YYYY-MM-DD` strings (see `pool.js`); don't convert to `Date` objects for JSON.
 - File URLs returned by the API are signed automatically (`utils/ApiResponse`); never serve `/uploads` statically.
 - Add roles only in `config/roles.js` AND the `role_name` enum. New feature = new `modules/<name>/` folder, registered in `modules/index.js`.
-- Migrations: append-only, next number is **030**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
+- Migrations: append-only, next number is **031**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
 - Tests: add a case in `api/test/*.test.js` for every behaviour change; tests must use unique emails/serials (`h.unique`) because all files share one database.
 
 ## Domain flow (as implemented)
@@ -76,12 +78,20 @@ Rules the code follows (keep following them):
 
 - Do not commit or push without being asked; do not touch `main`.
 - Do not run `npm run reset` / `db:setup` against a database you have not confirmed is disposable.
-- Do not delete or untrack committed files (e.g. `git rm --cached -r api/node_modules`, history rewrites, secret rotation) without explicit approval — explain the risk first.
-- `web/src/emaap_extracted_resources/` is no longer imported by anything (landing page and footer were rewritten with original content). Deleting the folder (15 MB of scraped government assets) still needs the owner's approval.
+- Do not rewrite or force-push history, delete committed files, or rotate/replace secrets without explicit approval — explain the risk first. (Untracking `api/node_modules` and removing the scraped `emaap` assets were already approved and done.)
+- Do not use database IDs or invented defaults in client code (an old hard-coded instrument-type list caused "Invalid or inactive instrument type").
 - Do not weaken the integrity rules: no un-revoking, no editing issued certificates, no client-supplied PASS/FAIL for computable readings.
 
-## Rules added in stage 1–4 (keep following them): no database IDs in client code (fetch types from the API); instrument edit/status changes go through `modules/instruments/instruments.lifecycle.js`; verification-vs-renewal is decided only by `utils/renewal.js`; required documents live in `modules/documents`.
+## More rules (keep following them)
+
+- Instrument edit/deactivate/decommission goes through `modules/instruments/instruments.lifecycle.js`; "first verification or renewal?" is decided only by `utils/renewal.js`; required documents live in `modules/documents`.
+- OCR output (`modules/nameplate`) is advice only: it must never change an instrument, certificate or case, and a person other than the uploader decides.
+- Write PASS/FAIL/NOT TESTED honestly in `docs/TEST_REPORT.md`; do not claim browser, device or real-provider (SMTP, SMS, S3, CA signature) behaviour that was not actually run.
+
+## Where to look
+
+`docs/TEST_REPORT.md` (what passed / was not tested), `docs/PPT_DEMO.md` (demo script and pitch), `docs/PHASE6_PLAN.md` (ranked next features), `docs/DESIGN_ED25519_QR.md` (offline QR design, not built), `docs/feature-roadmap.md` (progress table).
 
 ## Known gaps (details in `docs/context.md` §13 and the roadmap)
 
-offline photo queue and offline assignment-accept in the mobile app (structured inspection data syncs); the older online screens in `mobile/app` (written for the separate `api1` backend) are unverified against `api/`; Hindi covers navigation, landing, sign-in, public verification, notifications and server-written messages/PDF (other screens are English; no other Indian languages); e-mail/SMS are built and tested with fakes but untried against a real SMTP server or SMS gateway (DLT registration needed in India); S3 storage is tested with a fake client only, and existing files are not migrated between drivers; the PDF signature is PKCS#7 with a self-signed dev key (no PAdES profile, no timestamp, no CA trust evaluation, needs a CA-issued DSC); frontend tests; PDFs/UI not yet looked at in a browser.
+OCR nameplate reading is proven on generated images only (accuracy on real photographs unmeasured; English only); the mobile offline flow has never run on a device or emulator; offline photo queue and offline assignment-accept in the mobile app (structured inspection data syncs); the older online screens in `mobile/app` (written for the separate `api1` backend) are unverified against `api/`; Hindi covers navigation, landing, sign-in, public verification, notifications and server-written messages/PDF (other screens are English; no other Indian languages); e-mail/SMS are built and tested with fakes but untried against a real SMTP server or SMS gateway (DLT registration needed in India); S3 storage is tested with a fake client only, and existing files are not migrated between drivers; the PDF signature is PKCS#7 with a self-signed dev key (no PAdES profile, no timestamp, no CA trust evaluation, needs a CA-issued DSC); frontend tests; PDFs/UI not yet looked at in a browser.

@@ -24,6 +24,7 @@ Owners register weighing and measuring instruments and apply online; the departm
 | Inspection evidence | GPS, capture time, file fingerprint, minimum-evidence rule | officer inspection |
 | Automated reports | dashboards, pendency, expiry forecast, CSV export | `/reports` |
 | Instrument lifecycle, required documents | edit, deactivate, decommission; admin-defined document checklist | instrument page, `/fees` |
+| OCR-assisted nameplate check (differentiator) | local open-source OCR reads the plate, compares with the registered record, a second person confirms; the machine never decides | instrument page → Nameplate check |
 
 ## 3. Live demo script (about 8 minutes)
 
@@ -36,7 +37,8 @@ Accounts (development only, created by `npm run demo:users`): `demo.owner@`, `de
 5. **Admin:** issue the certificate. Open the PDF: English page, Hindi page, QR.
 6. **Public verification (the money shot):** scan or paste the QR link → VALID with the integrity panel. Then tamper: change a character of the `s=` signature in the link → "possible tampering". Upload an edited PDF → "does not match".
 7. **Revoke** the certificate → refresh the public page → REVOKED. Show the owner's notification.
-8. **Enforcement and reports (1 min):** register a spot-check offence twice for the same trader → REPEAT flag; open the dashboard and a CSV export.
+8. **Nameplate check (60 s):** `npm run ocr:demo-plate -- --serial <the instrument's serial>`, upload the PNG on the instrument page → table shows MATCH and "waiting for a person". Generate a second plate with a different serial → "details do not match". Log in as the officer and record the decision. Say: the software suggests, a person decides, and nothing changes automatically.
+9. **Enforcement and reports (1 min):** register a spot-check offence twice for the same trader → REPEAT flag; open the dashboard and a CSV export.
 
 Fallback if the network or browser misbehaves: run `cd api && npm test -- test/e2e_demo.test.js` and show the 16 green steps (it performs the same journey).
 
@@ -50,7 +52,7 @@ Fallback if the network or browser misbehaves: run `cd api && npm test -- test/e
 
 ## 5. Numbers to quote (all reproducible)
 
-148 automated tests passing · 29 database migrations · 16-step end-to-end run · 2 languages · 5 roles · API modules: auth, users, instruments, applications, assignments, schedules, verifications, certificates, QR verification, attachments, notifications, fees, queries, reports, sync, enforcement, documents.
+157 automated tests passing · 30 database migrations · 16-step end-to-end run · 2 languages · 5 roles · API modules: auth, users, instruments, applications, assignments, schedules, verifications, certificates, QR verification, attachments, notifications, fees, queries, reports, sync, enforcement, documents.
 
 ## 6. Be honest about these (judges respect it)
 
@@ -58,6 +60,7 @@ Fallback if the network or browser misbehaves: run `cd api && npm test -- test/e
 - Certificate PDF signature uses a development key; legal validity needs a Digital Signature Certificate from a licensed authority.
 - E-mail/SMS and cloud storage are built but not connected to real providers.
 - Hindi covers the core screens, not every screen.
+- OCR is proven on generated images only; accuracy on real nameplate photographs is not measured and the feature is advice, never a decision.
 - Offline QR verification (public-key signatures) is designed (`docs/DESIGN_ED25519_QR.md`), not built.
 
 ## 7. Likely questions

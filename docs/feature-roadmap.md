@@ -4,7 +4,7 @@ _Originally written against `develop` @ `4f21754`. Effort: S ≈ hours, M ≈ 1�
 
 ## Progress (updated after implementing phases 0–3 in the working tree)
 
-Status key: ✅ done and covered by tests (`cd api && npm test` → 148 passing) · 🟡 backend done, UI missing · ⏳ not started · ⚠️ needs an owner decision.
+Status key: ✅ done and covered by tests (`cd api && npm test` → 157 passing) · 🟡 backend done, UI missing · ⏳ not started · ⚠️ needs an owner decision.
 
 | Phase | Item | Status | Notes |
 |---|---|---|---|
@@ -42,6 +42,8 @@ Status key: ✅ done and covered by tests (`cd api && npm test` → 148 passing)
 | 5 | Signed certificate PDF + independent signature verification + public display | ✅ PKCS#7 with a dev key; ⚠️ PAdES / CA-issued DSC / timestamps not done | `utils/pdfSigner.js`, migration 027, `api/test/signing.test.js` |
 | 6 | Instrument types loaded from the API (fixes "Invalid or inactive instrument type"); instrument edit / deactivate / decommission; renewal rules with auto-linked certificate; admin-defined required documents with checklist | ✅ (API tests; UI type-checked and built, not clicked through) | `instruments.lifecycle.js`, `utils/renewal.js`, `modules/documents`, migrations 028–029, `api/test/lifecycle.test.js` |
 | 6 | End-to-end demo run (16 steps) and test report | ✅ | `api/test/e2e_demo.test.js`, `docs/TEST_REPORT.md`, `docs/PPT_DEMO.md` |
+| 6 | **Phase 6 feature 1:** OCR-assisted nameplate check with human review (local tesseract.js, compare with registered data, four-eyes decision, immutable evidence) | ✅ API + real-engine test; UI type-checked and built, not clicked through; accuracy on real photos NOT TESTED | `modules/nameplate`, migration 030, `api/test/nameplate.test.js`, `docs/PHASE6_PLAN.md` |
+| 6 | Phase 6 features 2–4 (real-device offline, Command HQ, Ed25519) | planned, ranked in `docs/PHASE6_PLAN.md` | |
 | 6 | Ed25519 QR signatures | design only | `docs/DESIGN_ED25519_QR.md` |
 | 5 | Production start-up guard against dev/demo accounts (seeded dev users share a known password) | ✅ | `utils/startupChecks.js`, `api/test/startup.test.js` |
 

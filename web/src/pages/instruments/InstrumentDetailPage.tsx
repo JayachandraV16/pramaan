@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { InstrumentManage } from '../../components/instruments/InstrumentManage';
+import { NameplateCheck } from '../../components/instruments/NameplateCheck';
 import { instrumentsApi } from '../../api/instruments.api';
 import { applicationsApi } from '../../api/applications.api';
 import { Instrument } from '../../types';
@@ -265,6 +266,8 @@ export const InstrumentDetailPage: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {user && <NameplateCheck instrumentId={instrument.id} role={user.role_id} userId={user.id} />}
 
       {user && (
         <InstrumentManage

@@ -73,3 +73,12 @@ Which documents an application needs depends on State rules, so none are seeded.
 
 ## D24 — Instrument lifecycle
 Edit, deactivate (reversible) and decommission (final) are separate, audited actions. Decommissioning is blocked while an application is open and freezes the row in the database. Out-of-service instruments leave the due list and reports. Their existing certificates are not revoked automatically; revocation stays a deliberate admin action.
+
+## D25 — OCR is advice, never a decision
+The nameplate reading is stored as immutable evidence (photo hash, raw text, what was extracted, what it was compared with, the machine's suggestion) and always starts as `PENDING_REVIEW`. Only a person can set the outcome; the audit log records the machine's advice beside the human decision. OCR never edits an instrument, revokes a certificate or opens an enforcement case. A "perfect" read still waits for a person.
+
+## D26 — Four eyes on the review
+The reviewer must be an administrator or an officer assigned to the instrument, and cannot be the person who uploaded the photo (also a database CHECK). Owners can upload but cannot decide.
+
+## D27 — Local, open-source OCR
+tesseract.js (Apache-2.0, WebAssembly, no native build) with the English "fast" model kept on the server (`npm run ocr:setup`). No paid or cloud AI service, nothing leaves the server, and the feature degrades to "check the plate by eye" when the model is missing. Known limits: English only; accuracy on real photos (glare, angle, embossed or worn plates) is unmeasured; the OCR library processes uploaded images, so uploads stay restricted (type, magic bytes, size limit, time limit, rate limit) and run in a worker thread.

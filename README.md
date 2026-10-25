@@ -71,6 +71,16 @@ npx expo start
 
 PPT material: `docs/PPT_DEMO.md` (pitch, demo script, security slide), `docs/TEST_REPORT.md` (what passed, what was not tested), `docs/DESIGN_ED25519_QR.md` (offline QR verification design).
 
+## Nameplate check (OCR, optional)
+
+```bash
+cd api
+npm run ocr:setup                     # one-off: downloads the 4 MB English model into api/ocr-data (git-ignored)
+npm run ocr:demo-plate -- --serial AW2024-001178   # makes a sample nameplate PNG for the demo (any serial)
+```
+
+Open an instrument → *Nameplate check* → upload a JPG/PNG of the plate. The text is read locally and compared with the registered details; an administrator or assigned officer (not the uploader) then confirms. It is a suggestion tool: it never changes records by itself.
+
 ## Optional services (all off by default)
 
 Set in `api/.env` (see `api/.env.example`):

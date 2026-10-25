@@ -237,3 +237,17 @@ Renewal rules (also enforced by `POST /api/applications`): no certificate yet �
 | `GET /checklist/:applicationId` | owner, assigned officer, ADMIN | `{ items: [{ documentType, label, labelHi, satisfied, attachmentId, fileName }], missing, complete }` |
 
 Uploads are tagged with `POST /api/attachments` field `documentType` (application documents only). `POST /api/assignments` returns 409 listing the missing documents until the checklist is complete. With no requirements defined (the default) nothing changes.
+
+## Nameplate check (OCR-assisted) — `/api/nameplate`
+
+The machine **reads and suggests; a person decides.** Nothing here changes the instrument, its certificates or enforcement cases. The OCR runs locally (tesseract.js); photos are not sent anywhere.
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `GET /status` | any internal role | `{ available, engine }`; `available` is false until `npm run ocr:setup` has downloaded the model |
+| `POST /instruments/:instrumentId` | owner of the instrument, ADMIN, assigned LMO/GATC | multipart `file` (JPG or PNG; extension, magic bytes and 10 MB limit are checked). Stores the photo, reads it, compares with the registered data, returns the check with `status: PENDING_REVIEW`. 503 when OCR is not set up, 504 on timeout. Rate-limited (30 per hour per user). |
+| `GET /instruments/:instrumentId` | same | all checks for the instrument |
+| `GET /:id` | same | one check |
+| `POST /:id/review` | ADMIN, assigned LMO/GATC, **not the uploader** | `{ decision: CONFIRMED_MATCH\|CONFIRMED_MISMATCH\|UNREADABLE, note?, values? }`. A note (≥ 5 characters) is required for MISMATCH and UNREADABLE. A check is decided once. The owner is notified. |
+
+Check fields: `extracted`, `comparison.fields.{serialNumber, manufacturer, model, capacity, accuracyClass}` each `{ read, registered, status: MATCH|CLOSE|MISMATCH|NOT_READ|NOT_REGISTERED, note? }`, `comparison.extra` (year, approval number: shown, never compared), `registered_snapshot`, `raw_text`, `ocr_confidence`, `engine`, `file_sha256`, `advisory` (ALL_MATCH, NEEDS_REVIEW, LIKELY_MISMATCH, UNREADABLE) and `advisory_summary`. The machine fields are immutable (database trigger); the audit log records the machine's advice next to the human decision and whether they agreed.

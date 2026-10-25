@@ -301,3 +301,44 @@ export const documentsApi = {
   createRequirement: (body: Record<string, unknown>) => apiClient.post<DocumentRequirement>('/documents/requirements', body),
   updateRequirement: (id: string, body: Record<string, unknown>) => apiClient.patch<DocumentRequirement>(`/documents/requirements/${id}`, body),
 };
+
+/* ---------- OCR-assisted nameplate check ---------- */
+
+export type NameplateFieldStatus = 'MATCH' | 'CLOSE' | 'MISMATCH' | 'NOT_READ' | 'NOT_REGISTERED';
+export type NameplateAdvisory = 'ALL_MATCH' | 'NEEDS_REVIEW' | 'LIKELY_MISMATCH' | 'UNREADABLE';
+export type NameplateStatus = 'PENDING_REVIEW' | 'CONFIRMED_MATCH' | 'CONFIRMED_MISMATCH' | 'UNREADABLE';
+
+export interface NameplateCheck {
+  id: string;
+  instrument_id: string;
+  uploaded_by_id: string;
+  uploaded_by_name?: string;
+  file_url: string;
+  engine: string;
+  ocr_confidence: string | number | null;
+  raw_text: string;
+  comparison: {
+    fields: Record<string, { read: string | null; registered: string | null; status: NameplateFieldStatus; note?: string }>;
+    extra: Record<string, string>;
+  };
+  advisory: NameplateAdvisory;
+  advisory_summary: string;
+  status: NameplateStatus;
+  reviewed_by_name?: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  created_at: string;
+  disclaimer?: string;
+}
+
+export const nameplateApi = {
+  status: () => apiClient.get<{ available: boolean; engine: string | null }>('/nameplate/status'),
+  list: (instrumentId: string) => apiClient.get<NameplateCheck[]>(`/nameplate/instruments/${instrumentId}`),
+  upload(instrumentId: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return apiFetch<NameplateCheck>(`/nameplate/instruments/${instrumentId}`, { method: 'POST', body: form });
+  },
+  review: (id: string, body: { decision: 'CONFIRMED_MATCH' | 'CONFIRMED_MISMATCH' | 'UNREADABLE'; note?: string }) =>
+    apiClient.post<NameplateCheck>(`/nameplate/${id}/review`, body),
+};

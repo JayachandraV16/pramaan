@@ -11,7 +11,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 148 of 148** (0 failed) |
+| API automated tests | **PASS: 157 of 157** (0 failed) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
@@ -69,6 +69,25 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 All 124 tests that existed before stages 1–4 still pass (security, certificates, workflow, reports, lists, enforcement, Hindi, delivery, storage, signing, sync, start-up guard).
 
+## 4b. Phase 6, feature 1: OCR-assisted nameplate check
+
+| Item | Evidence | Result |
+|---|---|---|
+| Local OCR engine starts and reads a generated nameplate (0.4 s start-up, about 0.3 s per image, every field parsed) | `nameplate.test.js` real-engine test; feasibility run | PASS |
+| Field parsing: clean and noisy plates, several label styles and units, nothing invented from garbage | unit test | PASS |
+| Comparison with registered data: match, look-alike characters (O/0), unit conversion (0.5 t = 500 kg), mass vs volume, class III = 3 = "lll", not registered, not read | unit tests | PASS |
+| Advisory thresholds (low OCR confidence is never "all match") | unit test | PASS |
+| Upload through the API: evidence stored with SHA-256, private signed link, audit entry; instrument row unchanged | API test | PASS |
+| Wrong serial number flagged as LIKELY_MISMATCH; blank photo as UNREADABLE; none are auto-resolved | API test | PASS |
+| Access and input rules (anonymous, stranger, unassigned officer, PDF, fake image, malformed ids, engine not set up → 503 and no record) | API test | PASS |
+| Human decision: owners cannot decide, uploader cannot decide, unassigned officer cannot decide, one decision only, note required for mismatch/unreadable, owner notified, machine advice recorded beside the decision, no side effects on instrument or enforcement | API test | PASS |
+| Machine output immutable, decision final, no deletes (database triggers and CHECK constraints) | database test | PASS |
+| Accuracy on **real photographs** (angle, glare, embossed or worn plates, handwriting) | | **NOT TESTED** |
+| Hindi or other-script plates; PDF documents; phone-camera capture in a browser | | **NOT TESTED / not supported** |
+| The upload and review screens in a browser | type-check and build only | **NOT TESTED** |
+| Robustness against malicious images in the OCR library (limits are in place: type, magic bytes, 10 MB, 60 s, rate limit, worker thread) | no security review | **NOT TESTED** |
+| Behaviour with many simultaneous uploads (jobs are queued one at a time) | | **NOT TESTED** |
+
 ## 5. Defects found and fixed during this work
 
 | Defect | How it was found | Status |
@@ -81,6 +100,7 @@ All 124 tests that existed before stages 1–4 still pass (security, certificate
 
 ## 6. NOT TESTED (be explicit in the PPT)
 
+- OCR accuracy on real nameplate photographs, and the nameplate screens in a browser (see 4b).
 - Every web page in a real browser (including the new instrument manage card, renewal banner, document checklist, enforcement, notifications, Hindi switcher); only type-check, build and API tests were run.
 - Visual layout of the English/Hindi certificate PDF; QR scanning from a printed copy with a phone camera.
 - The mobile app on a device or emulator (offline inspection logic is covered by contract tests against the API only).

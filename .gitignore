@@ -13,6 +13,9 @@ api/src/uploads/
 
 # signing keys
 api/signing/
+
+# OCR model downloaded by "npm run ocr:setup"
+api/ocr-data/
 *.p12
 *.pfx
 
