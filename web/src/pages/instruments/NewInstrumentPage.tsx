@@ -7,6 +7,8 @@ import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { EmptyState } from '../../components/common/EmptyState';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../context/AuthContext';
+import { LocationPicker } from '../../components/maps/LocationPicker';
+import { LatLng } from '../../utils/coordinates';
 
 export const NewInstrumentPage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,8 +28,9 @@ export const NewInstrumentPage: React.FC = () => {
   const [capacityUnit, setCapacityUnit] = useState('kg');
   const [accuracyClass, setAccuracyClass] = useState('Class III (Medium Accuracy)');
   const [locationAddress, setLocationAddress] = useState(user?.address || '');
-  const [locationLat, setLocationLat] = useState('19.0760');
-  const [locationLng, setLocationLng] = useState('72.9980');
+  // No default location: the owner picks it on the map (or leaves it empty and nothing is saved).
+  const [location, setLocation] = useState<LatLng | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const [isLoadingTypes, setIsLoadingTypes] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,6 +87,10 @@ export const NewInstrumentPage: React.FC = () => {
       setError('Capacity must be a positive number.');
       return;
     }
+    if (locationError) {
+      setError(locationError);
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -98,8 +105,8 @@ export const NewInstrumentPage: React.FC = () => {
         capacity_unit: capacityUnit,
         accuracy_class: accuracyClass,
         location_address: locationAddress,
-        location_lat: locationLat ? Number(locationLat) : undefined,
-        location_lng: locationLng ? Number(locationLng) : undefined,
+        location_lat: location ? location.lat : undefined,
+        location_lng: location ? location.lng : undefined,
         owner_id: user?.id,
         owner_name: ownerName.trim() || user?.full_name,
       });
@@ -347,29 +354,15 @@ export const NewInstrumentPage: React.FC = () => {
             />
           </div>
 
-          {/* GPS Coordinates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Latitude (° N)</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={locationLat}
-                onChange={(e) => setLocationLat(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pramaan-navy-800"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Longitude (° E)</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={locationLng}
-                onChange={(e) => setLocationLng(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pramaan-navy-800"
-              />
-            </div>
-          </div>
+          {/* Map location */}
+          <LocationPicker
+            label="Pin the instrument's exact location on the map (recommended)"
+            value={location}
+            onChange={(value, err) => {
+              setLocation(value);
+              setLocationError(err);
+            }}
+          />
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
             <Link to="/instruments">

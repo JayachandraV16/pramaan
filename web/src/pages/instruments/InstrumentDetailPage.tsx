@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { InstrumentManage } from '../../components/instruments/InstrumentManage';
 import { NameplateCheck } from '../../components/instruments/NameplateCheck';
+import { LocationPicker } from '../../components/maps/LocationPicker';
+import { formatCoordinate, isFormerDefault } from '../../utils/coordinates';
 import { instrumentsApi } from '../../api/instruments.api';
 import { applicationsApi } from '../../api/applications.api';
 import { Instrument } from '../../types';
@@ -210,17 +212,21 @@ export const InstrumentDetailPage: React.FC = () => {
                 {instrument.location_address || instrument.owner_address || '—'}
               </p>
             </div>
-            {(instrument.location_lat || instrument.location_lng) && (
-              <div className="pt-2 border-t border-slate-100 flex items-center gap-4">
-                <div>
-                  <span className="text-[10px] text-slate-400">GPS Latitude</span>
-                  <p className="font-mono text-slate-700">{instrument.location_lat?.toFixed(4)}° N</p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400">GPS Longitude</span>
-                  <p className="font-mono text-slate-700">{instrument.location_lng?.toFixed(4)}° E</p>
-                </div>
+            {Number.isFinite(instrument.location_lat) && Number.isFinite(instrument.location_lng) ? (
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <LocationPicker value={{ lat: Number(instrument.location_lat), lng: Number(instrument.location_lng) }} readOnly height={180} />
+                <p className="font-mono text-slate-700">
+                  {formatCoordinate(Number(instrument.location_lat))}° N, {formatCoordinate(Number(instrument.location_lng))}° E
+                </p>
+                {isFormerDefault(instrument.location_lat, instrument.location_lng) && (
+                  <p role="status" className="rounded-lg bg-amber-50 border border-amber-300 text-amber-900 px-3 py-2 text-[11px]">
+                    This location is the placeholder that earlier versions of the form filled in automatically (central Mumbai), so it may not be the real site.
+                    The owner or an administrator should confirm it on the map below.
+                  </p>
+                )}
               </div>
+            ) : (
+              <p className="pt-2 border-t border-slate-100 text-[11px] text-slate-500">No map location has been recorded for this instrument.</p>
             )}
           </div>
         </Card>

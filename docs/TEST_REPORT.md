@@ -2,8 +2,8 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `de7156b` plus the uncommitted stage 1–4 changes described below.
-- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 29 migrations applied. No real or production data is used.
+- Code: `develop` at `5723091` plus the Checkpoint 1 (map location) changes described in 4c.
+- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 30 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
 
@@ -11,11 +11,12 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 157 of 157** (0 failed) |
+| API automated tests | **PASS: 162 of 162** (0 failed) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
-| Any page opened in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
+| Map location picker in a real browser (headless Microsoft Edge, 4c) | **PASS: 26 of 26** |
+| Every other page in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
 
 ## 1. End-to-end workflow: owner → admin → officer → certificate → public verification
 
@@ -88,6 +89,34 @@ All 124 tests that existed before stages 1–4 still pass (security, certificate
 | Robustness against malicious images in the OCR library (limits are in place: type, magic bytes, 10 MB, 60 s, rate limit, worker thread) | no security review | **NOT TESTED** |
 | Behaviour with many simultaneous uploads (jobs are queued one at a time) | | **NOT TESTED** |
 
+## 4c. Checkpoint 1: map-based location
+
+Browser checks ran in headless Microsoft Edge driven by `puppeteer-core`, against an isolated stack (throw-away PostgreSQL, the real API, the Vite dev server); the harness is outside the repository. Your own database was not used.
+
+| Item | Evidence | Result |
+|---|---|---|
+| Coordinate rules (both or neither, ranges, rounding to 6 places), India warning, detection of the old Mumbai default | `map.test.js` (2 unit tests) | PASS |
+| Registration without a location stores NULL (no invented default) | `map.test.js` | PASS |
+| Picked location stored; half-given, out-of-range, text or null coordinates refused on create and nothing saved | `map.test.js` | PASS |
+| Location corrected or cleared on update, never left half-set; a stranger gets 403 | `map.test.js` | PASS |
+| Full API suite after the change | `npm test` | PASS: 162 of 162 |
+| Web `tsc --noEmit`, `vite build`, mobile `tsc --noEmit` | commands | PASS |
+| Map renders; OpenStreetMap tiles load; attribution shown | browser | PASS |
+| Latitude and longitude start empty, no pin before a choice | browser | PASS |
+| Click fills coordinates (in India) and shows a pin; dragging the pin updates them; typing moves the pin | browser | PASS |
+| Impossible latitude shows an error; submit blocked while invalid | browser | PASS |
+| Valid pick saved exactly; detail page shows a read-only map and pin | browser | PASS |
+| Registering without a map choice stores no coordinates; detail page says none recorded | browser | PASS |
+| Existing instrument at the old default shows the "confirm this location" notice; clearing it in the edit form removes the location | browser | PASS |
+| Tiles blocked: a notice appears and typed coordinates still place the pin | browser | PASS |
+| "Use my current location" with a simulated GPS fix fills 12.971600, 77.594600; "Clear location" empties; permission denied gives a clear message | browser (simulated geolocation) | PASS |
+| No browser errors on the pages tested | browser | PASS |
+| Touch and phone input; real GPS hardware; other browsers than Edge | | **NOT TESTED** |
+| Interactive map in the mobile app (mobile keeps GPS capture only) | | **NOT BUILT** |
+| OpenStreetMap tile usage under heavy traffic (their policy suits a prototype; production needs a tile provider) | | **NOT TESTED** |
+
+Observations, not fixed here: instruments without a capacity display "0 kg" (existing web mapper default); Leaflet raised the web bundle to about 627 kB (Vite chunk-size warning); the instrument web page is only open to owners and admins, which matters for Checkpoint 2.
+
 ## 5. Defects found and fixed during this work
 
 | Defect | How it was found | Status |
@@ -101,7 +130,7 @@ All 124 tests that existed before stages 1–4 still pass (security, certificate
 ## 6. NOT TESTED (be explicit in the PPT)
 
 - OCR accuracy on real nameplate photographs, and the nameplate screens in a browser (see 4b).
-- Every web page in a real browser (including the new instrument manage card, renewal banner, document checklist, enforcement, notifications, Hindi switcher); only type-check, build and API tests were run.
+- Web pages in a real browser other than the map pages in 4c (the instrument manage card, renewal banner, document checklist, enforcement, notifications, Hindi switcher, nameplate screens); only type-check, build and API tests were run for them.
 - Visual layout of the English/Hindi certificate PDF; QR scanning from a printed copy with a phone camera.
 - The mobile app on a device or emulator (offline inspection logic is covered by contract tests against the API only).
 - Real SMTP e-mail and SMS gateway delivery (tested with fakes and a local stub); real S3/MinIO (tested with a fake client).

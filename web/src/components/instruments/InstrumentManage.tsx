@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Instrument } from '../../types';
 import { instrumentManageApi } from '../../api/workflow.api';
 import { Button } from '../common/Button';
+import { LocationPicker } from '../maps/LocationPicker';
+import { LatLng } from '../../utils/coordinates';
 
 interface Props {
   instrument: Instrument;
@@ -16,8 +18,14 @@ export const InstrumentManage: React.FC<Props> = ({ instrument, canManage, onCha
   const [form, setForm] = useState({ instrumentName: '', manufacturer: '', model: '', capacity: '', capacityUnit: '', accuracyClass: '', locationAddress: '' });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [loc, setLoc] = useState<LatLng | null>(null);
+  const [locError, setLocError] = useState<string | null>(null);
 
   useEffect(() => {
+    const lat = instrument.location_lat;
+    const lng = instrument.location_lng;
+    setLoc(lat !== undefined && lat !== null && lng !== undefined && lng !== null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) ? { lat: Number(lat), lng: Number(lng) } : null);
+    setLocError(null);
     setForm({
       instrumentName: instrument.instrument_name || '',
       manufacturer: instrument.manufacturer || '',
@@ -49,6 +57,10 @@ export const InstrumentManage: React.FC<Props> = ({ instrument, canManage, onCha
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
+    if (locError) {
+      setNotice({ kind: 'err', text: locError });
+      return;
+    }
     run(
       () =>
         instrumentManageApi.update(instrument.id, {
@@ -59,6 +71,8 @@ export const InstrumentManage: React.FC<Props> = ({ instrument, canManage, onCha
           capacityUnit: form.capacityUnit,
           accuracyClass: form.accuracyClass,
           locationAddress: form.locationAddress,
+          locationLat: loc ? loc.lat : null,
+          locationLng: loc ? loc.lng : null,
         }),
       'Instrument details saved.'
     );
@@ -100,6 +114,17 @@ export const InstrumentManage: React.FC<Props> = ({ instrument, canManage, onCha
             <label className="text-xs font-semibold text-slate-700 sm:col-span-3">Location
               <input value={form.locationAddress} onChange={f('locationAddress')} className={inputCls} />
             </label>
+            <div className="sm:col-span-3">
+              <LocationPicker
+                label="Location on the map"
+                value={loc}
+                height={240}
+                onChange={(value, err) => {
+                  setLoc(value);
+                  setLocError(err);
+                }}
+              />
+            </div>
             <div className="sm:col-span-3 flex flex-wrap items-center gap-2">
               <Button type="submit" size="sm" isLoading={busy}>Save changes</Button>
               <span className="text-xs text-slate-500">While an application is open only the name and location can change; the serial number and type are fixed once an application exists.</span>

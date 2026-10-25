@@ -10,6 +10,16 @@ async function createInstrument(user, data) {
     throw ApiError.badRequest('Invalid or inactive instrument type');
   }
 
+  // A map location is optional, but when given it must be a complete, valid point.
+  const lat = data.locationLat ?? null;
+  const lng = data.locationLng ?? null;
+  if ((lat === null) !== (lng === null)) {
+    throw ApiError.badRequest('locationLat and locationLng must be provided together');
+  }
+  if (lat !== null && (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)) {
+    throw ApiError.badRequest('locationLat/locationLng are out of range');
+  }
+
   const existing = await repo.findInstrumentBySerialNumber(data.serialNumber);
 
   if (existing) {
