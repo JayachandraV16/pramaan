@@ -5,6 +5,7 @@ import { RoleName } from '../types';
 import { PendingApprovalError } from '../api/auth.api';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { passwordProblem } from '../utils/passwordRules';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,8 +29,9 @@ export const RegisterPage: React.FC = () => {
       setError('Please fill in all mandatory identity fields.');
       return;
     }
-    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/d/.test(password)) {
-      setError('Password must be at least 8 characters and contain a letter and a digit.');
+    const passwordIssue = passwordProblem(password);
+    if (passwordIssue) {
+      setError(passwordIssue);
       return;
     }
     if (password !== confirmPassword) {

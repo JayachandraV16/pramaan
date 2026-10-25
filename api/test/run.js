@@ -90,6 +90,10 @@ async function main() {
           LOG_LEVEL: 'error',
           BCRYPT_SALT_ROUNDS: '4',
           FRONTEND_URL: 'http://localhost:5173',
+          // pinned so a developer's own api/.env (loaded by dotenv, which never overrides these) cannot change what the tests expect
+          CERT_ID_SCHEME: 'legacy',
+          CERT_OFFICE_CODE: 'IND',
+          STORAGE_DRIVER: 'local',
         },
       });
       child.on('exit', (code) => resolve(code ?? 1));
