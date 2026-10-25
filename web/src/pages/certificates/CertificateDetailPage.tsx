@@ -10,6 +10,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { getFileUrl } from '../../api/client';
 import pramaanLogoMain from '../../assets/pramaan_logo_main.png';
+import { Fingerprint } from '../../components/certificates/Fingerprint';
 
 function formatDate(d?: string | Date) {
   if (!d) return 'N/A';
@@ -268,6 +269,23 @@ export const CertificateDetailPage: React.FC = () => {
             <p className="text-[10px] text-[#222222] font-sans font-normal pt-0.5">Authorised Signatory</p>
             <p className="text-[9px] text-[#555555] font-sans">Issued on: {formatDate(cert.issue_date || cert.created_at || cert.valid_from)}</p>
           </div>
+
+          {cert.record_sha256 && (
+            <Fingerprint
+              testId="record-fingerprint"
+              title="Record fingerprint (SHA-256, 64 characters)"
+              hash={cert.record_sha256}
+              note="A fingerprint of the details recorded for this certificate, used to detect any change. It is not a digital signature. The digital signature, where present, is inside the PDF file."
+            />
+          )}
+          {cert.pdf_sha256 && (
+            <Fingerprint
+              testId="pdf-fingerprint"
+              title="Fingerprint of the certificate PDF file (SHA-256, 64 characters)"
+              hash={cert.pdf_sha256}
+              note="Identifies the exact PDF file that was issued; anyone can compare a copy with it on the public verification page."
+            />
+          )}
 
           {/* Disclaimer at Bottom */}
           <div className="pt-4 text-[8px] text-[#555555] font-sans">

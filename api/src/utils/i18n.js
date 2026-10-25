@@ -190,6 +190,9 @@ const PDF_LABELS = {
     signatory: 'Authorised Signatory',
     issuedOn: 'Issued on: ',
     fingerprint: 'Record fingerprint (SHA-256): ',
+    fingerprintTitle: 'RECORD FINGERPRINT (SHA-256, 64 characters)',
+    fingerprintNote:
+      'A fingerprint of the details recorded for this certificate, used to detect any change. It is not a digital signature. The digital signature, where present, is embedded in this PDF file and is checked separately.',
     footer: 'This certificate is system-generated and can be verified online using the QR code or certificate number above.',
     locale: 'en-IN',
     notAvailable: 'N/A',
@@ -207,6 +210,9 @@ const PDF_LABELS = {
     signatory: 'अधिकृत हस्ताक्षरकर्ता',
     issuedOn: 'जारी करने की तिथि: ',
     fingerprint: 'अभिलेख फ़िंगरप्रिंट (SHA-256): ',
+    fingerprintTitle: 'अभिलेख फ़िंगरप्रिंट (SHA-256, 64 अक्षर)',
+    fingerprintNote:
+      'यह इस प्रमाणपत्र में दर्ज विवरणों का फ़िंगरप्रिंट है, जिससे किसी भी बदलाव का पता चलता है। यह डिजिटल हस्ताक्षर नहीं है। डिजिटल हस्ताक्षर, जहाँ मौजूद हो, इसी PDF फ़ाइल में जुड़ा होता है और अलग से जाँचा जाता है।',
     footer: 'यह प्रमाणपत्र प्रणाली द्वारा तैयार किया गया है और ऊपर दिए गए QR कोड या प्रमाणपत्र संख्या से ऑनलाइन सत्यापित किया जा सकता है।',
     locale: 'hi-IN',
     notAvailable: 'उपलब्ध नहीं',

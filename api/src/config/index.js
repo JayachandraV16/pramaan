@@ -49,6 +49,11 @@ const integritySecret =
     .update('pramaan-integrity-key-v1')
     .digest('hex');
 
+const certIdScheme = (process.env.CERT_ID_SCHEME || 'legacy').toLowerCase();
+if (!['legacy', 'v2'].includes(certIdScheme)) throw new Error('CERT_ID_SCHEME must be "legacy" or "v2"');
+const certOfficeCode = (process.env.CERT_OFFICE_CODE || 'IND').toUpperCase();
+if (!/^[A-Z]{3}$/.test(certOfficeCode)) throw new Error('CERT_OFFICE_CODE must be three letters, for example IND');
+
 const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
 
 const config = {
@@ -133,6 +138,13 @@ const config = {
     lang: 'eng',
     langPath: path.resolve(process.env.OCR_LANG_PATH || path.join(__dirname, '..', '..', 'ocr-data')),
     timeoutMs: Math.max(parseInt(process.env.OCR_TIMEOUT_MS, 10) || 60000, 5000),
+  },
+
+  // Certificate numbers (see utils/certificateId.js): legacy CERT-YYYY-NNNNNN or structured PRM-YY-OOO-NNNNNNN-C-TTTT.
+  // Existing numbers of either kind stay valid whatever this is set to.
+  certificateIds: {
+    scheme: certIdScheme,
+    officeCode: certOfficeCode,
   },
 
   // Renewal opens this many days before a valid certificate expires (see utils/renewal.js).

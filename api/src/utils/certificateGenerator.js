@@ -119,7 +119,7 @@ function drawPage(doc, lang, certificate, qrCodeBuffer) {
   ];
 
   const labelWidth = 150;
-  const rowHeight = 26;
+  const rowHeight = 22;
 
   rows.forEach(([label, value], i) => {
     const rowY = y + i * rowHeight;
@@ -143,7 +143,8 @@ function drawPage(doc, lang, certificate, qrCodeBuffer) {
   }
 
   // ---- Footer: signature + issue date ----
-  const footerY = pageHeight - innerMargin - 70;
+  // sits below the details table (whatever the length of the statement above it) and above the footer text
+  const footerY = Math.max(pageHeight - innerMargin - 109, y + rows.length * rowHeight + 12);
 
   doc.moveTo(contentLeft, footerY).lineTo(contentLeft + 180, footerY).lineWidth(0.75).strokeColor(COLORS.text).stroke();
 
@@ -155,12 +156,19 @@ function drawPage(doc, lang, certificate, qrCodeBuffer) {
     .fillColor(COLORS.muted)
     .text(`${L.issuedOn}${fmt(certificate.issued_at || new Date())}`, contentLeft, footerY + 30);
 
+  // The whole 64-character record fingerprint, in two lines of 32, with a plain statement of what it is.
   if (certificate.record_sha256) {
+    const boxX = contentLeft + 215;
+    const boxWidth = contentRight - boxX;
+    doc.rect(boxX, footerY - 6, boxWidth, 84).lineWidth(0.75).strokeColor(COLORS.line).stroke();
+    doc.font(F.bold).fontSize(8).fillColor(COLORS.text).text(L.fingerprintTitle, boxX + 8, footerY, { width: boxWidth - 16 });
     doc
-      .font('Courier')
-      .fontSize(7.5)
-      .fillColor(COLORS.muted)
-      .text(`${lang === 'hi' ? '' : L.fingerprint}${certificate.record_sha256.slice(0, 32)}...`, contentLeft, footerY + 46, { width: contentWidth, align: 'left' });
+      .font('Courier-Bold')
+      .fontSize(10)
+      .fillColor(COLORS.text)
+      .text(certificate.record_sha256.slice(0, 32), boxX + 8, footerY + 14, { width: boxWidth - 16, characterSpacing: 0.4 })
+      .text(certificate.record_sha256.slice(32), boxX + 8, footerY + 28, { width: boxWidth - 16, characterSpacing: 0.4 });
+    doc.font(F.regular).fontSize(7.5).fillColor(COLORS.muted).text(L.fingerprintNote, boxX + 8, footerY + 46, { width: boxWidth - 16, lineGap: 1 });
   }
 
   doc.font(F.regular).fontSize(8).fillColor(COLORS.muted).text(L.footer, contentLeft, pageHeight - innerMargin - 20, { width: contentWidth, align: 'left' });

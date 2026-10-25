@@ -2,8 +2,8 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `e0cc596` plus the Checkpoint 3 changes described in 4e.
-- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 32 migrations applied. No real or production data is used.
+- Code: `develop` at `77815e4` plus the Checkpoint 4 changes described in 4f.
+- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 33 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
 
@@ -11,13 +11,14 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 170 of 170** (0 failed) |
+| API automated tests | **PASS: 174 of 174** (0 failed) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
 | Map location picker in a real browser (headless Microsoft Edge, 4c) | **PASS: 26 of 26** |
 | Nameplate review queue and inspection photos in a real browser (4d) | **PASS: 17 of 17** |
 | Query inbox, document requests and replies with files in a real browser (4e) | **PASS: 15 of 15** |
+| Structured certificate number and full fingerprints in a real browser (4f) | **PASS: 13 of 13** |
 | Every other page in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
 
 ## 1. End-to-end workflow: owner → admin → officer → certificate → public verification
@@ -152,6 +153,24 @@ Existing threads (open, reply, close, notifications) are unchanged and still cov
 | Hindi text for the new notifications and screens | | **NOT BUILT** (new query notifications are written in English like the earlier query messages) |
 | Unread counters / badges, e-mail or SMS delivery of query notifications through a real provider | | **NOT TESTED** |
 
+## 4f. Checkpoint 4: certificate numbers v2 and the full SHA-256 fingerprint
+
+Number format `PRM-YY-OOO-NNNNNNN-C-TTTT` (year, office, serial, ISO 7064 MOD 37,36 check character, 4-character HMAC tag). New certificates use it only when `CERT_ID_SCHEME=v2`; the default stays `legacy`, and `CERT-YYYY-NNNNNN` numbers stay valid either way. Migration 033 (per-year, per-office counter).
+
+| Item | Evidence | Result |
+|---|---|---|
+| Check character: every single wrong character (all 35 alternatives at every position) and every swap of neighbouring characters is detected, on five sample numbers | `certid.test.js` | PASS |
+| Keyed tag: deterministic, depends on the server secret (a tag made with another key is refused), case and surrounding spaces do not matter, bad format / check / tag reported separately | `certid.test.js` | PASS |
+| Switchable scheme: legacy by default; v2 numbers count up per year and office; another office starts at 1; invalid `CERT_ID_SCHEME` or `CERT_OFFICE_CODE` stops start-up | `certid.test.js` | PASS |
+| Public verification by number works for legacy and v2 (any case); revocation works the same | `certid.test.js` | PASS |
+| A mistyped or invented v2 number is turned away before the registry is asked (`NUMBER_CHECK_FAILED`, `NUMBER_TAG_MISMATCH`) and leaves no scan record; a well-formed but never-issued number is `NOT_FOUND` | `certid.test.js` | PASS |
+| The public result now carries the full 64-character record fingerprint (was first 16) and equals the stored value | `certid.test.js` | PASS |
+| The issued PDF prints both halves of the 64-character record fingerprint and the sentence that it is not a digital signature (text extracted from the PDF streams) | `certid.test.js` | PASS |
+| PDF layout geometry (details table ends about y=420 on both language pages; fingerprint box y=446-530; footer text y=541; page border y=561) | computed from the generator, not looked at | PASS by calculation, **NOT TESTED visually** |
+| Browser: structured number on the certificate page; full 64-character record and PDF fingerprints with the "not a digital signature" explanation; same values on the public page; lower-case number accepted; typo and invented security code give clear messages | browser, 13 of 13 | PASS |
+| Strength of the tag: 4 characters = 20 bits. It guards against typing and guessing; it is **not** proof of authenticity (only the registry plus the QR signature and record fingerprint are) | design note | stated in code and UI |
+| Switching an existing deployment to v2 with live data; the Hindi PDF page's fingerprint wording rendered in a PDF viewer | | **NOT TESTED** |
+
 ## 5. Defects found and fixed during this work
 
 | Defect | How it was found | Status |
@@ -161,6 +180,7 @@ Existing threads (open, reply, close, notifications) are unchanged and still cov
 | Migration 029 used a non-immutable enum cast in an index (failed to apply) | applying it | fixed |
 | Document checklist queried a column that does not exist | regression run | fixed |
 | Earlier "untrack node_modules / PDF" commits were no-ops | audit before pushing | fixed (commit `46cfa51`) |
+| Certificate detail page dropped the hash fields when mapping the API response (so the fingerprint could not be shown) | real-browser run (Checkpoint 4) | fixed |
 | A JPG/PNG with a damaged body crashed the API through an uncaught OCR worker error | real-browser run (Checkpoint 2) | fixed: decode first, 400 |
 
 ## 6. NOT TESTED (be explicit in the PPT)

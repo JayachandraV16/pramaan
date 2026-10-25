@@ -22,7 +22,7 @@ const { recordFingerprint, verifyQrSignature } = require('../../utils/certificat
 const repo = require('./qr-auth.repository');
 const { QR_AUTH_RESULTS } = require('./qr-auth.validation');
 
-const CERTIFICATE_NUMBER_PATTERN = /^CERT-\d{4}-\d{3,}$/i;
+const certificateId = require('../../utils/certificateId');
 const QR_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 
 // "Rajesh Sharma" -> "R***** S*****" : enough to recognise, not to dox.
@@ -45,8 +45,12 @@ function todayString() {
 
 async function findCertificate(identifier) {
   const value = String(identifier || '').trim();
-  if (CERTIFICATE_NUMBER_PATTERN.test(value)) {
-    return { certificate: await repo.findCertificateByNumber(value), by: 'NUMBER' };
+  if (certificateId.looksLikeCertificateNumber(value)) {
+    // A structured number carries a check character and a keyed tag: a mistyped or invented number
+    // is turned away here without a database lookup. Legacy numbers have neither and go straight to the registry.
+    const inspected = certificateId.inspect(value);
+    if (!inspected.valid) return { certificate: null, by: 'NUMBER', numberProblem: inspected.reason };
+    return { certificate: await repo.findCertificateByNumber(inspected.normalised), by: 'NUMBER' };
   }
   if (QR_TOKEN_PATTERN.test(value)) {
     return { certificate: await repo.findCertificateByQrToken(value), by: 'QR_TOKEN' };
@@ -60,7 +64,7 @@ async function verifyPublic({ identifier, signature }, metadata = {}) {
     throw ApiError.badRequest('A QR token or certificate number is required');
   }
 
-  const { certificate, by } = await findCertificate(identifier);
+  const { certificate, by, numberProblem } = await findCertificate(identifier);
   const verifiedAt = new Date().toISOString();
 
   if (!certificate) {
@@ -68,7 +72,7 @@ async function verifyPublic({ identifier, signature }, metadata = {}) {
       result: QR_AUTH_RESULTS.INVALID,
       valid: false,
       tampered: false,
-      reason: 'NOT_FOUND',
+      reason: numberProblem === 'CHECK_CHARACTER' ? 'NUMBER_CHECK_FAILED' : numberProblem === 'TAG' ? 'NUMBER_TAG_MISMATCH' : 'NOT_FOUND',
       certificate: null,
       integrity: null,
       verifiedAt,
@@ -166,7 +170,7 @@ async function verifyPublic({ identifier, signature }, metadata = {}) {
       pdfSigned: !!certificate.pdf_signed,
       signerSubject: certificate.signature_subject || null,
       signedAt: certificate.signed_at || null,
-      recordFingerprint: certificate.record_sha256 ? certificate.record_sha256.slice(0, 16) : null,
+      recordFingerprint: certificate.record_sha256 || null,
     },
     verifiedAt,
   };

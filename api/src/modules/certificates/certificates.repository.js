@@ -1,3 +1,4 @@
+const certificateId = require('../../utils/certificateId');
 const pool = require('../../pool');
 
 // Find verification with its application and result
@@ -284,18 +285,9 @@ async function findIssuanceContext(verificationId, client = pool) {
   return rows[0] || null;
 }
 
-// Race-free CERT-{year}-{000001}; call inside the issuing transaction.
-async function nextCertificateNumber(client, year) {
-  const { rows } = await client.query(
-    `INSERT INTO certificate_number_counters (year, last_sequence)
-     VALUES ($1, 1)
-     ON CONFLICT (year)
-     DO UPDATE SET last_sequence = certificate_number_counters.last_sequence + 1
-     RETURNING last_sequence`,
-    [year]
-  );
-  return `CERT-${year}-${String(rows[0].last_sequence).padStart(6, '0')}`;
-}
+// Race-free next number under the configured scheme (legacy CERT-{year}-{000001} or PRM-...);
+// call inside the issuing transaction. See utils/certificateId.js.
+const nextCertificateNumber = (client, year, options) => certificateId.nextCertificateNumber(client, year, options);
 
 async function insertCertificate(client, { verificationId, instrumentId, certificateNumber, validFrom, validUntil }) {
   const { rows } = await client.query(

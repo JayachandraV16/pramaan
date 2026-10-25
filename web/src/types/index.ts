@@ -379,6 +379,11 @@ export interface VerificationCertificate {
   valid_until: string;
   status: CertificateStatus;
   certificate_file_url?: string;
+  /** SHA-256 over the certificate's recorded details (64 hex characters) */
+  record_sha256?: string | null;
+  /** SHA-256 of the issued PDF file (64 hex characters) */
+  pdf_sha256?: string | null;
+  pdf_signed?: boolean;
   qr_token: string;
   verification_decision: "PASS";
   issued_by_name: string;

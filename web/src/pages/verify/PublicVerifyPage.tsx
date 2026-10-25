@@ -9,6 +9,7 @@ import {
 import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import pramaanLogoMain from '../../assets/pramaan_logo_main.png';
+import { Fingerprint } from '../../components/certificates/Fingerprint';
 
 /** Date-only strings (YYYY-MM-DD) are calendar dates: format without timezone shifts. */
 function formatDate(d?: string | null) {
@@ -175,7 +176,7 @@ export const PublicVerifyPage: React.FC = () => {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. CERT-2026-000123"
+              placeholder="e.g. PRM-26-IND-0000123-K-7QXM or CERT-2026-000123"
               required
               className="flex-1 px-4 py-3 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pramaan-navy-800"
             />
@@ -199,6 +200,12 @@ export const PublicVerifyPage: React.FC = () => {
           <div className={`rounded-2xl p-6 border shadow-gov ${VERDICT_COPY[verdict].tone}`} role="status">
             <h2 className="text-lg font-bold">{t(`verify.${verdict}.title`, VERDICT_COPY[verdict].title)}</h2>
             <p className="text-sm mt-1 leading-relaxed">{t(`verify.${verdict}.text`, VERDICT_COPY[verdict].text)}</p>
+            {result.reason === 'NUMBER_CHECK_FAILED' && (
+              <p className="text-xs mt-2" data-testid="number-problem">This number contains a typing mistake. Compare each character with the certificate and try again.</p>
+            )}
+            {result.reason === 'NUMBER_TAG_MISMATCH' && (
+              <p className="text-xs mt-2" data-testid="number-problem">The security code at the end of this number does not match, so Pramaan did not issue this number. Check the number on the certificate again.</p>
+            )}
             {result.certificate?.revokedAt && (
               <p className="text-xs mt-2">Revoked on {formatDate(result.certificate.revokedAt)}.</p>
             )}
@@ -233,12 +240,6 @@ export const PublicVerifyPage: React.FC = () => {
                   Certificate record:{' '}
                   <strong>{INTEGRITY_LABEL[result.integrity.recordHash] ?? result.integrity.recordHash}</strong>
                 </li>
-                {result.integrity.recordFingerprint && (
-                  <li>
-                    Record fingerprint (SHA-256, first 16):{' '}
-                    <code className="font-mono text-xs">{result.integrity.recordFingerprint}</code>
-                  </li>
-                )}
                 <li>
                   {t('verify.signature', 'Digital signature')}:{' '}
                   <strong>
@@ -247,12 +248,23 @@ export const PublicVerifyPage: React.FC = () => {
                       : t('verify.notSigned', 'Not digitally signed (issued without a signing key)')}
                   </strong>
                 </li>
-                {result.integrity.pdfSha256 && (
-                  <li className="break-all">
-                    PDF SHA-256: <code className="font-mono text-xs">{result.integrity.pdfSha256}</code>
-                  </li>
-                )}
               </ul>
+              {result.integrity.recordFingerprint && (
+                <Fingerprint
+                  testId="record-fingerprint"
+                  title="Record fingerprint (SHA-256, 64 characters)"
+                  hash={result.integrity.recordFingerprint}
+                  note="A fingerprint of the details recorded for this certificate. It is printed on the certificate, so you can compare it with your copy. It is not a digital signature."
+                />
+              )}
+              {result.integrity.pdfSha256 && (
+                <Fingerprint
+                  testId="pdf-fingerprint"
+                  title="Fingerprint of the certificate PDF file (SHA-256, 64 characters)"
+                  hash={result.integrity.pdfSha256}
+                  note="Identifies the exact PDF file that was issued. Upload your copy below to compare. It is not a digital signature; the digital signature, where present, is inside the PDF."
+                />
+              )}
               <p className="text-xs text-slate-500">Checked {new Date(result.verifiedAt).toLocaleString('en-IN')}.</p>
             </div>
           )}
