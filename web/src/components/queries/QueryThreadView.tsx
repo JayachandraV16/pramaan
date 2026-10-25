@@ -21,8 +21,7 @@ const HISTORY_TEXT: Record<string, string> = {
 };
 
 /** One query thread: messages with their files, a reply box (with an optional file), close / reopen and the thread history. */
-export const QueryThreadView: React.FC<Props> = ({ threadId, role, userId, onChanged }) => {
-  const isStaff = role === 'ADMIN' || role === 'LMO' || role === 'GATC';
+export const QueryThreadView: React.FC<Props> = ({ threadId, userId, onChanged }) => {
   const [thread, setThread] = useState<QueryThread | null>(null);
   const [reply, setReply] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -57,7 +56,9 @@ export const QueryThreadView: React.FC<Props> = ({ threadId, role, userId, onCha
   };
 
   if (!thread) return error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : <p className="text-sm text-slate-500">Loading…</p>;
-  const canClose = thread.status === 'OPEN' && (role === 'ADMIN' || thread.messages?.[0]?.author_id === userId);
+  // only an administrator or the assigned officer may resolve; the server decides and says so in can_close
+  const canResolve = !!thread.can_close;
+  const statusText = thread.status === 'CLOSED' ? 'Resolved and closed' : thread.awaiting === 'APPLICANT' ? 'Open: waiting for the applicant' : thread.awaiting === 'DEPARTMENT' ? 'Open: waiting for the department' : 'Open';
 
   return (
     <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-3" data-testid="query-thread">
@@ -66,6 +67,9 @@ export const QueryThreadView: React.FC<Props> = ({ threadId, role, userId, onCha
         <p className="text-[11px] text-slate-500">
           {thread.kind === 'DOCUMENT_REQUEST' ? 'Document request' : 'Clarification'}
           {thread.application_number ? ` · Application ${thread.application_number}` : ''}
+        </p>
+        <p className="mt-1">
+          <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${thread.status === 'CLOSED' ? 'bg-slate-200 text-slate-700' : 'bg-amber-100 text-amber-800'}`} data-testid="query-status">{statusText}</span>
         </p>
       </div>
 
@@ -112,8 +116,8 @@ export const QueryThreadView: React.FC<Props> = ({ threadId, role, userId, onCha
             <input value={reply} onChange={(e) => setReply(e.target.value)} aria-label="Reply" placeholder="Write a reply"
               className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-sm" />
             <Button type="submit" size="sm" isLoading={busy} disabled={!reply.trim()}>Send</Button>
-            {canClose && (
-              <Button type="button" size="sm" variant="secondary" onClick={() => run(() => queriesApi.close(thread.id))}>Close thread</Button>
+            {canResolve && (
+              <Button type="button" size="sm" variant="secondary" onClick={() => run(() => queriesApi.close(thread.id))}>Resolve and close</Button>
             )}
           </div>
           <label className="block text-xs text-slate-600">
@@ -125,7 +129,7 @@ export const QueryThreadView: React.FC<Props> = ({ threadId, role, userId, onCha
       ) : (
         <div className="flex items-center gap-3">
           <p className="text-xs text-slate-500">This thread is closed.</p>
-          {isStaff && <Button type="button" size="sm" variant="secondary" isLoading={busy} onClick={() => run(() => queriesApi.reopen(thread.id))}>Reopen</Button>}
+          {canResolve && <Button type="button" size="sm" variant="secondary" isLoading={busy} onClick={() => run(() => queriesApi.reopen(thread.id))}>Reopen</Button>}
         </div>
       )}
 

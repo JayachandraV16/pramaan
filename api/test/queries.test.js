@@ -154,3 +154,74 @@ test('closing, reopening and the history of a thread', async () => {
   assert.ok(thread.history.every((e) => e.actor_name && e.occurred_at));
   assert.equal(thread.status, 'OPEN');
 });
+
+// ---------------------------------------------------------------------------
+// who may ask, who is told, and who may resolve
+// ---------------------------------------------------------------------------
+
+test('applicants ask, reply, attach and track; they can never resolve or reopen', async () => {
+  const { application } = await newApplication(actors); // nobody assigned yet
+  const open = await ok(call('POST', '/api/queries', actors.owner.token, { applicationId: application.id, subject: 'When will you visit?', message: 'Please give a date' }), 201, 'applicant opens');
+  assert.equal(open.raised_by_id, actors.owner.id);
+
+  // with no officer assigned, the administrators are told so the question is not left unseen
+  const adminNotes = await h.pool.query("SELECT 1 FROM notifications WHERE recipient_id = $1 AND related_application_id = $2 AND type = 'QUERY_MESSAGE'", [actors.admin.id, application.id]);
+  assert.equal(adminNotes.rowCount, 1);
+  const adminList = await ok(call('GET', `/api/queries?applicationId=${application.id}`, actors.admin.token), 200, 'admin list');
+  assert.deepEqual(adminList.map((q) => q.id), [open.id], 'visible to administrators');
+  assert.equal(adminList[0].can_close, true);
+
+  // the applicant tracks the status and whose turn it is, and can add a file to a reply
+  const mine = await ok(call('GET', `/api/queries/${open.id}`, actors.owner.token), 200, 'applicant thread');
+  assert.equal(mine.status, 'OPEN');
+  assert.equal(mine.awaiting, 'DEPARTMENT');
+  assert.equal(mine.can_close, false, 'the opener is not allowed to resolve');
+  const withFile = await reply(actors.owner.token, open.id, 'Photo attached', { bytes: png, type: 'image/png', name: 'shop.png' });
+  assert.equal(withFile.status, 201, JSON.stringify(withFile.body));
+
+  // not even the person who opened the thread may close or reopen it
+  const closeTry = await call('PATCH', `/api/queries/${open.id}/close`, actors.owner.token);
+  assert.equal(closeTry.status, 403);
+  assert.match(closeTry.body.message, /administrator or the officer assigned/);
+  assert.equal((await call('GET', `/api/queries/${open.id}`, actors.owner.token)).body.data.status, 'OPEN', 'still open');
+
+  await ok(call('PATCH', `/api/queries/${open.id}/close`, actors.admin.token), 200, 'admin resolves');
+  const closed = await ok(call('GET', `/api/queries/${open.id}`, actors.owner.token), 200, 'closed view');
+  assert.equal(closed.status, 'CLOSED');
+  assert.equal(closed.awaiting, null);
+  assert.equal((await reply(actors.owner.token, open.id, 'one more thing')).status, 409, 'closed threads take no replies');
+  assert.equal((await call('PATCH', `/api/queries/${open.id}/reopen`, actors.owner.token)).status, 403, 'applicants cannot reopen');
+});
+
+test('a query reaches the assigned officer; only that officer or an administrator can resolve it', async () => {
+  const { application } = await newApplication(actors);
+  const assignment = await assignTo(actors, application.id, actors.lmo);
+  const q = await ok(call('POST', '/api/queries', actors.owner.token, { applicationId: application.id, subject: 'Calibration weights', message: 'Which weights will you use?' }), 201, 'open');
+
+  const lmoNotes = await h.pool.query("SELECT title FROM notifications WHERE recipient_id = $1 AND related_application_id = $2 AND type = 'QUERY_MESSAGE'", [actors.lmo.id, application.id]);
+  assert.equal(lmoNotes.rowCount, 1, 'the assigned officer is told');
+  const adminNotes = await h.pool.query("SELECT 1 FROM notifications WHERE recipient_id = $1 AND related_application_id = $2", [actors.admin.id, application.id]);
+  assert.equal(adminNotes.rowCount, 0, 'administrators are not spammed when an officer is assigned (they can still see everything)');
+  assert.ok((await ok(call('GET', `/api/queries?awaiting=me&applicationId=${application.id}`, actors.lmo.token), 200, 'officer inbox')).some((t) => t.id === q.id));
+  assert.ok((await ok(call('GET', `/api/queries?applicationId=${application.id}`, actors.admin.token), 200, 'admin sees it')).some((t) => t.id === q.id));
+
+  // an officer who is not assigned sees nothing and cannot touch it
+  const outsider = await h.createUser('LMO');
+  assert.equal((await call('GET', `/api/queries/${q.id}`, outsider.token)).status, 403);
+  assert.equal((await call('PATCH', `/api/queries/${q.id}/close`, outsider.token)).status, 403);
+  assert.equal((await reply(outsider.token, q.id, 'hello')).status, 403);
+  assert.deepEqual(await ok(call('GET', `/api/queries?applicationId=${application.id}`, outsider.token), 200, 'outsider list'), []);
+
+  const view = await ok(call('GET', `/api/queries/${q.id}`, actors.lmo.token), 200, 'officer view');
+  assert.equal(view.can_close, true);
+  await ok(call('PATCH', `/api/queries/${q.id}/close`, actors.lmo.token), 200, 'assigned officer resolves');
+  assert.equal((await call('PATCH', `/api/queries/${q.id}/reopen`, actors.owner.token)).status, 403);
+  await ok(call('PATCH', `/api/queries/${q.id}/reopen`, actors.lmo.token), 200, 'assigned officer reopens');
+
+  // an officer who declines the assignment loses access and cannot resolve any more
+  const declined = await call('PATCH', `/api/assignments/${assignment.id}/status`, actors.lmo.token, { status: 'DECLINED' });
+  assert.equal(declined.status, 200, JSON.stringify(declined.body));
+  assert.equal((await call('GET', `/api/queries/${q.id}`, actors.lmo.token)).status, 403, 'a declined officer no longer sees the thread');
+  assert.equal((await call('PATCH', `/api/queries/${q.id}/close`, actors.lmo.token)).status, 403);
+  await ok(call('PATCH', `/api/queries/${q.id}/close`, actors.admin.token), 200, 'admin still can');
+});

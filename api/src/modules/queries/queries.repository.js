@@ -3,13 +3,14 @@
 const pool = require('../../pool');
 
 // Who may take part in queries about an application: ADMIN, the applicant and
-// instrument owner, and every officer ever assigned to it.
+// instrument owner, and the officers CURRENTLY assigned to it (an assignment that was declined or
+// reassigned away no longer counts, so that officer neither sees the thread nor can resolve it).
 async function findApplicationParticipants(applicationId, client = pool) {
   const { rows } = await client.query(
     `SELECT a.id, a.application_number, a.applicant_id, i.owner_id,
             COALESCE(
               (SELECT array_agg(DISTINCT s.assigned_to_id) FROM verification_assignments s
-               WHERE s.application_id = a.id),
+               WHERE s.application_id = a.id AND s.status IN ('ASSIGNED', 'ACCEPTED', 'COMPLETED')),
               ARRAY[]::uuid[]
             ) AS officer_ids
      FROM verification_applications a
@@ -18,6 +19,14 @@ async function findApplicationParticipants(applicationId, client = pool) {
     [applicationId]
   );
   return rows[0] || null;
+}
+
+// Active administrators: told about a query when no officer is assigned yet, so it is not left unseen.
+async function findActiveAdminIds(client = pool) {
+  const { rows } = await client.query(
+    `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'ADMIN' AND u.status = 'ACTIVE'`
+  );
+  return rows.map((r) => r.id);
 }
 
 async function insertQuery(client, { applicationId, raisedById, subject, kind = 'CLARIFICATION', requestedItems = [] }) {
@@ -90,7 +99,8 @@ async function listQueries({ applicationId, status, kind, userId }) {
             OR a.applicant_id = $3::uuid
             OR i.owner_id = $3::uuid
             OR EXISTS (SELECT 1 FROM verification_assignments s
-                       WHERE s.application_id = a.id AND s.assigned_to_id = $3::uuid))
+                       WHERE s.application_id = a.id AND s.assigned_to_id = $3::uuid
+                         AND s.status IN ('ASSIGNED', 'ACCEPTED', 'COMPLETED')))
      ORDER BY q.updated_at DESC`,
     [applicationId || null, status || null, userId || null, kind || null]
   );
@@ -142,6 +152,7 @@ async function closeQuery(client, id, userId) {
 
 module.exports = {
   findApplicationParticipants,
+  findActiveAdminIds,
   insertQuery,
   insertMessage,
   findQueryById,

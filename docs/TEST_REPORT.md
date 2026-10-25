@@ -2,7 +2,7 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `8ef1eb6` plus the Checkpoint 6 changes described in 4h.
+- Code: `develop` at `08298a3` plus the query-resolution fix described in 4e (update).
 - Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 34 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
@@ -11,7 +11,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 192 of 192** (0 failed) |
+| API automated tests | **PASS: 197 of 197** (0 failed) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
@@ -154,6 +154,20 @@ Existing threads (open, reply, close, notifications) are unchanged and still cov
 | Browser: officer sees the file, closes, finds it under Closed, reopens; history lists all four events; applicants have no "Request documents" option | browser | PASS |
 | Hindi text for the new notifications and screens | | **NOT BUILT** (new query notifications are written in English like the earlier query messages) |
 | Unread counters / badges, e-mail or SMS delivery of query notifications through a real provider | | **NOT TESTED** |
+
+### 4e (update). Query resolution rules
+
+Applicants can ask, reply, attach files and track a query; only an administrator or the officer currently assigned can resolve (close) or reopen it. Regression tests in `queries.test.js`; browser checks as in 4c.
+
+| Item | Evidence | Result |
+|---|---|---|
+| Root causes found: the opener (an applicant) could close their own thread; "assigned" meant anyone ever assigned (declined and reassigned officers kept access); questions on an unassigned application notified nobody; the inbox had no way to start a query | code review, browser reproduction | fixed |
+| An applicant opens a query on an unassigned application; the active administrators are notified and can see and resolve it | `queries.test.js` | PASS |
+| Applicant tracking: status and whose turn it is; reply with a file; `can_close` is false for them | `queries.test.js` | PASS |
+| Applicants get 403 on close and reopen, even for threads they opened; closed threads take no replies | `queries.test.js` | PASS |
+| The assigned officer is notified, finds it under "waiting for me", resolves and reopens; an unassigned officer gets 403 on read, reply and close and sees nothing in the list | `queries.test.js` | PASS |
+| An officer who declines the assignment loses access and cannot resolve; the administrator still can | `queries.test.js` | PASS |
+| Browser: the applicant starts a query from the inbox, sees the status chip, has no "Resolve and close" button, replies with a file; the administrator sees it and was notified; the assigned officer resolves it; the applicant sees "Resolved and closed" and cannot reopen | browser, 14 of 14 | PASS |
 
 ## 4f. Checkpoint 4: certificate numbers v2 and the full SHA-256 fingerprint
 

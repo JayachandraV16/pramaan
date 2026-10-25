@@ -33,6 +33,8 @@ export interface QueryThread {
   requested_items?: string[];
   status: 'OPEN' | 'CLOSED';
   awaiting: 'APPLICANT' | 'DEPARTMENT' | null;
+  /** the server says whether this user may resolve (close / reopen) the thread */
+  can_close?: boolean;
   message_count?: number;
   last_message?: string | null;
   last_message_at?: string | null;

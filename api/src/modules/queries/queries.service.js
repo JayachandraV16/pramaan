@@ -53,6 +53,13 @@ function isParticipant(user, participants) {
   return participants.officer_ids.includes(user.id);
 }
 
+// Resolving (closing / reopening) belongs to the department: an administrator or an officer currently
+// assigned to the application. Applicants can ask, reply and attach files, but never resolve.
+function canResolve(user, participants) {
+  if (user.role === ROLES.ADMIN) return true;
+  return (user.role === ROLES.LMO || user.role === ROLES.GATC) && participants.officer_ids.includes(user.id);
+}
+
 function isApplicantSide(userId, participants) {
   return participants.applicant_id === userId || participants.owner_id === userId;
 }
@@ -70,9 +77,13 @@ async function loadParticipants(applicationId, client) {
   return participants;
 }
 
-// Everyone involved except the author.
-function otherRecipients(participants, query, authorId) {
+// Everyone involved except the author. When nobody from the department is assigned yet, the
+// administrators are included so an applicant's question is never left unseen.
+async function otherRecipients(participants, query, authorId, client) {
   const set = new Set([participants.applicant_id, participants.owner_id, query.raised_by_id, ...participants.officer_ids]);
+  if (participants.officer_ids.length === 0 && isApplicantSide(authorId, participants)) {
+    for (const adminId of await repo.findActiveAdminIds(client)) set.add(adminId);
+  }
   set.delete(authorId);
   set.delete(null);
   set.delete(undefined);
@@ -119,7 +130,7 @@ async function createQuery(user, data) {
       details: { applicationId: data.applicationId, subject, kind, requestedItems },
     });
 
-    for (const recipientId of otherRecipients(participants, query, user.id)) {
+    for (const recipientId of await otherRecipients(participants, query, user.id, client)) {
       await notify(client, {
         recipientId,
         type: 'QUERY_MESSAGE',
@@ -152,7 +163,7 @@ async function listQueries(user, filters) {
     if (!cache.has(row.application_id)) {
       cache.set(row.application_id, await repo.findApplicationParticipants(row.application_id));
     }
-    const item = withAwaiting(row, cache.get(row.application_id));
+    const item = { ...withAwaiting(row, cache.get(row.application_id)), can_close: canResolve(user, cache.get(row.application_id)) };
     // awaiting=me keeps the threads where the next move belongs to this person's side
     if (String(filters.awaiting || '').toLowerCase() === 'me') {
       const mySide = isApplicantSide(user.id, cache.get(row.application_id)) ? 'APPLICANT' : 'DEPARTMENT';
@@ -176,6 +187,7 @@ async function getQuery(user, queryId) {
     ...withAwaiting({ ...query, last_author_id: last ? last.author_id : null }, participants),
     application_number: participants.application_number,
     messages,
+    can_close: canResolve(user, participants),
     history: await repo.findHistory(queryId),
   };
 }
@@ -210,7 +222,7 @@ async function addMessage(user, queryId, data, file = null) {
       details: { applicationId: query.application_id, attachmentSha256: file ? file.sha256 : null },
     });
 
-    for (const recipientId of otherRecipients(participants, query, user.id)) {
+    for (const recipientId of await otherRecipients(participants, query, user.id, client)) {
       await notify(client, {
         recipientId,
         type: 'QUERY_MESSAGE',
@@ -234,8 +246,8 @@ async function closeQuery(user, queryId) {
     if (!isParticipant(user, participants)) {
       throw ApiError.forbidden('You do not have access to this query');
     }
-    if (user.role !== ROLES.ADMIN && query.raised_by_id !== user.id) {
-      throw ApiError.forbidden('Only the person who opened a query, or an administrator, can close it');
+    if (!canResolve(user, participants)) {
+      throw ApiError.forbidden('Only an administrator or the officer assigned to this application can resolve or close a query');
     }
     if (query.status === 'CLOSED') return query;
 
@@ -260,7 +272,7 @@ async function reopenQuery(user, queryId) {
 
     const participants = await loadParticipants(query.application_id, client);
     if (!isParticipant(user, participants)) throw ApiError.forbidden('You do not have access to this query');
-    if (!isStaff(user)) throw ApiError.forbidden('Only the department can reopen a query');
+    if (!canResolve(user, participants)) throw ApiError.forbidden('Only an administrator or the officer assigned to this application can reopen a query');
     if (query.status === 'OPEN') return query;
 
     const reopened = await repo.reopenQuery(client, queryId);
@@ -271,7 +283,7 @@ async function reopenQuery(user, queryId) {
       entityId: queryId,
       details: { applicationId: query.application_id },
     });
-    for (const recipientId of otherRecipients(participants, query, user.id)) {
+    for (const recipientId of await otherRecipients(participants, query, user.id, client)) {
       await notify(client, {
         recipientId,
         type: 'QUERY_MESSAGE',

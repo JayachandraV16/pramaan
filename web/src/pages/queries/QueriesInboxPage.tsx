@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { QueryThread, queriesApi } from '../../api/workflow.api';
 import { QueryThreadView } from '../../components/queries/QueryThreadView';
+import { NewQueryForm } from '../../components/queries/NewQueryForm';
+import { applicationsApi } from '../../api/applications.api';
+import { VerificationApplication } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 type Tab = 'ME' | 'OPEN' | 'DOCS' | 'CLOSED';
@@ -23,6 +26,8 @@ export const QueriesInboxPage: React.FC = () => {
   const [rows, setRows] = useState<QueryThread[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [applications, setApplications] = useState<VerificationApplication[]>([]);
+  const [newFor, setNewFor] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -36,6 +41,9 @@ export const QueriesInboxPage: React.FC = () => {
     setRows(null);
     load();
   }, [load]);
+  useEffect(() => {
+    applicationsApi.listApplications().then(setApplications).catch(() => setApplications([]));
+  }, []);
 
   if (isLoading) return null;
   if (!user) return <Navigate to="/dashboard" replace />;
@@ -55,6 +63,34 @@ export const QueriesInboxPage: React.FC = () => {
         ))}
       </div>
       {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
+
+      <details className="bg-white rounded-2xl border border-slate-200 shadow-gov p-4" data-testid="new-query-panel">
+        <summary className="cursor-pointer text-sm font-semibold text-[#1a3a5c]">Start a new query</summary>
+        <label className="mt-3 block text-xs font-semibold text-slate-700">
+          About which application?
+          <select value={newFor} onChange={(e) => setNewFor(e.target.value)} aria-label="Application" data-testid="new-query-application"
+            className="mt-1 block w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm">
+            <option value="">Choose an application</option>
+            {applications.map((a) => (
+              <option key={a.id} value={a.id}>{a.application_number}{a.instrument_name ? ` · ${a.instrument_name}` : ''}</option>
+            ))}
+          </select>
+        </label>
+        {applications.length === 0 && <p className="mt-2 text-xs text-slate-500">You have no applications yet. Queries are about an application.</p>}
+        {newFor && (
+          <NewQueryForm
+            key={newFor}
+            applicationId={newFor}
+            role={user.role_id}
+            onCreated={(id) => {
+              setNewFor('');
+              setTab('OPEN');
+              setSelected(id);
+              load();
+            }}
+          />
+        )}
+      </details>
 
       <div className="grid md:grid-cols-2 gap-4">
         <ul className="bg-white rounded-2xl border border-slate-200 shadow-gov divide-y divide-slate-100 self-start" data-testid="inbox-list">
