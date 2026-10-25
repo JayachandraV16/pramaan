@@ -96,6 +96,36 @@ async function getCheck(user, id) {
   return { ...row, disclaimer: 'Machine reading and suggestion only; a person must confirm.' };
 }
 
+// Review queue. ADMIN sees every check; an officer sees checks on instruments assigned to them.
+// status: PENDING_REVIEW (default) | CONFIRMED_MATCH | CONFIRMED_MISMATCH | UNREADABLE | ALL
+async function queue(user, status) {
+  if (!canReview(user)) throw ApiError.forbidden('Only an administrator or an officer can open the review queue');
+  const wanted = String(status || 'PENDING_REVIEW').toUpperCase();
+  if (wanted !== 'ALL' && !['PENDING_REVIEW', ...DECISIONS].includes(wanted)) throw ApiError.badRequest('Unknown status filter');
+  const params = [];
+  const where = [];
+  if (wanted !== 'ALL') { params.push(wanted); where.push(`c.status = $${params.length}`); }
+  if (user.role !== ROLES.ADMIN) {
+    params.push(user.id);
+    where.push(`EXISTS (SELECT 1 FROM verification_applications va
+                          JOIN verification_assignments vs ON vs.application_id = va.id
+                         WHERE va.instrument_id = c.instrument_id AND vs.assigned_to_id = $${params.length})`);
+  }
+  const { rows } = await pool.query(
+    `SELECT c.*, u.full_name AS uploaded_by_name, r.full_name AS reviewed_by_name,
+            i.instrument_name, i.serial_number AS instrument_serial, o.full_name AS owner_name
+       FROM nameplate_checks c
+       JOIN users u ON u.id = c.uploaded_by_id
+       JOIN instruments i ON i.id = c.instrument_id
+       JOIN users o ON o.id = i.owner_id
+       LEFT JOIN users r ON r.id = c.reviewed_by_id
+      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+      ORDER BY c.created_at DESC LIMIT 200`,
+    params
+  );
+  return rows;
+}
+
 async function listForInstrument(user, instrumentId) {
   const instrument = await accessibleInstrument(user, instrumentId);
   const { rows } = await pool.query(
@@ -170,4 +200,4 @@ async function review(user, id, data) {
   return getCheck(user, id);
 }
 
-module.exports = { status, createCheck, getCheck, listForInstrument, review, DECISIONS };
+module.exports = { status, createCheck, getCheck, queue, listForInstrument, review, DECISIONS };

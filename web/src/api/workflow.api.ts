@@ -329,9 +329,16 @@ export interface NameplateCheck {
   review_note: string | null;
   created_at: string;
   disclaimer?: string;
+  /** present in the review queue */
+  instrument_name?: string;
+  instrument_serial?: string;
+  owner_name?: string;
 }
 
+export type NameplateQueueStatus = 'PENDING_REVIEW' | 'CONFIRMED_MATCH' | 'CONFIRMED_MISMATCH' | 'UNREADABLE' | 'ALL';
+
 export const nameplateApi = {
+  queue: (status: NameplateQueueStatus = 'PENDING_REVIEW') => apiClient.get<NameplateCheck[]>(`/nameplate/queue?status=${status}`),
   status: () => apiClient.get<{ available: boolean; engine: string | null }>('/nameplate/status'),
   list: (instrumentId: string) => apiClient.get<NameplateCheck[]>(`/nameplate/instruments/${instrumentId}`),
   upload(instrumentId: string, file: File) {
@@ -341,4 +348,41 @@ export const nameplateApi = {
   },
   review: (id: string, body: { decision: 'CONFIRMED_MATCH' | 'CONFIRMED_MISMATCH' | 'UNREADABLE'; note?: string }) =>
     apiClient.post<NameplateCheck>(`/nameplate/${id}/review`, body),
+};
+
+
+/* ---------- inspection photos (verification evidence) ---------- */
+
+export type EvidenceKind = 'READING' | 'TEST_WEIGHT' | 'SEAL' | 'CONDITION' | 'OTHER';
+export const EVIDENCE_KIND_LABEL: Record<EvidenceKind, string> = {
+  READING: 'Instrument reading',
+  TEST_WEIGHT: 'Test weight',
+  SEAL: 'Seal',
+  CONDITION: 'Instrument condition',
+  OTHER: 'Other',
+};
+export interface EvidencePhoto {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_sha256: string | null;
+  evidence_kind: EvidenceKind | null;
+  description: string | null;
+  captured_at: string | null;
+  uploaded_at: string;
+  uploaded_by_name?: string;
+}
+
+export const evidenceApi = {
+  list: (verificationId: string) => apiClient.get<EvidencePhoto[]>(`/attachments/verification/${verificationId}`),
+  upload(verificationId: string, kind: EvidenceKind, file: File, description?: string) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('category', 'INSPECTION_EVIDENCE');
+    form.append('verificationId', verificationId);
+    form.append('evidenceKind', kind);
+    if (description) form.append('description', description);
+    if (file.lastModified && file.lastModified < Date.now()) form.append('capturedAt', new Date(file.lastModified).toISOString());
+    return apiFetch<EvidencePhoto>('/attachments', { method: 'POST', body: form });
+  },
 };

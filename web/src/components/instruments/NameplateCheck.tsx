@@ -5,11 +5,14 @@ import {
   NameplateAdvisory,
   NameplateCheck as Check,
   NameplateFieldStatus,
+  NameplateQueueStatus,
 } from '../../api/workflow.api';
 import { Button } from '../common/Button';
 
 interface Props {
-  instrumentId: string;
+  /** One instrument's checks (with upload). Omit and pass `queueStatus` for the officer/admin review queue. */
+  instrumentId?: string;
+  queueStatus?: NameplateQueueStatus;
   role: string;
   userId: string;
 }
@@ -47,7 +50,8 @@ const STATUS_TEXT: Record<string, { text: string; cls: string }> = {
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /** OCR-assisted nameplate check: upload a photo, see what was read against the registered data, a person decides. */
-export const NameplateCheck: React.FC<Props> = ({ instrumentId, role, userId }) => {
+export const NameplateCheck: React.FC<Props> = ({ instrumentId, queueStatus, role, userId }) => {
+  const inQueue = !instrumentId;
   const canReview = role === 'ADMIN' || role === 'LMO' || role === 'GATC';
   const [available, setAvailable] = useState<boolean | null>(null);
   const [checks, setChecks] = useState<Check[]>([]);
@@ -58,20 +62,20 @@ export const NameplateCheck: React.FC<Props> = ({ instrumentId, role, userId }) 
 
   const load = useCallback(async () => {
     try {
-      const [s, list] = await Promise.all([nameplateApi.status(), nameplateApi.list(instrumentId)]);
+      const [s, list] = await Promise.all([nameplateApi.status(), instrumentId ? nameplateApi.list(instrumentId) : nameplateApi.queue(queueStatus)]);
       setAvailable(s.available);
       setChecks(list);
     } catch (e: any) {
       setError(e?.message || 'Could not load nameplate checks.');
     }
-  }, [instrumentId]);
+  }, [instrumentId, queueStatus]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const upload = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || !instrumentId) return;
     setBusy(true);
     setError(null);
     try {
@@ -103,12 +107,14 @@ export const NameplateCheck: React.FC<Props> = ({ instrumentId, role, userId }) 
     <section className="bg-white rounded-2xl border border-slate-200 shadow-gov p-5 space-y-4" aria-label="Nameplate check">
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-bold text-slate-900">Nameplate check (assisted by OCR)</h2>
+          <h2 className="text-sm font-bold text-slate-900">{inQueue ? 'Nameplate photos to review' : 'Nameplate check (assisted by OCR)'}</h2>
           <p className="text-xs text-slate-500">
-            Photograph the instrument's nameplate. The text is read on this server and compared with the registered details. It is a suggestion only: a person confirms the result.
+            {inQueue
+              ? 'Look at the photo itself: the machine reading is a suggestion and you decide.'
+              : "Photograph the instrument's nameplate. The text is read on this server and compared with the registered details. It is a suggestion only: a person confirms the result."}
           </p>
         </div>
-        {available === false ? (
+        {inQueue ? null : available === false ? (
           <span className="text-xs rounded-lg bg-amber-50 border border-amber-300 text-amber-900 px-3 py-2">
             Text reading is not set up on this server (run <code>npm run ocr:setup</code>). Check the plate by eye.
           </span>
@@ -122,14 +128,24 @@ export const NameplateCheck: React.FC<Props> = ({ instrumentId, role, userId }) 
       </div>
 
       {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
-      {checks.length === 0 && available !== null && <p className="text-sm text-slate-500">No nameplate has been checked yet.</p>}
+      {checks.length === 0 && available !== null && <p className="text-sm text-slate-500" data-testid="nameplate-empty">{inQueue ? 'Nothing to show here.' : 'No nameplate has been checked yet.'}</p>}
 
       {checks.map((c) => {
         const adv = ADVISORY_STYLE[c.advisory];
         const st = STATUS_TEXT[c.status];
         const canDecide = canReview && c.status === 'PENDING_REVIEW' && c.uploaded_by_id !== userId;
         return (
-          <article key={c.id} className="border border-slate-200 rounded-xl p-4 space-y-3">
+          <article key={c.id} className="border border-slate-200 rounded-xl p-4 space-y-3" data-testid="nameplate-check">
+            {inQueue && (
+              <p className="text-sm font-bold text-slate-900">
+                {c.instrument_name} <span className="font-mono text-xs font-normal text-slate-600">{c.instrument_serial}</span>
+                <span className="ml-2 text-xs font-normal text-slate-500">owner: {c.owner_name}</span>
+              </p>
+            )}
+            <a href={getFileUrl(c.file_url)} target="_blank" rel="noreferrer" className="block">
+              <img src={getFileUrl(c.file_url)} alt="Nameplate photo" loading="lazy" data-testid="nameplate-image"
+                className="max-h-56 rounded-lg border border-slate-200 bg-slate-50 object-contain" />
+            </a>
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>{when(c.created_at)} · {c.uploaded_by_name}</span>
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.text}</span>

@@ -6,7 +6,7 @@
 |---|---|---|
 | 0. OCR nameplate check | **DONE**, committed `5723091` | 157 API tests passed at the time; see `docs/TEST_REPORT.md` 4b |
 | 1. Map-based location | **DONE**: automated and real-browser checks PASS (see `docs/TEST_REPORT.md` 4c) | map tests 5/5, API suite 162/162, web and mobile type-check, web build, 26/26 headless-Edge checks. NOT TESTED: touch/phone input, real GPS hardware, mobile map |
-| 2. OCR review visibility | NOT STARTED | |
+| 2. OCR review visibility | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4d) | API suite 166/166, 17/17 browser checks. Migration 031 (evidence kind). Upload at registration not built |
 | 3. Application queries | NOT STARTED | |
 | 4. Certificate ID v2 | NOT STARTED | |
 | 5. Hash wording and physical-copy check | NOT STARTED | |
@@ -21,6 +21,8 @@ Approved decisions
 Ground rules for every checkpoint: reuse existing modules; keep current workflows, authorization and data integrity intact; no checkpoint changes issued certificates, signatures or audit records; add tests with each change; run the full API suite, web and mobile type-checks and the web build before committing; one commit per checkpoint with a verified file list; update `docs/TEST_REPORT.md` with PASS / FAIL / NOT TESTED; stop and explain if a checkpoint exposes a significant architectural problem.
 
 Verification tooling: besides the API tests, UI behaviour is checked in a real browser engine (headless Microsoft Edge or Chrome driven by `puppeteer-core`, kept outside the repository) against an isolated stack: a throw-away embedded PostgreSQL, the API and the Vite dev server. The developer's own database is never used. Anything that needs a physical phone, a printed paper copy or a real provider stays NOT TESTED.
+
+Migration numbers: 031 is used by Checkpoint 2 (evidence kind); Checkpoint 3 uses 032 and Checkpoint 4 uses 033.
 
 Dependencies added overall: `leaflet` and `@types/leaflet` (web), `jsqr` (api, QR from images), `jimp` moved from dev to runtime dependency (api, image preparation and QR pixel access). Nothing else; OCR (`tesseract.js`) is already in place.
 

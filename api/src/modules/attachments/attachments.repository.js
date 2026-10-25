@@ -50,6 +50,7 @@ async function createAttachment({
   description,
   fileSha256,
   documentType,
+  evidenceKind,
   capturedAt,
   latitude,
   longitude,
@@ -70,9 +71,10 @@ async function createAttachment({
       captured_at,
       latitude,
       longitude,
-      document_type
+      document_type,
+      evidence_kind
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *`,
     [
       applicationId || null,
@@ -90,6 +92,7 @@ async function createAttachment({
       latitude ?? null,
       longitude ?? null,
       documentType || null,
+      evidenceKind || null,
     ]
   );
 

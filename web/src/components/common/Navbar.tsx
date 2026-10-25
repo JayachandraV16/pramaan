@@ -261,6 +261,15 @@ export const Navbar: React.FC = () => {
                       >
                         {t("nav.enforcement", "Enforcement")}
                       </Link>
+                      {user.role_id !== "INSTRUMENT_OWNER" && (
+                        <Link
+                          to="/nameplate-queue"
+                          onClick={() => setRoleDropdownOpen(false)}
+                          className="block px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#1a1a2e]"
+                        >
+                          {t("nav.nameplateQueue", "Nameplate review queue")}
+                        </Link>
+                      )}
                         </>
                       )}
                       {user.role_id === "ADMIN" && (

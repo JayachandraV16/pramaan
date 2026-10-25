@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../../config');
 const ApiError = require('../../utils/ApiError');
+const { normalizeImage } = require('../../utils/imageTools');
 
 let override = null; // tests inject a fake: setEngine(async (buffer) => ({ text, confidence, engine }))
 let workerPromise = null;
@@ -69,13 +70,15 @@ function recognize(buffer) {
   }
 
   const job = queue.then(async () => {
+    // decode first: a damaged image must be refused here, never handed to the WebAssembly worker
+    const image = await normalizeImage(buffer);
     const worker = await getWorker();
     let timer;
     const timeout = new Promise((_, reject) => {
       timer = setTimeout(() => reject(new ApiError(504, 'Reading the image took too long. Try a smaller or clearer photo.')), config.ocr.timeoutMs);
     });
     try {
-      const { data } = await Promise.race([worker.recognize(buffer), timeout]);
+      const { data } = await Promise.race([worker.recognize(image.buffer), timeout]);
       return { text: data.text || '', confidence: Number(data.confidence) || 0, engine: engineName() };
     } catch (err) {
       if (err instanceof ApiError) await resetWorker(); // a stuck job: start fresh next time

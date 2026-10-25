@@ -5,6 +5,7 @@
 //   GET   /status                              is the local OCR engine set up?
 //   POST  /instruments/:instrumentId           multipart "file" (JPG/PNG photo of the nameplate): store, read, compare
 //   GET   /instruments/:instrumentId           checks for the instrument
+//   GET   /queue?status=                       ADMIN: all checks; officer: checks on assigned instruments
 //   GET   /:id                                 one check
 //   POST  /:id/review                          ADMIN / assigned officer (not the uploader):
 //                                              { decision: CONFIRMED_MATCH|CONFIRMED_MISMATCH|UNREADABLE, note?, values? }
@@ -69,6 +70,13 @@ router.get(
   '/instruments/:instrumentId',
   asyncHandler(async (req, res) => {
     new ApiResponse(200, await service.listForInstrument(req.user, req.params.instrumentId)).send(res);
+  })
+);
+
+router.get(
+  '/queue',
+  asyncHandler(async (req, res) => {
+    new ApiResponse(200, await service.queue(req.user, req.query.status)).send(res);
   })
 );
 

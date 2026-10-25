@@ -7,6 +7,7 @@ const {
 } = require('./attachments.validation');
 
 const { ROLES } = require('../../config/roles');
+const EVIDENCE_KINDS = ['READING', 'TEST_WEIGHT', 'SEAL', 'CONDITION', 'OTHER'];
 async function ensureApplicationAccess(user, applicationId) {
   // ADMIN has full access
   if (user.role === ROLES.ADMIN) {
@@ -94,6 +95,22 @@ async function createAttachment(user, data) {
   if (data.documentType !== undefined && data.documentType !== null && data.documentType !== '') {
     if (!applicationId) throw ApiError.badRequest('documentType can only be set on application documents');
     documentType = documentsService.normaliseType(data.documentType);
+  }
+
+  // What an inspection photo shows (verification evidence only, uploaded by the assigned officer or an admin).
+  let evidenceKind = null;
+  if (data.evidenceKind !== undefined && data.evidenceKind !== null && data.evidenceKind !== '') {
+    evidenceKind = String(data.evidenceKind).toUpperCase();
+    if (!EVIDENCE_KINDS.includes(evidenceKind)) {
+      throw ApiError.badRequest(`evidenceKind must be one of ${EVIDENCE_KINDS.join(', ')}`);
+    }
+    if (!verificationId) throw ApiError.badRequest('evidenceKind can only be set on verification evidence');
+    if (!['image/jpeg', 'image/png'].includes(mimeType)) {
+      throw ApiError.badRequest('Inspection photos must be JPG or PNG images');
+    }
+    if (user.role === ROLES.INSTRUMENT_OWNER) {
+      throw ApiError.forbidden('Only the inspecting officer or an administrator can add inspection photos');
+    }
   }
 
   // Exactly one owner must be provided
@@ -201,6 +218,7 @@ async function createAttachment(user, data) {
     description,
     fileSha256,
     documentType,
+    evidenceKind,
     capturedAt: evidence.capturedAt,
     latitude: evidence.latitude,
     longitude: evidence.longitude,
@@ -341,6 +359,7 @@ async function deleteAttachment(
 }
 
 module.exports = {
+  EVIDENCE_KINDS,
   createAttachment,
   getAttachmentById,
   getApplicationAttachments,

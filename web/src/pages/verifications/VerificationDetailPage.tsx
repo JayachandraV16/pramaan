@@ -13,6 +13,7 @@ import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useAuth } from '../../context/AuthContext';
 import { getFileUrl } from '../../api/client';
+import { InspectionPhotos } from '../../components/verifications/InspectionPhotos';
 
 export const VerificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -526,6 +527,8 @@ export const VerificationDetailPage: React.FC = () => {
           ) : null}
         </Card>
       )}
+
+      <InspectionPhotos verificationId={verification.id} canUpload={isAuthorized && verification.status === 'IN_PROGRESS'} />
 
       {/* Section 1: Quantitative Measurement Readings Table */}
       <Card

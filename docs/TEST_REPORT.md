@@ -2,8 +2,8 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `5723091` plus the Checkpoint 1 (map location) changes described in 4c.
-- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 30 migrations applied. No real or production data is used.
+- Code: `develop` at `2d8345d` plus the Checkpoint 2 changes described in 4d.
+- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 31 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
 
@@ -11,11 +11,12 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 162 of 162** (0 failed) |
+| API automated tests | **PASS: 166 of 166** (0 failed; two consecutive full runs) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
 | Map location picker in a real browser (headless Microsoft Edge, 4c) | **PASS: 26 of 26** |
+| Nameplate review queue and inspection photos in a real browser (4d) | **PASS: 17 of 17** |
 | Every other page in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
 
 ## 1. End-to-end workflow: owner → admin → officer → certificate → public verification
@@ -117,6 +118,23 @@ Browser checks ran in headless Microsoft Edge driven by `puppeteer-core`, agains
 
 Observations, not fixed here: instruments without a capacity display "0 kg" (existing web mapper default); Leaflet raised the web bundle to about 627 kB (Vite chunk-size warning); the instrument web page is only open to owners and admins, which matters for Checkpoint 2.
 
+## 4d. Checkpoint 2: OCR review queue and inspection photos
+
+Same browser method as 4c (headless Edge, isolated stack, real OCR engine with the English model).
+
+| Item | Evidence | Result |
+|---|---|---|
+| Root cause of "photos not visible": the photo was only a "View photo" link inside the instrument page, which officers cannot open; there was no queue | code review | fixed: inline image, queue page |
+| `GET /nameplate/queue?status=`: ADMIN sees all, an officer only instruments assigned to them, owners get 403, bad status 400, decided checks move between tabs | `inspection.test.js` | PASS |
+| Queue rows carry instrument, serial, owner and a signed photo link | `inspection.test.js` | PASS |
+| Inspection photos with a kind (reading, test weight, seal, condition, other): stored with SHA-256, images only, owners and unassigned officers refused, kind only on verification evidence, evidence without a kind still works (migration 031) | `inspection.test.js` | PASS |
+| Damaged image with valid header used to **crash the whole API process** (found in the browser run: uncaught error in the OCR worker). Images are now decoded and re-encoded before OCR; damaged files give 400, absurd pixel counts are refused, large photos scaled to 2400 px | `inspection.test.js` (unit and real-engine API test) | fixed, PASS |
+| Browser: officer queue shows only the assigned instrument; image decoded and visible; advisory, comparison and status shown; decision from the queue moves the check to its tab with the note | browser | PASS |
+| Browser: admin sees every instrument; owner is redirected away from the queue; owner sees the photo inline on the instrument page | browser | PASS |
+| Browser: officer uploads four photos (reading, test weight, seal, condition) on the verification page; they display and are stored with their kinds | browser | PASS |
+| No browser errors on the pages tested | browser | PASS |
+| Photo upload at instrument registration; phone camera capture; EXIF rotation of real phone photos | | **NOT BUILT / NOT TESTED** (orientation is applied by the image library on load, not verified with a real photo) |
+
 ## 5. Defects found and fixed during this work
 
 | Defect | How it was found | Status |
@@ -126,6 +144,7 @@ Observations, not fixed here: instruments without a capacity display "0 kg" (exi
 | Migration 029 used a non-immutable enum cast in an index (failed to apply) | applying it | fixed |
 | Document checklist queried a column that does not exist | regression run | fixed |
 | Earlier "untrack node_modules / PDF" commits were no-ops | audit before pushing | fixed (commit `46cfa51`) |
+| A JPG/PNG with a damaged body crashed the API through an uncaught OCR worker error | real-browser run (Checkpoint 2) | fixed: decode first, 400 |
 
 ## 6. NOT TESTED (be explicit in the PPT)
 
