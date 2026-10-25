@@ -7,7 +7,7 @@
 | 0. OCR nameplate check | **DONE**, committed `5723091` | 157 API tests passed at the time; see `docs/TEST_REPORT.md` 4b |
 | 1. Map-based location | **DONE**: automated and real-browser checks PASS (see `docs/TEST_REPORT.md` 4c) | map tests 5/5, API suite 162/162, web and mobile type-check, web build, 26/26 headless-Edge checks. NOT TESTED: touch/phone input, real GPS hardware, mobile map |
 | 2. OCR review visibility | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4d) | API suite 166/166, 17/17 browser checks. Migration 031 (evidence kind). Upload at registration not built |
-| 3. Application queries | NOT STARTED | |
+| 3. Application queries | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4e) | API suite 170/170, 15/15 browser checks. Migration 032. Not built: Hindi text for new messages, unread badges |
 | 4. Certificate ID v2 | NOT STARTED | |
 | 5. Hash wording and physical-copy check | NOT STARTED | |
 | 6. Storage hardening | NOT STARTED | |

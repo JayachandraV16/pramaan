@@ -2,8 +2,8 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `2d8345d` plus the Checkpoint 2 changes described in 4d.
-- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 31 migrations applied. No real or production data is used.
+- Code: `develop` at `e0cc596` plus the Checkpoint 3 changes described in 4e.
+- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 32 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
 
@@ -11,12 +11,13 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 166 of 166** (0 failed; two consecutive full runs) |
+| API automated tests | **PASS: 170 of 170** (0 failed) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
 | Map location picker in a real browser (headless Microsoft Edge, 4c) | **PASS: 26 of 26** |
 | Nameplate review queue and inspection photos in a real browser (4d) | **PASS: 17 of 17** |
+| Query inbox, document requests and replies with files in a real browser (4e) | **PASS: 15 of 15** |
 | Every other page in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
 
 ## 1. End-to-end workflow: owner → admin → officer → certificate → public verification
@@ -134,6 +135,22 @@ Same browser method as 4c (headless Edge, isolated stack, real OCR engine with t
 | Browser: officer uploads four photos (reading, test weight, seal, condition) on the verification page; they display and are stored with their kinds | browser | PASS |
 | No browser errors on the pages tested | browser | PASS |
 | Photo upload at instrument registration; phone camera capture; EXIF rotation of real phone photos | | **NOT BUILT / NOT TESTED** (orientation is applied by the image library on load, not verified with a real photo) |
+
+## 4e. Checkpoint 3: application queries
+
+Existing threads (open, reply, close, notifications) are unchanged and still covered by `phase3.test.js`. Browser checks use the same method as 4c.
+
+| Item | Evidence | Result |
+|---|---|---|
+| Document requests: only the department may ask; 1-10 named documents; items refused on ordinary questions; applicant notified with the list; database constraint rejects an empty request (migration 032) | `queries.test.js` | PASS |
+| Replies with a file (JPG/PNG/PDF): stored with SHA-256, shown in the thread, signed link opens, bare path refused, listed with the application's attachments, department notified "(file attached)" | `queries.test.js` | PASS |
+| Refused replies keep no file and no message (outsider, wrong type, fake PNG) | `queries.test.js` | PASS |
+| Inbox: `GET /queries?awaiting=me&kind=&status=` returns only threads where the next move is this person's; rows carry application, instrument and opener; outsiders see nothing | `queries.test.js` | PASS |
+| Close, reopen (department or admin only), reopen notifies the applicant once; thread history from the audit log (opened, replied, closed, reopened) with actor names | `queries.test.js` | PASS |
+| Browser: officer requests documents from the application page; owner gets the notification, finds it under "Waiting for me", replies with a file; the link opens the image | browser, 15 of 15 | PASS |
+| Browser: officer sees the file, closes, finds it under Closed, reopens; history lists all four events; applicants have no "Request documents" option | browser | PASS |
+| Hindi text for the new notifications and screens | | **NOT BUILT** (new query notifications are written in English like the earlier query messages) |
+| Unread counters / badges, e-mail or SMS delivery of query notifications through a real provider | | **NOT TESTED** |
 
 ## 5. Defects found and fixed during this work
 

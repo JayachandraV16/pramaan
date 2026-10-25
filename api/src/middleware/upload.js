@@ -100,7 +100,7 @@ function matchesSignature(filePath, extension) {
 // instead of generic 500s, (b) the uploaded file's real type is checked
 // against its extension, and (c) the stored mimetype and a SHA-256 of the
 // content are set from the server's own read of the file (req.file.sha256).
-function uploadSingle(fieldName) {
+function uploadSingle(fieldName, { optional = false } = {}) {
   const handler = upload.single(fieldName);
   return (req, res, next) => {
     handler(req, res, (err) => {
@@ -115,6 +115,7 @@ function uploadSingle(fieldName) {
       }
 
       if (!req.file) {
+        if (optional) return next();
         return next(ApiError.badRequest('A file is required'));
       }
 

@@ -19,17 +19,34 @@ export const applicationActionsApi = {
 
 /* ---------- queries (officer <-> owner threads) ---------- */
 
+export type QueryKind = 'CLARIFICATION' | 'DOCUMENT_REQUEST';
+
 export interface QueryThread {
   id: string;
   application_id: string;
   application_number?: string;
+  instrument_name?: string;
+  instrument_serial?: string;
+  raised_by_name?: string;
   subject: string;
+  kind: QueryKind;
+  requested_items?: string[];
   status: 'OPEN' | 'CLOSED';
   awaiting: 'APPLICANT' | 'DEPARTMENT' | null;
   message_count?: number;
   last_message?: string | null;
+  last_message_at?: string | null;
   created_at: string;
   messages?: QueryMessage[];
+  history?: Array<{ action: string; occurred_at: string; actor_name: string | null; actor_role: string | null }>;
+}
+
+export interface QueryAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  mime_type: string | null;
+  file_sha256: string | null;
 }
 
 export interface QueryMessage {
@@ -39,15 +56,25 @@ export interface QueryMessage {
   author_role: string;
   body: string;
   created_at: string;
+  attachments?: QueryAttachment[];
 }
 
 export const queriesApi = {
   list: (applicationId: string) => apiClient.get<QueryThread[]>(`/queries?applicationId=${applicationId}`),
+  inbox: (filters: { status?: string; kind?: string; awaiting?: string }) =>
+    apiClient.get<QueryThread[]>(`/queries?${new URLSearchParams(filters as Record<string, string>).toString()}`),
   get: (id: string) => apiClient.get<QueryThread>(`/queries/${id}`),
-  create: (applicationId: string, subject: string, message: string) =>
-    apiClient.post<QueryThread>('/queries', { applicationId, subject, message }),
-  reply: (id: string, body: string) => apiClient.post<unknown>(`/queries/${id}/messages`, { body }),
+  create: (applicationId: string, subject: string, message: string, extra?: { kind: QueryKind; requestedItems: string[] }) =>
+    apiClient.post<QueryThread>('/queries', { applicationId, subject, message, ...(extra || {}) }),
+  reply(id: string, body: string, file?: File) {
+    if (!file) return apiClient.post<unknown>(`/queries/${id}/messages`, { body });
+    const form = new FormData();
+    form.append('body', body);
+    form.append('file', file);
+    return apiFetch<unknown>(`/queries/${id}/messages`, { method: 'POST', body: form });
+  },
   close: (id: string) => apiClient.patch<unknown>(`/queries/${id}/close`, {}),
+  reopen: (id: string) => apiClient.patch<unknown>(`/queries/${id}/reopen`, {}),
 };
 
 /* ---------- fee rules ---------- */

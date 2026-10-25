@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '../common/Button';
 import { DocumentChecklist } from './DocumentChecklist';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { QueryThreadView } from '../queries/QueryThreadView';
+import { NewQueryForm } from '../queries/NewQueryForm';
 import {
   applicationActionsApi,
   queriesApi,
@@ -39,9 +41,6 @@ export const ApplicationExtras: React.FC<Props> = (p) => {
   const [busy, setBusy] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showReject, setShowReject] = useState(false);
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [reply, setReply] = useState('');
 
   const loadHistory = useCallback(async () => {
     try {
@@ -194,7 +193,7 @@ export const ApplicationExtras: React.FC<Props> = (p) => {
             {threads.map((t) => (
               <li key={t.id} className="py-2 flex items-center gap-3">
                 <button type="button" className="text-left flex-1 min-w-0" onClick={() => openThreadById(t.id)}>
-                  <span className="block text-sm font-semibold text-[#1a3a5c] truncate">{t.subject}</span>
+                  <span className="block text-sm font-semibold text-[#1a3a5c] truncate">{t.kind === 'DOCUMENT_REQUEST' ? 'Documents: ' : ''}{t.subject}</span>
                   <span className="block text-xs text-slate-500 truncate">{t.last_message}</span>
                 </button>
                 {t.status === 'CLOSED' ? (
@@ -210,107 +209,23 @@ export const ApplicationExtras: React.FC<Props> = (p) => {
         )}
 
         {openThread && (
-          <div className="mt-3 border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-900">{openThread.subject}</p>
-              <button type="button" className="text-xs text-slate-500 hover:underline" onClick={() => setOpenThread(null)}>
-                Close view
-              </button>
-            </div>
-            <ul className="space-y-2 max-h-72 overflow-y-auto">
-              {(openThread.messages || []).map((m) => (
-                <li key={m.id} className={`rounded-lg px-3 py-2 text-sm ${m.author_id === p.userId ? 'bg-[#1a3a5c] text-white ml-8' : 'bg-white border border-slate-200 mr-8'}`}>
-                  <span className="block text-[11px] opacity-75">
-                    {m.author_name} · {label(m.author_role)} · {fmt(m.created_at)}
-                  </span>
-                  <span className="whitespace-pre-wrap">{m.body}</span>
-                </li>
-              ))}
-            </ul>
-            {openThread.status === 'OPEN' ? (
-              <form
-                className="flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!reply.trim()) return;
-                  run(
-                    async () => {
-                      await queriesApi.reply(openThread.id, reply.trim());
-                      setReply('');
-                      setOpenThread(await queriesApi.get(openThread.id));
-                    },
-                    loadThreads
-                  );
-                }}
-              >
-                <input
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  aria-label="Reply"
-                  placeholder="Write a reply"
-                  className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-sm"
-                />
-                <Button type="submit" size="sm" isLoading={busy}>
-                  Send
-                </Button>
-                {(isAdmin || openThread.messages?.[0]?.author_id === p.userId) && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => run(async () => {
-                      await queriesApi.close(openThread.id);
-                      setOpenThread(await queriesApi.get(openThread.id));
-                    }, loadThreads)}
-                  >
-                    Close thread
-                  </Button>
-                )}
-              </form>
-            ) : (
-              <p className="text-xs text-slate-500">This thread is closed.</p>
-            )}
+          <div className="mt-3 space-y-1">
+            <button type="button" className="text-xs text-slate-500 hover:underline" onClick={() => setOpenThread(null)}>
+              Close view
+            </button>
+            <QueryThreadView threadId={openThread.id} role={p.role} userId={p.userId} onChanged={loadThreads} />
           </div>
         )}
 
         {p.role !== 'PUBLIC_USER' && (
-          <form
-            className="mt-4 space-y-2 border-t border-slate-100 pt-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              run(
-                async () => {
-                  const t = await queriesApi.create(p.applicationId, subject.trim(), message.trim());
-                  setSubject('');
-                  setMessage('');
-                  setOpenThread(await queriesApi.get(t.id));
-                },
-                loadThreads
-              );
+          <NewQueryForm
+            applicationId={p.applicationId}
+            role={p.role}
+            onCreated={async (id) => {
+              await loadThreads();
+              setOpenThread(await queriesApi.get(id));
             }}
-          >
-            <p className="text-xs font-semibold text-slate-700">Raise a new query</p>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              aria-label="Query subject"
-              placeholder="Subject"
-              required
-              className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm"
-            />
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              aria-label="Query message"
-              placeholder="Describe what you need clarified"
-              rows={2}
-              required
-              className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm"
-            />
-            <Button type="submit" size="sm" isLoading={busy} disabled={!subject.trim() || !message.trim()}>
-              Send query
-            </Button>
-          </form>
+          />
         )}
       </div>
 
