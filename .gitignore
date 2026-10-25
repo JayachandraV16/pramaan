@@ -31,3 +31,6 @@ Thumbs.db
 !.env.example
 !api/.env.example
 !web/.env.example
+
+# local AI-assistant instructions (kept on this machine, not in the repository)
+/CLAUDE.md
