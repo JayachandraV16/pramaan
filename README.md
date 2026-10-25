@@ -107,4 +107,3 @@ cd web && npx tsc --noEmit && npx vite build
 - `docs/DB_SCHEMA.md`, `docs/DECISIONS.md`
 - `docs/context.md` — project analysis, PS 26036 audit and implementation record
 - `docs/feature-roadmap.md` — progress and next steps
-- `CLAUDE.md` — working rules for AI-assisted development
