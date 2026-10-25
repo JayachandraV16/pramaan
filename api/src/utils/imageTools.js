@@ -25,8 +25,8 @@ function peekSize(buffer) {
   return null;
 }
 
-/** @returns {Promise<{ buffer: Buffer, width: number, height: number }>} a clean, upright, size-limited PNG */
-async function normalizeImage(buffer, { maxSide = MAX_SIDE } = {}) {
+/** Decodes and size-limits a photo; returns the Jimp image (upright, longest side at most `maxSide`). */
+async function decodeImage(buffer, { maxSide = MAX_SIDE } = {}) {
   const peek = peekSize(buffer);
   if (peek && peek.width * peek.height > MAX_PIXELS) {
     throw ApiError.badRequest('The photo has too many pixels. Use a smaller photo (for example 12 megapixels or less).');
@@ -42,8 +42,13 @@ async function normalizeImage(buffer, { maxSide = MAX_SIDE } = {}) {
     const scale = maxSide / longest;
     image.resize({ w: Math.round(image.width * scale), h: Math.round(image.height * scale) });
   }
-  const out = await image.getBuffer('image/png');
-  return { buffer: out, width: image.width, height: image.height };
+  return image;
 }
 
-module.exports = { normalizeImage, peekSize, MAX_PIXELS, MAX_SIDE };
+/** @returns {Promise<{ buffer: Buffer, width: number, height: number }>} a clean, upright, size-limited PNG */
+async function normalizeImage(buffer, options) {
+  const image = await decodeImage(buffer, options);
+  return { buffer: await image.getBuffer('image/png'), width: image.width, height: image.height };
+}
+
+module.exports = { decodeImage, normalizeImage, peekSize, MAX_PIXELS, MAX_SIDE };

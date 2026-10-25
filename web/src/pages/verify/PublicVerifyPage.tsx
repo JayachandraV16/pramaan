@@ -10,6 +10,7 @@ import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import pramaanLogoMain from '../../assets/pramaan_logo_main.png';
 import { Fingerprint } from '../../components/certificates/Fingerprint';
+import { PaperCopyCheck } from '../../components/certificates/PaperCopyCheck';
 
 /** Date-only strings (YYYY-MM-DD) are calendar dates: format without timezone shifts. */
 function formatDate(d?: string | null) {
@@ -322,6 +323,8 @@ export const PublicVerifyPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <PaperCopyCheck />
     </div>
   );
 };

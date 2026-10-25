@@ -180,4 +180,25 @@ export const certificatesApi = {
     form.append('file', file);
     return apiFetch<DocumentCheckResponse>('/qr-auth/check-document', { method: 'POST', body: form });
   },
+
+  /**
+   * Public: a photograph, scan or scanned PDF of a paper certificate. The QR code and the printed text
+   * are compared with the registry; the answer is never "authentic" (see CopyCheckResponse.limits).
+   */
+  async checkCopy(file: File): Promise<CopyCheckResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    return apiFetch<CopyCheckResponse>('/qr-auth/check-copy', { method: 'POST', body: form });
+  },
 };
+
+export interface CopyCheckResponse {
+  file: { kind: 'PDF' | 'IMAGE'; sha256: string; bytes: number };
+  exactFile: { matches: boolean; certificateNumber?: string; status?: string } | null;
+  qr: { found: boolean; usable?: boolean; reason?: string | null; host?: string | null };
+  registry: { result: string; valid: boolean; tampered: boolean; reason: string | null; certificate: { certificateNumber: string } | null } | null;
+  printed: { attempted: boolean; read: boolean; engine?: string; confidence?: number; error?: string };
+  comparison: Array<{ field: string; label: string; printed: string | null; registry: string | null; status: 'MATCH' | 'CLOSE' | 'MISMATCH' | 'NOT_READ' | 'NOT_ON_RECORD'; note?: string }>;
+  conclusion: { code: string; level: 'INFO' | 'WARN' | 'ALERT'; text: string };
+  limits: string[];
+}

@@ -2,7 +2,7 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `77815e4` plus the Checkpoint 4 changes described in 4f.
+- Code: `develop` at `51a6b68` plus the Checkpoint 5 changes described in 4g.
 - Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 33 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
@@ -11,7 +11,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 174 of 174** (0 failed) |
+| API automated tests | **PASS: 185 of 185** (0 failed; two consecutive full runs) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
@@ -19,6 +19,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 | Nameplate review queue and inspection photos in a real browser (4d) | **PASS: 17 of 17** |
 | Query inbox, document requests and replies with files in a real browser (4e) | **PASS: 15 of 15** |
 | Structured certificate number and full fingerprints in a real browser (4f) | **PASS: 13 of 13** |
+| Paper-copy check in a real browser with the real OCR engine (4g) | **PASS: 11 of 11** |
 | Every other page in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
 
 ## 1. End-to-end workflow: owner → admin → officer → certificate → public verification
@@ -170,6 +171,28 @@ Number format `PRM-YY-OOO-NNNNNNN-C-TTTT` (year, office, serial, ISO 7064 MOD 37
 | Browser: structured number on the certificate page; full 64-character record and PDF fingerprints with the "not a digital signature" explanation; same values on the public page; lower-case number accepted; typo and invented security code give clear messages | browser, 13 of 13 | PASS |
 | Strength of the tag: 4 characters = 20 bits. It guards against typing and guessing; it is **not** proof of authenticity (only the registry plus the QR signature and record fingerprint are) | design note | stated in code and UI |
 | Switching an existing deployment to v2 with live data; the Hindi PDF page's fingerprint wording rendered in a PDF viewer | | **NOT TESTED** |
+
+## 4g. Checkpoint 5: checking a physical certificate copy
+
+`POST /api/qr-auth/check-copy` (public, rate limited to 6 per minute and 40 per hour per address, on top of the general public limit; at most 3 checks at a time). Accepts a JPG, PNG or PDF; the file is processed in memory and not stored. The QR link inside is only parsed, never fetched.
+
+| Item | Evidence | Result |
+|---|---|---|
+| Printed-text parser: certificate number (legacy and v2, with OCR spacing), instrument, manufacturer, model, serial, valid from/until (long month, short month, numeric dates); nothing invented from garbage | `copycheck.test.js` | PASS |
+| QR code found in synthetic certificate pictures (PNG, JPEG, QR inside a scanned PDF's JPEG), looked up with the normal public verification (signature, record fingerprint, status) and recorded as a `PUBLIC_COPY_CHECK` scan | `copycheck.test.js` | PASS |
+| Field-by-field comparison with the registry (MATCH / CLOSE / MISMATCH / NOT_READ / NOT_ON_RECORD); a different serial number or end date is reported as `DETAILS_DISAGREE` (alert) | `copycheck.test.js` | PASS |
+| OCR alone is never enough: with no QR code the best result is `NUMBER_IN_REGISTRY_NO_QR` (warning); unreadable text gives `REGISTRY_RECORD_FOUND` with no claim about the paper; with text reading switched off the QR path still works | `copycheck.test.js` | PASS |
+| Mistyped / invented numbers read from the paper (`NUMBER_TYPO`, `NUMBER_NOT_ISSUED`, never-issued `NOT_IN_REGISTRY`) | `copycheck.test.js` | PASS |
+| A QR code leading to another website, or not a link at all, is flagged and not followed (`QR_POINTS_ELSEWHERE`) | `copycheck.test.js` | PASS |
+| Edited QR link = `TAMPER_SIGNALS`; revoked certificate = alert | `copycheck.test.js` | PASS |
+| PDFs: the exact issued file is recognised (with the warning that an identical file can still be a passed-on copy); an edited PDF is not; a scanner-style PDF holding a JPEG is read like a photo | `copycheck.test.js` | PASS |
+| No result ever uses the words "authentic" or "genuine" about the paper; every result carries the limits list | `copycheck.test.js`, browser | PASS |
+| Input rules: no file, wrong type and damaged picture are 400; nothing is stored; rate limit returns 429 after six checks a minute | `copycheck.test.js` | PASS |
+| Browser (real OCR engine, real QR decoding, synthetic certificate pictures): matching picture, altered serial, QR without text, hostile QR, no QR, text file | browser, 11 of 11 | PASS |
+| **Real photographs** (perspective, glare, folds, small QR in a large picture, phone cameras, rotated pages) and real scans | | **NOT TESTED** (only synthetic, flat, well-lit pictures) |
+| PDF scans that store the page as Flate/CCITT/JBIG2 images instead of JPEG (not read; the answer says so) | | **NOT SUPPORTED** |
+| Hindi pages of the certificate; Hindi or other-script text | | **NOT SUPPORTED** (English text is read; the QR works regardless) |
+| Abuse resistance of the public endpoint under real load; a security review of jsQR and the image library | | **NOT TESTED** |
 
 ## 5. Defects found and fixed during this work
 

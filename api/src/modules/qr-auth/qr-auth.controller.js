@@ -1,4 +1,5 @@
 const service = require('./qr-auth.service');
+const copyCheck = require('./copyCheck');
 const ApiResponse = require('../../utils/ApiResponse');
 const asyncHandler = require('../../utils/asyncHandler');
 
@@ -27,7 +28,15 @@ const checkDocument = asyncHandler(async (req, res) => {
   new ApiResponse(200, result, 'Document check completed').send(res);
 });
 
+// Public: a photograph, scan or scanned PDF of a paper certificate (QR code + printed text vs the registry)
+const checkCopy = asyncHandler(async (req, res) => {
+  const result = await copyCheck.checkCopy({ buffer: req.file.buffer, mimetype: req.file.mimetype }, requestMetadata(req));
+
+  new ApiResponse(200, result, 'Copy check completed').send(res);
+});
+
 module.exports = {
   authenticateQr,
   checkDocument,
+  checkCopy,
 };

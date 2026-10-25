@@ -9,7 +9,7 @@
 | 2. OCR review visibility | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4d) | API suite 166/166, 17/17 browser checks. Migration 031 (evidence kind). Upload at registration not built |
 | 3. Application queries | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4e) | API suite 170/170, 15/15 browser checks. Migration 032. Not built: Hindi text for new messages, unread badges |
 | 4. Certificate ID v2 | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4f) | API suite 174/174, 13/13 browser checks. Migration 033. Scheme stays `legacy` until `CERT_ID_SCHEME=v2` is set. The full record fingerprint is on the PDF, the certificate page and the public page (from Checkpoint 5's scope) |
-| 5. Hash wording and physical-copy check | NOT STARTED | |
+| 5. Hash wording and physical-copy check | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4g) | API suite 185/185, 11/11 browser checks with the real OCR engine. New dependency `jsqr`. No migration. Real phone photographs NOT TESTED |
 | 6. Storage hardening | NOT STARTED | |
 
 Approved decisions
