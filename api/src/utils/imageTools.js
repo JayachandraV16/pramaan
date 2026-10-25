@@ -25,6 +25,56 @@ function peekSize(buffer) {
   return null;
 }
 
+/** The EXIF orientation tag (1-8) of a JPEG, or null. 1 = upright; 6 = the camera was turned (needs a 90 degree turn to display). */
+function readExifOrientation(buffer) {
+  if (buffer.length < 12 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+  let i = 2;
+  while (i + 4 < buffer.length) {
+    if (buffer[i] !== 0xff) return null;
+    const marker = buffer[i + 1];
+    if (marker === 0xda || marker === 0xd9) return null; // start of scan / end: no EXIF before the picture data
+    const length = buffer.readUInt16BE(i + 2);
+    if (marker === 0xe1 && buffer.toString('latin1', i + 4, i + 10) === 'Exif\0\0') {
+      const tiff = i + 10;
+      const little = buffer.toString('latin1', tiff, tiff + 2) === 'II';
+      const u16 = (o) => (little ? buffer.readUInt16LE(o) : buffer.readUInt16BE(o));
+      const u32 = (o) => (little ? buffer.readUInt32LE(o) : buffer.readUInt32BE(o));
+      if (tiff + 8 > buffer.length || u16(tiff + 2) !== 0x2a) return null;
+      const ifd = tiff + u32(tiff + 4);
+      if (ifd + 2 > buffer.length) return null;
+      const entries = u16(ifd);
+      for (let e = 0; e < entries; e += 1) {
+        const at = ifd + 2 + e * 12;
+        if (at + 12 > buffer.length) return null;
+        if (u16(at) === 0x0112) {
+          const value = u16(at + 8);
+          return value >= 1 && value <= 8 ? value : null;
+        }
+      }
+      return null;
+    }
+    i += 2 + length;
+  }
+  return null;
+}
+
+/**
+ * Checks that an uploaded photo really is a readable picture of a sane size and describes it.
+ * The file itself is NOT changed (its SHA-256 is part of the evidence); orientation is recorded so a viewer
+ * can turn it, and the OCR / QR code paths turn it themselves (decodeImage applies the tag).
+ * @returns {Promise<{ width: number, height: number, orientation: number|null }>} width / height as stored in the file
+ */
+async function describeImage(buffer) {
+  const image = await decodeImage(buffer, { maxSide: Infinity }); // throws a 400 for damaged or oversized pictures
+  const peek = peekSize(buffer);
+  const orientation = readExifOrientation(buffer);
+  // decodeImage returns the upright picture; the stored size is the one in the file
+  const turned = orientation && orientation >= 5;
+  const width = peek ? peek.width : turned ? image.height : image.width;
+  const height = peek ? peek.height : turned ? image.width : image.height;
+  return { width, height, orientation };
+}
+
 /** Decodes and size-limits a photo; returns the Jimp image (upright, longest side at most `maxSide`). */
 async function decodeImage(buffer, { maxSide = MAX_SIDE } = {}) {
   const peek = peekSize(buffer);
@@ -51,4 +101,4 @@ async function normalizeImage(buffer, options) {
   return { buffer: await image.getBuffer('image/png'), width: image.width, height: image.height };
 }
 
-module.exports = { decodeImage, normalizeImage, peekSize, MAX_PIXELS, MAX_SIDE };
+module.exports = { decodeImage, normalizeImage, describeImage, readExifOrientation, peekSize, MAX_PIXELS, MAX_SIDE };

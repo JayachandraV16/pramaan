@@ -7,6 +7,9 @@
 //          (STORAGE_DRIVER=s3, S3_BUCKET, S3_REGION, S3_ENDPOINT, S3_ACCESS_KEY_ID,
 //           S3_SECRET_ACCESS_KEY, S3_FORCE_PATH_STYLE, S3_PREFIX)
 //
+// Every driver offers put / open / remove / list. list() is what the storage tools (src/storage) use
+// to audit, clean up and migrate between drivers.
+//
 // Objects are addressed by a relative key such as "certificates/CERT-2026-000001.pdf".
 // The database keeps "/uploads/<key>" and the API serves that path with a signed,
 // expiring link (app.js), so the bucket itself can stay private.
@@ -64,12 +67,35 @@ function createLocalDriver(root) {
         if (err.code !== 'ENOENT') throw err;
       });
     },
+    // every stored file: [{ key, size, modifiedAt }]; names that are not valid keys are ignored
+    async list() {
+      const out = [];
+      const walk = async (dir, rel) => {
+        let entries;
+        try {
+          entries = await fs.promises.readdir(dir, { withFileTypes: true });
+        } catch (err) {
+          if (err.code === 'ENOENT') return;
+          throw err;
+        }
+        for (const entry of entries) {
+          const relative = rel ? `${rel}/${entry.name}` : entry.name;
+          if (entry.isDirectory()) await walk(path.join(dir, entry.name), relative);
+          else if (entry.isFile() && KEY_RE.test(relative)) {
+            const stat = await fs.promises.stat(path.join(dir, entry.name));
+            out.push({ key: relative, size: stat.size, modifiedAt: stat.mtime });
+          }
+        }
+      };
+      await walk(path.resolve(root), '');
+      return out.sort((a, b) => (a.key < b.key ? -1 : 1));
+    },
   };
 }
 
 // `client` is an S3Client (or anything with .send(command)); injected in tests.
 function createS3Driver({ client, bucket, prefix = '', serverSideEncryption }) {
-  const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+  const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
   const objectKey = (key) => `${prefix}${assertKey(key)}`;
   const missing = (err) => err && (err.name === 'NoSuchKey' || err.name === 'NotFound' || (err.$metadata && err.$metadata.httpStatusCode === 404));
   return {
@@ -92,12 +118,27 @@ function createS3Driver({ client, bucket, prefix = '', serverSideEncryption }) {
     async remove(key) {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey(key) }));
     },
+    // every object under the prefix, following pagination: [{ key, size, modifiedAt }]
+    async list() {
+      const out = [];
+      let token;
+      do {
+        const res = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix || undefined, ContinuationToken: token }));
+        for (const o of res.Contents || []) {
+          const key = o.Key.slice(prefix.length);
+          if (KEY_RE.test(key)) out.push({ key, size: o.Size, modifiedAt: o.LastModified });
+        }
+        token = res.IsTruncated ? res.NextContinuationToken : undefined;
+      } while (token);
+      return out.sort((a, b) => (a.key < b.key ? -1 : 1));
+    },
   };
 }
 
-function driverFromConfig() {
-  const { driver, s3 } = config.storage;
-  if (driver !== 's3') return createLocalDriver(config.uploadDir);
+// A driver for explicit settings (the storage tools build the "from" and "to" sides this way).
+function driverFromSettings({ driver, s3 = config.storage.s3, uploadDir = config.uploadDir }) {
+  if (driver !== 's3') return createLocalDriver(uploadDir);
+  if (!s3.bucket) throw new Error('S3_BUCKET is not set');
   const { S3Client } = require('@aws-sdk/client-s3');
   const client = new S3Client({
     region: s3.region,
@@ -108,6 +149,8 @@ function driverFromConfig() {
   return createS3Driver({ client, bucket: s3.bucket, prefix: s3.prefix, serverSideEncryption: s3.serverSideEncryption });
 }
 
+const driverFromConfig = () => driverFromSettings({ driver: config.storage.driver });
+
 let current = null;
 const driver = () => current || (current = driverFromConfig());
 
@@ -115,10 +158,12 @@ module.exports = {
   put: (key, body) => driver().put(key, body),
   open: (key) => driver().open(key),
   remove: (key) => driver().remove(key),
+  list: () => driver().list(),
   driverName: () => driver().name,
   setDriver: (d) => { current = d; }, // tests; pass null to reset to the configured driver
   assertKey,
   contentTypeFor,
   createLocalDriver,
   createS3Driver,
+  driverFromSettings,
 };

@@ -8,6 +8,8 @@ const os = require('os');
 const config = require('../config');
 const objectStorage = require('../utils/storage');
 const ApiError = require('../utils/ApiError');
+const pool = require('../pool');
+const { describeImage } = require('../utils/imageTools');
 
 // Absolute path to the uploads directory (single source of truth in config;
 // the same folder is used for certificates and for signed /uploads serving)
@@ -96,10 +98,35 @@ function matchesSignature(filePath, extension) {
   }
 }
 
+// What the database remembers about every stored upload (table stored_files): who sent it, when, its
+// size and SHA-256 and, for pictures, the pixel size and camera orientation.
+async function recordStoredFile(req, kind, image) {
+  await pool.query(
+    `INSERT INTO stored_files (key, kind, mime_type, size_bytes, sha256, width, height, exif_orientation, driver, uploaded_by_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     ON CONFLICT (key) DO NOTHING`,
+    [
+      req.file.filename, kind, req.file.mimetype, req.file.size, req.file.sha256,
+      image ? image.width : null, image ? image.height : null, image ? image.orientation : null,
+      config.storage.driver, req.user ? req.user.id : null,
+    ]
+  );
+}
+
+async function discardUpload(file) {
+  // local files sit in the upload folder (or the temp folder while staged for object storage); stored objects are removed by key
+  fs.unlink(file.path, () => {});
+  if (config.storage.driver !== 'local') await objectStorage.remove(file.filename).catch(() => {});
+  await pool.query('DELETE FROM stored_files WHERE key = $1', [file.filename]).catch(() => {});
+}
+
 // Wraps multer so that (a) multer/filter errors become 400/413 ApiErrors
 // instead of generic 500s, (b) the uploaded file's real type is checked
-// against its extension, and (c) the stored mimetype and a SHA-256 of the
-// content are set from the server's own read of the file (req.file.sha256).
+// against its extension, (c) pictures must really decode (a damaged or absurdly large
+// picture is refused) and (d) the stored mimetype and a SHA-256 of the
+// content are set from the server's own read of the file (req.file.sha256),
+// the metadata is written to PostgreSQL, and the file is removed again if the
+// request then fails (so refused requests leave no stray files behind).
 function uploadSingle(fieldName, { optional = false } = {}) {
   const handler = upload.single(fieldName);
   return (req, res, next) => {
@@ -126,19 +153,30 @@ function uploadSingle(fieldName, { optional = false } = {}) {
       }
 
       req.file.mimetype = MIME_BY_EXTENSION[extension];
-      req.file.sha256 = require('../utils/integrity').sha256Hex(fs.readFileSync(req.file.path));
+      const bytes = fs.readFileSync(req.file.path);
+      req.file.sha256 = require('../utils/integrity').sha256Hex(bytes);
 
-      if (config.storage.driver === 'local') return next();
-      objectStorage
-        .put(req.file.filename, req.file.path)
-        .then(() => {
-          fs.unlink(req.file.path, () => {});
-          next();
-        })
-        .catch((storeErr) => {
-          fs.unlink(req.file.path, () => {});
-          next(storeErr);
+      const file = req.file;
+      (async () => {
+        const isImage = file.mimetype.startsWith('image/');
+        const image = isImage ? await describeImage(bytes) : null; // 400 if damaged or too large
+        file.image = image;
+        if (config.storage.driver !== 'local') {
+          await objectStorage.put(file.filename, file.path);
+          fs.unlink(file.path, () => {});
+        }
+        await recordStoredFile(req, isImage ? 'IMAGE' : 'PDF', image);
+        // whatever happens next in the request, a refused request must not leave its file behind
+        res.on('finish', () => {
+          if (res.statusCode >= 400) discardUpload(file).catch(() => {});
         });
+      })().then(
+        () => next(),
+        async (problem) => {
+          await discardUpload(file);
+          next(problem);
+        }
+      );
     });
   };
 }

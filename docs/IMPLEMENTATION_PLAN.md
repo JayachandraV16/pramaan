@@ -10,7 +10,7 @@
 | 3. Application queries | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4e) | API suite 170/170, 15/15 browser checks. Migration 032. Not built: Hindi text for new messages, unread badges |
 | 4. Certificate ID v2 | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4f) | API suite 174/174, 13/13 browser checks. Migration 033. Scheme stays `legacy` until `CERT_ID_SCHEME=v2` is set. The full record fingerprint is on the PDF, the certificate page and the public page (from Checkpoint 5's scope) |
 | 5. Hash wording and physical-copy check | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4g) | API suite 185/185, 11/11 browser checks with the real OCR engine. New dependency `jsqr`. No migration. Real phone photographs NOT TESTED |
-| 6. Storage hardening | NOT STARTED | |
+| 6. Storage hardening | **DONE**: tests PASS (see `docs/TEST_REPORT.md` 4h) | API suite 192/192, 5/5 browser checks. Migration 034. Not tested against a real S3 bucket |
 
 Approved decisions
 - **Certificate IDs:** the PRM format with office code `IND` by default, behind a configuration switch (`CERT_ID_SCHEME`, default `legacy`) until tested.

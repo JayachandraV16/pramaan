@@ -124,8 +124,9 @@ Status machine: `SUBMITTED → UNDER_REVIEW → SCHEDULED → COMPLETED`, with `
 
 | Method & path | Notes |
 |---|---|
-| `GET /:identifier?s=<signature>` | `identifier` = QR token **or** certificate number (`CERT-2026-000123`). `s` is the signature carried by the QR link (optional for manual lookups). |
+| `GET /:identifier?s=<signature>` | `identifier` = QR token **or** certificate number (legacy `CERT-2026-000123`, or structured `PRM-26-IND-0000123-K-7QXM`; a structured number is checked for typing mistakes and its keyed tag before the registry is asked). `s` is the signature carried by the QR link (optional for manual lookups). |
 | `POST /check-document` | multipart `file` (PDF ≤10 MB): is this exact file a certificate Pramaan issued (SHA-256 lookup)? |
+| `POST /check-copy` | multipart `file` (JPG, PNG or PDF ≤10 MB): a photograph, scan or scanned PDF of a **paper** certificate. Reads the QR code (parsed, never fetched; must point at this portal), looks the record up, reads the printed text locally (OCR) and compares it field by field. Rate limited (6 per minute, 40 per hour per address). Never says "authentic": see below. |
 
 Verification response (`data`):
 
@@ -138,14 +139,16 @@ Verification response (`data`):
   "certificate": { "certificateNumber": "…", "validFrom": "…", "validUntil": "…", "status": "ACTIVE",
                    "instrumentName": "…", "serialNumber": "…", "ownerName": "R***** S*****", "…": "…" },
   "integrity": { "signature": "VALID|INVALID|NOT_PROVIDED", "recordHash": "MATCH|MISMATCH|UNAVAILABLE",
-                 "pdfSha256": "…", "recordFingerprint": "16 hex chars" },
+                 "pdfSha256": "64 hex", "recordFingerprint": "64 hex" },
   "verifiedAt": "ISO timestamp"
 }
 ```
 
-`reason` is one of `NOT_FOUND`, `SIGNATURE_MISMATCH`, `RECORD_HASH_MISMATCH`, `REVOKED`, `EXPIRED`, `NOT_YET_VALID`. A failed signature or record hash sets `tampered:true`, `result:"INVALID"`, and writes a `TAMPER_DETECTED` audit entry. Every lookup of a known certificate is logged in `qr_authentications`.
+`reason` is one of `NOT_FOUND`, `NUMBER_CHECK_FAILED` (typing mistake in a structured number), `NUMBER_TAG_MISMATCH` (not issued by this server), `SIGNATURE_MISMATCH`, `RECORD_HASH_MISMATCH`, `REVOKED`, `EXPIRED`, `NOT_YET_VALID`. A failed signature or record hash sets `tampered:true`, `result:"INVALID"`, and writes a `TAMPER_DETECTED` audit entry. Every lookup of a known certificate is logged in `qr_authentications`.
 
 Document-check response: `{ matches, sha256, certificateNumber?, status?, validUntil?, message }`.
+
+Copy-check response (`data`): `{ file: { kind, sha256, bytes }, exactFile, qr: { found, usable, reason, host }, registry, printed: { attempted, read, engine, confidence, fields }, comparison: [{ field, label, printed, registry, status: MATCH|CLOSE|MISMATCH|NOT_READ|NOT_ON_RECORD, note? }], conclusion: { code, level: INFO|WARN|ALERT, text }, limits: [..] }`. Conclusion codes: `EXACT_FILE_ISSUED`, `REGISTRY_RECORD_AGREES`, `REGISTRY_RECORD_FOUND`, `NUMBER_IN_REGISTRY_NO_QR` (warning: text alone), `DETAILS_DISAGREE`, `REGISTRY_REVOKED`, `REGISTRY_EXPIRED`, `REGISTRY_NOT_VALID`, `TAMPER_SIGNALS`, `QR_POINTS_ELSEWHERE`, `NUMBER_TYPO`, `NUMBER_NOT_ISSUED`, `NOT_IN_REGISTRY`, `NOTHING_READABLE`. OCR is approximate and a copy of a genuine certificate looks like the original, so no code means "this paper is authentic"; the registry record is the authority. The upload is processed in memory and not stored.
 
 ## Attachments — `/api/attachments` (authenticated; access = ADMIN, applicant/owner, or assigned officer of the parent application)
 
@@ -172,7 +175,7 @@ Conflict rules: the server wins. One inspection per assignment (a second `client
 
 ## Queries (clarification threads) — `/api/queries` (OWNER, LMO, GATC, ADMIN)
 
-`POST /` `{ applicationId, subject, message }` · `GET /?applicationId=&status=OPEN|CLOSED` · `GET /:id` (thread + messages, `awaiting: APPLICANT|DEPARTMENT|null`) · `POST /:id/messages` `{ body }` · `PATCH /:id/close` (opener or ADMIN). Participants: ADMIN, applicant/owner, officers ever assigned to the application. Closed threads accept no messages.
+`POST /` `{ applicationId, subject, message, kind?, requestedItems? }` (`kind` CLARIFICATION by default; DOCUMENT_REQUEST is department-only and lists 1-10 `requestedItems`) · `GET /?applicationId=&status=OPEN|CLOSED&kind=&awaiting=me` (also the inbox: rows carry application number, instrument and opener; `awaiting=me` keeps threads where the next move is yours) · `GET /:id` (thread + messages with their `attachments`, `history` from the audit log, `awaiting: APPLICANT|DEPARTMENT|null`) · `POST /:id/messages` `{ body }` as JSON, or multipart with `body` and an optional `file` (JPG/PNG/PDF; stored with SHA-256 and attached to the application) · `PATCH /:id/close` (opener or ADMIN) · `PATCH /:id/reopen` (department or ADMIN; notifies the others). Participants: ADMIN, applicant/owner, officers ever assigned to the application. Closed threads accept no messages.
 
 ## Fees — `/api/fees`
 
@@ -247,7 +250,12 @@ The machine **reads and suggests; a person decides.** Nothing here changes the i
 | `GET /status` | any internal role | `{ available, engine }`; `available` is false until `npm run ocr:setup` has downloaded the model |
 | `POST /instruments/:instrumentId` | owner of the instrument, ADMIN, assigned LMO/GATC | multipart `file` (JPG or PNG; extension, magic bytes and 10 MB limit are checked). Stores the photo, reads it, compares with the registered data, returns the check with `status: PENDING_REVIEW`. 503 when OCR is not set up, 504 on timeout. Rate-limited (30 per hour per user). |
 | `GET /instruments/:instrumentId` | same | all checks for the instrument |
+| `GET /queue?status=` | ADMIN (all), LMO/GATC (instruments assigned to them) | review queue with instrument, serial and owner on each row; `status` PENDING_REVIEW (default), CONFIRMED_MATCH, CONFIRMED_MISMATCH, UNREADABLE or ALL. `file_url` is a signed link, so the photo can be shown inline. |
 | `GET /:id` | same | one check |
 | `POST /:id/review` | ADMIN, assigned LMO/GATC, **not the uploader** | `{ decision: CONFIRMED_MATCH\|CONFIRMED_MISMATCH\|UNREADABLE, note?, values? }`. A note (≥ 5 characters) is required for MISMATCH and UNREADABLE. A check is decided once. The owner is notified. |
 
 Check fields: `extracted`, `comparison.fields.{serialNumber, manufacturer, model, capacity, accuracyClass}` each `{ read, registered, status: MATCH|CLOSE|MISMATCH|NOT_READ|NOT_REGISTERED, note? }`, `comparison.extra` (year, approval number: shown, never compared), `registered_snapshot`, `raw_text`, `ocr_confidence`, `engine`, `file_sha256`, `advisory` (ALL_MATCH, NEEDS_REVIEW, LIKELY_MISMATCH, UNREADABLE) and `advisory_summary`. The machine fields are immutable (database trigger); the audit log records the machine's advice next to the human decision and whether they agreed.
+
+## Inspection photos (verification evidence)
+
+`POST /api/attachments` multipart with `category=INSPECTION_EVIDENCE`, `verificationId`, optional `evidenceKind` = `READING | TEST_WEIGHT | SEAL | CONDITION | OTHER` (JPG/PNG only; the inspecting officer or an administrator; owners get 403) and optional `capturedAt`, `latitude`, `longitude`. `GET /api/attachments/verification/:id` returns the photos with `evidence_kind`, `file_sha256` and a signed `file_url`. Every upload, of any kind, must decode as a real picture (damaged files and absurd pixel counts are 400) and is recorded in `stored_files`; the stored bytes are never altered.

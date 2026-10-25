@@ -28,6 +28,7 @@ npm run migrate | seed         # apply new migrations / seed roles, instrument t
 npm run reset                  # DEV ONLY – drops everything in the public schema
 npm run db:setup               # reset + migrate + seed
 npm run jobs:run               # expire lapsed certificates + send expiry reminders once
+npm run storage:audit | storage:cleanup | storage:migrate   # stored files vs the database; delete orphans; copy local <-> S3 (dry run unless --apply; see docs/STORAGE.md)
 npm run demo:users             # DEV ONLY: create demo.admin/owner/lmo@pramaan.local, prints a password once
 npm run signing:dev-cert       # DEV ONLY: self-signed PDF signing key in api/signing/ (git-ignored)
 npm run ocr:setup              # downloads the local OCR model into api/ocr-data (git-ignored); ocr:demo-plate makes a sample plate image
@@ -52,7 +53,7 @@ api/src/
      auth users instruments applications assignments schedules verifications
      certificates qr-auth attachments notifications fees queries reports sync enforcement documents nameplate
   jobs/                               expiry sweep, reminders, scheduler (advisory-lock guarded)
-  db/migrations (001–033), db/seeds
+  db/migrations (001–034), db/seeds
 api/test/                             run.js (temp Postgres), helpers.js, workflow.js, *.test.js
 mobile/services/offline/              syncCore.ts (pure model), syncEngine.ts (push/pull via injected Http), OfflineContext.tsx (storage + auto-sync)
 mobile/app/inspector/offline/         Field work list + inspection form (works without a connection)
@@ -67,7 +68,7 @@ Rules the code follows (keep following them):
 - SQL `DATE` columns are returned as `YYYY-MM-DD` strings (see `pool.js`); don't convert to `Date` objects for JSON.
 - File URLs returned by the API are signed automatically (`utils/ApiResponse`); never serve `/uploads` statically.
 - Add roles only in `config/roles.js` AND the `role_name` enum. New feature = new `modules/<name>/` folder, registered in `modules/index.js`.
-- Migrations: append-only, next number is **034**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
+- Migrations: append-only, next number is **035**, never edit an applied one, name `NNN_description.sql`, constraints/indexes/triggers named `uq_/ck_/idx_/trg_<table>_…`. `ALTER TYPE … ADD VALUE` cannot be used in the same migration that adds it.
 - Tests: add a case in `api/test/*.test.js` for every behaviour change; tests must use unique emails/serials (`h.unique`) because all files share one database.
 
 ## Domain flow (as implemented)

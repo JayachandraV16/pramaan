@@ -82,3 +82,15 @@ The reviewer must be an administrator or an officer assigned to the instrument, 
 
 ## D27 — Local, open-source OCR
 tesseract.js (Apache-2.0, WebAssembly, no native build) with the English "fast" model kept on the server (`npm run ocr:setup`). No paid or cloud AI service, nothing leaves the server, and the feature degrades to "check the plate by eye" when the model is missing. Known limits: English only; accuracy on real photos (glare, angle, embossed or worn plates) is unmeasured; the OCR library processes uploaded images, so uploads stay restricted (type, magic bytes, size limit, time limit, rate limit) and run in a worker thread.
+
+## D28 — Certificate numbers: a check character and a keyed tag, legacy kept
+New numbers look like `PRM-26-IND-0000123-K-7QXM`. The check character (ISO 7064 MOD 37,36) catches every single wrong character and every swap of neighbours; the 4-character HMAC tag (20 bits, keyed with `INTEGRITY_SECRET`) stops invented numbers and guessing from a neighbour's number before the database is asked. Neither is proof: a certificate is authentic only if the registry holds it and its QR signature and record fingerprint agree. `CERT_ID_SCHEME` defaults to `legacy`; `CERT-` numbers stay valid for ever. Changing `INTEGRITY_SECRET` invalidates the tags of already-issued structured numbers, so rotate it with care.
+
+## D29 — A paper copy is never declared authentic
+The copy check reports what the registry holds and whether the printed details agree. OCR is approximate, and a photocopy of a genuine certificate looks like the original, so the strongest statement is "consistent with the record". Without a readable QR code the best outcome is a warning. A QR code that leads to another website is flagged and never followed. The upload is processed in memory.
+
+## D30 — Originals are kept; metadata lives in PostgreSQL
+Evidence photos are fingerprinted at upload, so they are stored byte-for-byte. Rotation is not baked in: the camera orientation is recorded (`stored_files.exif_orientation`), browsers display the photo upright, and the OCR and QR paths turn it themselves. Pictures must decode and have a sane pixel count. Files that no request ends up using are removed when the request fails, and `npm run storage:audit/cleanup` finds the rest.
+
+## D31 — Storage migration copies, verifies and never deletes
+`npm run storage:migrate` copies every file to the other driver, reads each copy back and compares SHA-256, never overwrites a different file on the target, and never touches the source. Switching `STORAGE_DRIVER` is a separate, deliberate step after a clean report.

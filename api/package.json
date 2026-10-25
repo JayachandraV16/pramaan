@@ -15,7 +15,10 @@
     "ocr:setup": "node src/ocr/setup.js",
     "ocr:demo-plate": "node src/ocr/makeDemoPlate.js",
     "signing:dev-cert": "node src/signing/createDevCert.js",
-    "jobs:run": "node src/jobs/run.js"
+    "jobs:run": "node src/jobs/run.js",
+    "storage:audit": "node src/storage/cli.js audit",
+    "storage:cleanup": "node src/storage/cli.js cleanup",
+    "storage:migrate": "node src/storage/cli.js migrate"
   },
   "keywords": [],
   "author": "",

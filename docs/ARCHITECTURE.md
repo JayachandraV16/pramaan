@@ -130,3 +130,12 @@ Migrations are append-only and applied in filename order inside a transaction ea
 - **Storage** (`utils/storage.js`): local or S3-compatible; every file read/write goes through it.
 - **Signing** (`utils/pdfSigner.js`): signs the certificate PDF and verifies embedded signatures.
 - **Start-up guard** (`utils/startupChecks.js`): production refuses to run with dev/demo accounts.
+
+## Checkpoint 2-6 components
+
+- **Nameplate review queue** (`modules/nameplate`, web `/nameplate-queue`): officers and administrators see photo, OCR reading, comparison and status in one place.
+- **Inspection photos** (`attachments.evidence_kind`): readings, test weights, seals and condition, as verification evidence.
+- **Queries** (`modules/queries`): inbox (`awaiting=me`), document requests, replies with files, reopen, history from the audit log.
+- **Certificate numbers** (`utils/certificateId.js`): legacy or structured with check character and keyed tag, switch `CERT_ID_SCHEME`.
+- **Paper-copy check** (`modules/qr-auth/copyCheck.js`): QR (jsQR) + local OCR + registry comparison; image decoding in `utils/imageTools.js`.
+- **Storage tools** (`src/storage`, `stored_files`): audit, cleanup and migration between the local and S3-compatible drivers; see `docs/STORAGE.md`.

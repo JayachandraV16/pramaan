@@ -2,8 +2,8 @@
 
 Scope: what was actually run, with the result, and what was **not** run. Nothing here is estimated.
 
-- Code: `develop` at `51a6b68` plus the Checkpoint 5 changes described in 4g.
-- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 33 migrations applied. No real or production data is used.
+- Code: `develop` at `8ef1eb6` plus the Checkpoint 6 changes described in 4h.
+- Automated tests run against a **throw-away embedded PostgreSQL 18** (UTF8), created fresh for every run, with all 34 migrations applied. No real or production data is used.
 - Your local development database was used only for read-only smoke checks (health, instrument types, login, production start-up guard).
 - Reproduce: `cd api && npm test` (about 60 s) · `cd web && npx tsc --noEmit && npx vite build` · `cd mobile && npx tsc --noEmit`.
 
@@ -11,7 +11,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 
 | Check | Result |
 |---|---|
-| API automated tests | **PASS: 185 of 185** (0 failed; two consecutive full runs) |
+| API automated tests | **PASS: 192 of 192** (0 failed) |
 | Web type-check and production build | **PASS** |
 | Mobile type-check | **PASS** |
 | End-to-end workflow (16 narrated steps, `api/test/e2e_demo.test.js`) | **PASS: 16 of 16** |
@@ -20,6 +20,7 @@ Scope: what was actually run, with the result, and what was **not** run. Nothing
 | Query inbox, document requests and replies with files in a real browser (4e) | **PASS: 15 of 15** |
 | Structured certificate number and full fingerprints in a real browser (4f) | **PASS: 13 of 13** |
 | Paper-copy check in a real browser with the real OCR engine (4g) | **PASS: 11 of 11** |
+| Upload validation and rotated photos in a real browser (4h) | **PASS: 5 of 5** |
 | Every other page in a real browser, mobile app on a device | **NOT TESTED** (see the last section) |
 
 ## 1. End-to-end workflow: owner → admin → officer → certificate → public verification
@@ -193,6 +194,26 @@ Number format `PRM-YY-OOO-NNNNNNN-C-TTTT` (year, office, serial, ISO 7064 MOD 37
 | PDF scans that store the page as Flate/CCITT/JBIG2 images instead of JPEG (not read; the answer says so) | | **NOT SUPPORTED** |
 | Hindi pages of the certificate; Hindi or other-script text | | **NOT SUPPORTED** (English text is read; the QR works regardless) |
 | Abuse resistance of the public endpoint under real load; a security review of jsQR and the image library | | **NOT TESTED** |
+
+## 4h. Checkpoint 6: image storage hardening
+
+Local storage stays the default; the S3-compatible driver is unchanged in behaviour and gains listing. Migration 034 (`stored_files`). Runbook: `docs/STORAGE.md`.
+
+| Item | Evidence | Result |
+|---|---|---|
+| Camera orientation read from JPEG metadata in both byte orders (values 1, 3, 6, 8), no EXIF and non-JPEG give nothing, out-of-range ignored | `storage_tools.test.js` | PASS |
+| Uploads must decode: damaged picture and absurd pixel counts are 400 and leave no file; the stored bytes are exactly what was uploaded (the evidence hash stays valid) | `storage_tools.test.js` | PASS |
+| Metadata in PostgreSQL for every upload (kind, MIME type, size, SHA-256, picture size, orientation, uploader); equals the fingerprint shown to people | `storage_tools.test.js` | PASS |
+| A request refused after the upload (403, 400) leaves no file and no metadata row | `storage_tools.test.js` | PASS |
+| Driver listing: local walks folders and ignores invalid names; S3 follows pagination (5 objects over 3 pages) and strips the prefix | `storage_tools.test.js` | PASS |
+| `storage:audit`: finds orphans (only those older than the age limit), referenced-but-missing files, files without metadata (`--backfill` adds the rows), metadata without a file | `storage_tools.test.js` | PASS |
+| `storage:cleanup`: dry run by default; `--apply` deletes only old unreferenced files and their metadata, never referenced or young ones | `storage_tools.test.js` | PASS |
+| `storage:migrate` local to an S3-compatible store (fake client): dry run copies nothing; copies are read back and checked by SHA-256; a second run changes nothing; a different file already on the target is a conflict and is not overwritten; network failure and corrupted copies are reported (corrupted copy removed from the target); the source is untouched; S3 back to local works | `storage_tools.test.js` | PASS |
+| Command line: audit prints a report (exit 0 or 2), migrate refuses without `S3_BUCKET` or with the same driver twice | `storage_tools.test.js` | PASS |
+| Browser: a damaged picture is refused with a clear message and nothing is listed; a camera-rotated JPEG (100x50 stored, orientation 6) is displayed upright (50x100) | browser, 5 of 5 | PASS |
+| Against a **real** S3 / MinIO / R2 bucket (credentials, endpoint styles, server-side encryption, large objects) | | **NOT TESTED** (fake client only) |
+| Migrating a large real upload folder; running the tools against the developer database (migration 034 is not applied there) | | **NOT TESTED** |
+| Re-encoding or thumbnailing stored pictures | | **NOT BUILT** (originals are kept unchanged on purpose; viewers and the OCR/QR paths apply the orientation) |
 
 ## 5. Defects found and fixed during this work
 
